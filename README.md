@@ -1,6 +1,8 @@
-# 🏠 Ailem - Akıllı Aile Yönetimi ve Finans PWA Uygulaması
+# 🏠🧭 YuvaPusula - Akıllı Aile Yönetimi, Bütçe ve Zaman Rehberi
 
-**Ailem**, modern ailelerin günlük yaşamını, finansal bütçesini, görevlerini, planlarını ve iletişimini tek bir güvenli çatı altında toplayan gelişmiş bir **Progressive Web App (PWA)** uygulamasıdır.
+**YuvaPusula**, aile bireylerinin zamanı, bütçeyi, görevleri ve ortak hedefleri doğru yönetmesi için yön gösteren güvenilir ve modern bir rehber **Progressive Web App (PWA)** uygulamasıdır.
+
+Sıcak bir yuva samimiyetini, pusulanın yol gösterici netliğiyle birleştirir.
 
 ---
 
@@ -43,9 +45,9 @@
 - Ev işleri, dersler ve sorumlulukların aile üyelerine atanması.
 - Bitiş süresi ve tamamlanma durumu takibi.
 
-### 8. 📱 PWA & Yerel SQLite Veritabanı
+### 8. 📱 PWA, Yerel SQLite & Bulut Dağıtım Desteği
 - iOS (Safari) ve Android (Chrome) cihazlara tek dokunuşla uygulama gibi kurulabilme.
-- Node.js yerleşik `node:sqlite` ile sıfır harici bağımlılık, ultra hızlı yerel veritabanı.
+- Hibrit Veritabanı Mimarisi: Node.js yerleşik `node:sqlite` ve Vercel Serverless JSON uyumluluğu.
 - Yerel ağdaki (Wi-Fi) tüm telefon ve tabletlerden IP adresi üzerinden ortak kullanım.
 
 ---
@@ -53,13 +55,13 @@
 ## 🚀 Kurulum ve Çalıştırma
 
 ### Gereksinimler
-- **Node.js** (v22.0.0 veya üzeri önerilir — dahili SQLite desteği için)
+- **Node.js** (v18.0.0 veya üzeri)
 
 ### Adımlar
 1. Projeyi bilgisayarınıza klonlayın veya indirin:
    ```bash
-   git clone https://github.com/dicleinceleruysal/Ailem.git
-   cd Ailem
+   git clone https://github.com/dicleinceleruysal/ailem.git
+   cd ailem
    ```
 
 2. Sunucuyu başlatın:
@@ -79,8 +81,8 @@
 
 ## 🛠️ Kullanılan Teknolojiler
 - **Frontend:** Vanilla JavaScript (ES6+), HTML5, CSS3, PWA (Service Worker + Web App Manifest)
-- **Backend:** Node.js HTTP Server
-- **Veritabanı:** SQLite (`node:sqlite`)
+- **Backend:** Node.js HTTP Server & Vercel Serverless Functions
+- **Veritabanı:** Hibrit SQLite (`node:sqlite`) + Vercel JSON Fallback
 - **Canlı Veri Kaynağı:** [altinkaynak.com](https://www.altinkaynak.com/) Canlı Döviz ve Altın API'si
 - **İkon Seti:** Font Awesome 6.5.1
 - **Tipografi:** Google Fonts (Plus Jakarta Sans)

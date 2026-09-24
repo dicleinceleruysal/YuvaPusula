@@ -684,7 +684,7 @@ function checkMonthStartNotification() {
             showToast('🗓️ Yeni ay başladı! Aylık maaşlar ve bütçe güncellendi. Sabit giderlerinizi kontrol etmeyi unutmayın! 💰');
             if (appState.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
                 try {
-                    new Notification('Ailem - Yeni Ay & Bütçe', {
+                    new Notification('YuvaPusula - Yeni Ay & Bütçe', {
                         body: '🗓️ Yeni ay başladı! Aylık maaşlar ve bütçe güncellendi. Sabit giderlerinizi kontrol etmeyi unutmayın!',
                         icon: 'icons/icon.svg'
                     });
@@ -1039,7 +1039,7 @@ function renderApp() {
     if (!appState.currentUser || !appState.familyData) {
         authScreen.classList.remove('hidden');
         mainApp.classList.add('hidden');
-        document.title = 'Ailem - Giriş Yap';
+        document.title = 'YuvaPusula - Giriş Yap';
         return;
     }
 
@@ -1050,7 +1050,7 @@ function renderApp() {
     const user = appState.currentUser;
 
     // Dinamik Başlık ve Logo Güncelleme
-    const dynamicTitleText = `${family.name} Uygulaması`;
+    const dynamicTitleText = `${family.name} - YuvaPusula`;
     document.title = dynamicTitleText;
     
     const dynamicTitleEl = document.getElementById('dynamicAppTitle');

@@ -1,11 +1,11 @@
 {
-  "name": "Ailem - Aile İçi Paylaşım ve Yaşam Alanı",
-  "short_name": "Ailem",
-  "description": "Aile içi ortak liste, görevler, duyurular ve bütçe takip uygulaması",
+  "name": "YuvaPusula - Aile Yönetimi & Rehber PWA",
+  "short_name": "YuvaPusula",
+  "description": "Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için yön gösteren güvenilir aile rehberi.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#4f46e5",
+  "theme_color": "#312e81",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -15,5 +15,5 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["lifestyle", "productivity", "utilities"]
+  "categories": ["lifestyle", "finance", "productivity", "utilities"]
 }

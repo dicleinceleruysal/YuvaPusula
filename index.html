@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ailem - Aile İçi Paylaşım Uygulaması</title>
+    <title>YuvaPusula - Aile Yaşamı, Bütçe & Zaman Rehberi</title>
     
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#1e1b4b">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ailem">
+    <meta name="apple-mobile-web-app-title" content="YuvaPusula">
     <link rel="apple-touch-icon" href="icons/icon.svg">
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 
@@ -21,17 +21,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- App Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
     <!-- PWA Kurulum Bildirimi (Mobile Banner) -->
     <div id="pwaInstallBanner" class="pwa-banner hidden">
         <div class="pwa-banner-content">
-            <div class="pwa-icon">🏠</div>
+            <div class="pwa-icon">
+                <img src="icons/icon.svg" style="width: 28px; height: 28px; border-radius: 6px;" alt="YuvaPusula Logo">
+            </div>
             <div class="pwa-text">
-                <strong>Uygulamayı Telefona Yükle</strong>
-                <p>Ana ekrana ekleyip tam ekran kullanın</p>
+                <strong>YuvaPusula'yı Telefona Yükle</strong>
+                <p>Ana ekrana ekleyin, aile rehberinize anında ulaşın</p>
             </div>
         </div>
         <div class="pwa-banner-actions">
@@ -44,11 +46,11 @@
     <section id="authScreen" class="auth-wrapper">
         <div class="auth-card">
             <div class="auth-header">
-                <div class="app-logo">
-                    <i class="fa-solid fa-people-roof"></i>
+                <div class="app-logo" style="background: transparent; box-shadow: none; padding: 0;">
+                    <img src="icons/icon.svg" style="width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 8px 24px rgba(30, 27, 75, 0.4);" alt="YuvaPusula">
                 </div>
-                <h2>Ailem Uygulaması</h2>
-                <p>Ailenizle her an iletişimde ve organize kalın</p>
+                <h2 style="margin-top: 10px;">YuvaPusula</h2>
+                <p>Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için güvenilir aile rehberiniz</p>
             </div>
 
             <div class="auth-steps">
@@ -96,7 +98,7 @@
                     <div id="createFamilyFields" class="form-group hidden">
                         <label><i class="fa-solid fa-house-chimney-user"></i> Aile Adı (Soyadı veya Tanım)</label>
                         <input type="text" id="familyNameInput" placeholder="Örn: Uysal">
-                        <small class="field-hint">Uygulama adı <b>"[Aile Adı] Ailesi Uygulaması"</b> olarak güncellenecektir.</small>
+                        <small class="field-hint">Uygulama adı <b>"[Aile Adı] Ailesi - YuvaPusula"</b> olarak ayarlanacaktır.</small>
                     </div>
 
                     <!-- Mevcut Aileye Katılma Alanı -->
@@ -107,7 +109,7 @@
                     </div>
 
                     <button type="submit" class="btn-primary" id="btnAuthSubmit">
-                        <i class="fa-solid fa-right-to-bracket"></i> Giriş Yap
+                        <i class="fa-solid fa-compass"></i> YuvaPusula'ya Giriş Yap
                     </button>
                 </form>
             </div>
@@ -121,12 +123,12 @@
         <header class="app-header">
             <div class="header-top">
                 <div class="family-branding">
-                    <div class="family-avatar-icon">
-                        <i class="fa-solid fa-house-heart"></i>
+                    <div class="family-avatar-icon" style="background: transparent; padding: 0;">
+                        <img src="icons/icon.svg" style="width: 36px; height: 36px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" alt="YuvaPusula Logo">
                     </div>
                     <div>
                         <h1 id="dynamicAppTitle">Uysal Ailesi</h1>
-                        <span class="family-tagline"><i class="fa-solid fa-shield-heart"></i> Aile İçi Yaşam Alanı</span>
+                        <span class="family-tagline"><i class="fa-solid fa-compass"></i> YuvaPusula • Zaman & Bütçe Rehberi</span>
                     </div>
                 </div>
 

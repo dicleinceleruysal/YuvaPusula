@@ -1,7 +1,7 @@
 {
-  "name": "ailem-pwa",
+  "name": "yuvapusula",
   "version": "1.0.0",
-  "description": "Aile İçi Paylaşım ve Planlama PWA Uygulaması",
+  "description": "YuvaPusula - Aile İçi Paylaşım, Bütçe, Görev ve Planlama Rehberi",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
