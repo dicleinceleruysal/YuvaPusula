@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>YuvaPusula - Aile Yaşamı, Bütçe & Zaman Rehberi</title>
     
-    <!-- PWA Settings -->
+    <!-- PWA Settings & Standard Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e1b4b">
+    <meta name="application-name" content="YuvaPusula">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="YuvaPusula">
+    <meta name="msapplication-TileColor" content="#1e1b4b">
+    <meta name="msapplication-navbutton-color" content="#1e1b4b">
+    <meta name="format-detection" content="telephone=no">
     <link rel="apple-touch-icon" href="icons/icon.svg">
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 
@@ -21,9 +26,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- App Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
+
+    <!-- Çevrimdışı Durum Çubuğu (Offline Bar) -->
+    <div id="offlineIndicator" class="offline-indicator hidden">
+        <i class="fa-solid fa-cloud-slash"></i> <span>Çevrimdışı moddasınız. Kaydedilen verileriniz yerel depolamada güvende.</span>
+    </div>
 
     <!-- PWA Kurulum Bildirimi (Mobile Banner) -->
     <div id="pwaInstallBanner" class="pwa-banner hidden">
@@ -133,6 +143,9 @@
                 </div>
 
                 <div class="header-actions-right">
+                    <button class="header-install-btn hidden" id="headerInstallBtn" onclick="triggerPWAInstall()" title="YuvaPusula'yı Cihaza Yükle">
+                        <i class="fa-solid fa-download"></i> <span>Yükle</span>
+                    </button>
                     <button class="header-chat-btn" onclick="switchTab('tabChat')" title="Aile Sohbeti">
                         <i class="fa-solid fa-comment-dots"></i>
                         <span id="headerChatBadge" class="chat-badge-dot hidden">0</span>
@@ -1311,6 +1324,42 @@
         </div>
     </div>
 
+    <!-- MODAL: iOS SAFARI PWA KURULUM REHBERİ -->
+    <div id="modalIosInstall" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 420px; text-align: center;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> YuvaPusula'yı iPhone'a Yükle</h3>
+                <button class="btn-close" onclick="closeModal('modalIosInstall')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 20px;">
+                <img src="icons/icon.svg" style="width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 12px auto; display: block; box-shadow: 0 8px 24px rgba(30,27,75,0.3);" alt="YuvaPusula">
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Ana Ekrana Ekleyin</h4>
+                <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">
+                    Safari tarayıcısında 2 basit adımda tam ekran bir mobil uygulama deneyimi kazanın:
+                </p>
+
+                <div class="ios-guide-box">
+                    <div class="ios-step">
+                        <div class="ios-step-num">1</div>
+                        <div class="ios-step-text">
+                            Safari'nin en alt veya üst menüsündeki <strong>Paylaş <i class="fa-solid fa-arrow-up-from-bracket" style="color: #0284c7;"></i> (Share)</strong> simgesine dokunun.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">2</div>
+                        <div class="ios-step-text">
+                            Açılan menüyü aşağı kaydırıp <strong>'Ana Ekrana Ekle' <i class="fa-regular fa-square-plus" style="color: #10b981;"></i> (Add to Home Screen)</strong> seçeneğine tıklayın.
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" style="margin-top: 10px; width: 100%;" onclick="closeModal('modalIosInstall')">
+                    <i class="fa-solid fa-check"></i> Anladım
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Anlık Gelen Mesaj Bildirim Kartı (In-App Floating Banner) -->
     <div id="inAppMsgBanner" class="in-app-msg-banner hidden" onclick="openActiveChatFromBanner()">
         <div class="in-app-msg-left">
@@ -1330,6 +1379,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>

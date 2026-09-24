@@ -1,19 +1,72 @@
 {
-  "name": "YuvaPusula - Aile Yönetimi & Rehber PWA",
+  "name": "YuvaPusula - Aile Yönetimi, Bütçe & Rehber",
   "short_name": "YuvaPusula",
   "description": "Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için yön gösteren güvenilir aile rehberi.",
   "start_url": "./index.html",
+  "scope": "./",
+  "id": "/yuvapusula",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "background_color": "#0f172a",
-  "theme_color": "#312e81",
+  "theme_color": "#1e1b4b",
   "orientation": "portrait-primary",
+  "lang": "tr-TR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./icons/icon.svg",
-      "sizes": "192x192 512x512",
+      "sizes": "72x72 96x96 128x128 144x144 152x152 180x180 192x192 384x384 512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["lifestyle", "finance", "productivity", "utilities"]
+  "shortcuts": [
+    {
+      "name": "Aile Bütçesi & Maaşlar",
+      "short_name": "Bütçe",
+      "description": "Aylık maaşlar, sabit giderler ve harcama takibi",
+      "url": "./index.html?tab=finance",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Yatırımlar & Kurlar",
+      "short_name": "Yatırım",
+      "description": "Altın, Dolar, Euro portföyü ve canlı kurlar",
+      "url": "./index.html?tab=finance&section=invest",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Alışveriş Listesi",
+      "short_name": "Alışveriş",
+      "description": "Eksik ürünler ve ortak alışveriş listesi",
+      "url": "./index.html?tab=shopping",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Aile Sohbeti",
+      "short_name": "Sohbet",
+      "description": "Anlık aile mesajlaşması ve duyurular",
+      "url": "./index.html?tab=messages",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Aile Planları",
+      "short_name": "Planlar",
+      "description": "Tatil, etkinlik ve seyahat planları",
+      "url": "./index.html?tab=plans",
+      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    }
+  ],
+  "categories": [
+    "lifestyle",
+    "finance",
+    "productivity",
+    "utilities"
+  ]
 }

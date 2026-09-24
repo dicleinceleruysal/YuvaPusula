@@ -745,43 +745,136 @@ async function syncWithServer(silent = false) {
     }
 }
 
-// PWA Service Worker & Yükleme İşleyicisi
-function initPWA() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker kayıt başarılı:', reg.scope))
-            .catch(err => console.log('Service Worker kayıt hatası:', err));
+// PWA Service Worker, Çevrimdışı Mod & Yükleme İşleyicisi
+function isIosDevice() {
+    return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+}
+
+function isStandaloneMode() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function triggerPWAInstall() {
+    if (isStandaloneMode()) {
+        showToast('YuvaPusula zaten cihazınızda yüklü ve tam ekran çalışıyor! ✨');
+        return;
     }
 
-    // PWA Kurulum Butonu Olayı
+    if (appState.deferredPrompt) {
+        appState.deferredPrompt.prompt();
+        appState.deferredPrompt.userChoice.then(({ outcome }) => {
+            if (outcome === 'accepted') {
+                showToast('YuvaPusula başarıyla yükleniyor! 🎉');
+            }
+            appState.deferredPrompt = null;
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.classList.add('hidden');
+            const headerBtn = document.getElementById('headerInstallBtn');
+            if (headerBtn) headerBtn.classList.add('hidden');
+        });
+    } else if (isIosDevice()) {
+        openModal('modalIosInstall');
+    } else {
+        showToast('Tarayıcı menünüzden "Ana Ekrana Ekle" veya "Uygulamayı Yükle" seçeneğini seçebilirsiniz 📲');
+    }
+}
+
+function initPWA() {
+    // 1. Service Worker Kaydı
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => {
+                    console.log('YuvaPusula PWA Service Worker hazır:', reg.scope);
+                })
+                .catch(err => {
+                    console.log('Service Worker kayıt hatası:', err);
+                });
+        });
+    }
+
+    // 2. Çevrimdışı / Çevrimiçi Dinleyicileri
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    
+    function updateOnlineStatus() {
+        if (!navigator.onLine) {
+            if (offlineIndicator) offlineIndicator.classList.remove('hidden');
+            showToast('📡 Çevrimdışı moddasınız. Verileriniz yerel bellekte korunmaktadır.');
+        } else {
+            if (offlineIndicator) offlineIndicator.classList.add('hidden');
+            showToast('🟢 İnternet bağlantısı sağlandı. Veriler güncelleniyor.');
+            syncWithServer(true);
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    if (!navigator.onLine && offlineIndicator) {
+        offlineIndicator.classList.remove('hidden');
+    }
+
+    // 3. Standalone Mod Kontrolü
+    const headerInstallBtn = document.getElementById('headerInstallBtn');
+    const pwaBanner = document.getElementById('pwaInstallBanner');
+
+    if (isStandaloneMode()) {
+        console.log('YuvaPusula Standalone PWA modunda çalışıyor 🚀');
+        if (pwaBanner) pwaBanner.classList.add('hidden');
+        if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+    } else {
+        if (headerInstallBtn) headerInstallBtn.classList.remove('hidden');
+        if (isIosDevice() && !localStorage.getItem('yuvapusula_pwa_dismissed')) {
+            // iOS için ilk girişte banner'ı göster
+            setTimeout(() => {
+                if (pwaBanner && !isStandaloneMode()) pwaBanner.classList.remove('hidden');
+            }, 3000);
+        }
+    }
+
+    // 4. Android / Chrome beforeinstallprompt Yakalama
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         appState.deferredPrompt = e;
-        const banner = document.getElementById('pwaInstallBanner');
-        if (banner) banner.classList.remove('hidden');
+        if (!isStandaloneMode() && !localStorage.getItem('yuvapusula_pwa_dismissed')) {
+            if (pwaBanner) pwaBanner.classList.remove('hidden');
+        }
+        if (headerInstallBtn) headerInstallBtn.classList.remove('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+        appState.deferredPrompt = null;
+        if (pwaBanner) pwaBanner.classList.add('hidden');
+        if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+        showToast('YuvaPusula başarıyla kuruldu! Hoş geldiniz 🧭');
     });
 
     const btnInstall = document.getElementById('btnInstallPwa');
     if (btnInstall) {
-        btnInstall.addEventListener('click', async () => {
-            if (appState.deferredPrompt) {
-                appState.deferredPrompt.prompt();
-                const { outcome } = await appState.deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    showToast('Uygulama telefonunuza yükleniyor! 🎉');
-                }
-                appState.deferredPrompt = null;
-                document.getElementById('pwaInstallBanner').classList.add('hidden');
-            }
-        });
+        btnInstall.addEventListener('click', triggerPWAInstall);
     }
 
     const btnCloseBanner = document.getElementById('btnClosePwaBanner');
     if (btnCloseBanner) {
         btnCloseBanner.addEventListener('click', () => {
-            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            if (pwaBanner) pwaBanner.classList.add('hidden');
+            localStorage.setItem('yuvapusula_pwa_dismissed', '1');
         });
     }
+
+    // 5. PWA Shortcut URL Parametrelerini Dinleme
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetTab = urlParams.get('tab');
+        if (targetTab) {
+            setTimeout(() => {
+                if (targetTab === 'finance') switchTab('tabFinance');
+                else if (targetTab === 'shopping') switchTab('tabShopping');
+                else if (targetTab === 'messages' || targetTab === 'chat') switchTab('tabChat');
+                else if (targetTab === 'plans') switchTab('tabPlans');
+                else if (targetTab === 'tasks') switchTab('tabTasks');
+            }, 500);
+        }
+    } catch (e) {}
 }
 
 // LocalStorage'dan Durum Yükleme
