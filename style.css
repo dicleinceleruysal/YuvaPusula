@@ -312,18 +312,18 @@ body {
 }
 
 /* ==========================================================
-   APP HEADER (MOBİL ÖNCELİKLİ NATIVE APP BAR)
+   APP HEADER (MOBİL ÖNCELİKLİ MODERN VE SERBEST AKIŞLI APP BAR)
    ========================================================== */
 .app-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+    background: linear-gradient(135deg, #090d16 0%, #1e1b4b 55%, #312e81 100%);
     color: white;
-    padding: calc(12px + var(--safe-top)) 16px 14px 16px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
-    position: sticky;
-    top: 0;
-    z-index: 50;
+    padding: calc(14px + var(--safe-top)) 16px 16px 16px;
+    border-bottom-left-radius: 26px;
+    border-bottom-right-radius: 26px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+    position: relative; /* Üst taraf sabit kalmaz, içerikle birlikte doğal kayar */
+    top: auto;
+    z-index: 10;
     flex-shrink: 0;
 }
 
@@ -331,30 +331,31 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .family-branding {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .family-avatar-icon {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .family-branding h1 {
-    font-size: 1.15rem;
+    font-size: 1.18rem;
     font-weight: 800;
     letter-spacing: -0.4px;
     line-height: 1.2;
@@ -363,11 +364,12 @@ body {
 
 .family-tagline {
     font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.8);
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    margin-top: 2px;
 }
 
 .family-tagline i {
