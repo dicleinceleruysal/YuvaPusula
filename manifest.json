@@ -4,7 +4,7 @@
   "description": "Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için yön gösteren güvenilir aile rehberi.",
   "start_url": "./index.html",
   "scope": "./",
-  "id": "/yuvapusula",
+  "id": "yuvapusula-pwa",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay",
