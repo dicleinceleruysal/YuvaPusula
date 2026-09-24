@@ -1,7 +1,9 @@
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
+const os = require('os');
 
-const DB_PATH = path.join(__dirname, 'database.sqlite');
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+const DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.sqlite') : path.join(__dirname, 'database.sqlite');
 const db = new DatabaseSync(DB_PATH);
 
 // Veritabanı tablolarını oluştur (SQLite DDL)
@@ -638,6 +640,9 @@ function markMessagesAsRead(familyId, currentUserId, chatPartnerId) {
     }
     return getFullFamilyData(familyId);
 }
+
+// Otomatik başlat
+initDatabase();
 
 module.exports = {
     db,
