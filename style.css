@@ -43,7 +43,7 @@
 
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #0f172a;
+    background-color: #f8fafc;
     color: var(--text-main);
     min-height: 100vh;
     min-height: 100dvh;
@@ -315,123 +315,143 @@ body {
    APP HEADER (MOBİL ÖNCELİKLİ MODERN VE SERBEST AKIŞLI APP BAR)
    ========================================================== */
 .app-header {
-    background: linear-gradient(135deg, #090d16 0%, #1e1b4b 55%, #312e81 100%);
-    color: white;
-    padding: calc(14px + var(--safe-top)) 16px 16px 16px;
-    border-bottom-left-radius: 26px;
-    border-bottom-right-radius: 26px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
-    position: relative; /* Üst taraf sabit kalmaz, içerikle birlikte doğal kayar */
+    background: #ffffff;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    padding: calc(12px + var(--safe-top)) 16px 14px 16px;
+    border-radius: 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    position: relative; /* Üst taraf sabit kalmaz, içerikle birlikte serbest kayar */
     top: auto;
-    z-index: 10;
+    z-index: 20;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    width: 100%;
 }
 
 .family-branding {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    min-width: 0;
 }
 
 .family-avatar-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
 }
 
 .family-branding h1 {
-    font-size: 1.18rem;
+    font-size: 1.15rem;
     font-weight: 800;
-    letter-spacing: -0.4px;
+    letter-spacing: -0.3px;
     line-height: 1.2;
-    color: #ffffff;
+    color: #0f172a;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .family-tagline {
     font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: #64748b;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     margin-top: 2px;
 }
 
 .family-tagline i {
-    color: #34d399;
+    color: #10b981;
 }
 
 .header-actions-right {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .header-chat-btn {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #334155;
     width: 38px;
     height: 38px;
-    border-radius: 50%;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1rem;
     cursor: pointer;
     position: relative;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .header-chat-btn:active {
     transform: scale(0.92);
-    background: rgba(255, 255, 255, 0.25);
+    background: #e2e8f0;
+    color: #4f46e5;
+}
+
+.chat-badge-dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ffffff;
 }
 
 .user-profile-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 4px 10px 4px 4px;
-    border-radius: var(--radius-full);
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    padding: 3px 10px 3px 4px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.15s ease;
 }
 
 .user-profile-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.25);
+    background: #f1f5f9;
 }
 
 .user-avatar {
-    width: 30px;
-    height: 30px;
-    background: #ffffff;
+    width: 28px;
+    height: 28px;
+    background: #e0e7ff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 15px;
 }
 
 .user-badge-info {
@@ -444,12 +464,12 @@ body {
     font-size: 0.76rem;
     font-weight: 800;
     line-height: 1.1;
-    color: #ffffff;
+    color: #0f172a;
 }
 
 .user-badge-info small {
     font-size: 0.64rem;
-    color: rgba(255, 255, 255, 0.75);
+    color: #64748b;
     font-weight: 600;
 }
 
@@ -467,10 +487,11 @@ body {
 }
 
 .quick-stat-pill {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 5px 12px;
-    border-radius: var(--radius-full);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 700;
     display: inline-flex;
@@ -478,13 +499,20 @@ body {
     gap: 5px;
     white-space: nowrap;
     cursor: pointer;
-    color: #ffffff;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.quick-stat-pill i {
+    color: #6366f1;
+    font-size: 0.75rem;
 }
 
 .quick-stat-pill:active {
     transform: scale(0.94);
-    background: rgba(255, 255, 255, 0.22);
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4f46e5;
 }
 
 /* ==========================================================
@@ -492,7 +520,7 @@ body {
    ========================================================== */
 .app-content {
     flex: 1;
-    padding: 16px 16px calc(86px + var(--safe-bottom));
+    padding: 14px 14px calc(90px + var(--safe-bottom));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -508,42 +536,68 @@ body {
 
 /* Hoşgeldin Kartı */
 .welcome-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 18px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 18px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-sm);
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px -4px rgba(30, 27, 75, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-card::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 110px;
+    height: 110px;
+    background: radial-gradient(circle, rgba(236, 72, 153, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .welcome-text h3 {
     font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.2px;
 }
 
 .welcome-text p {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 2px;
+    font-size: 0.76rem;
+    color: #cbd5e1;
+    margin-top: 3px;
+    line-height: 1.35;
+    max-width: 220px;
 }
 
-.btn-action-sm {
-    background: var(--primary);
-    color: white;
-    border: none;
+.welcome-card .btn-action-sm {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
     padding: 8px 14px;
-    border-radius: var(--radius-full);
+    border-radius: 999px;
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.15s ease;
+}
+
+.welcome-card .btn-action-sm:active {
+    transform: scale(0.93);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Hızlı Aksiyonlar Izgarası */
@@ -555,12 +609,13 @@ body {
 }
 
 .section-title h4 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-main);
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 6px;
+    letter-spacing: -0.2px;
 }
 
 .count-badge {
@@ -575,65 +630,66 @@ body {
 .quick-actions-grid-4 {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 18px;
 }
 
 .quick-action-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
     padding: 12px 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.15s, border-color 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s, box-shadow 0.15s;
 }
 
 .quick-action-card:active {
-    transform: scale(0.94);
+    transform: scale(0.92);
     border-color: var(--primary);
+    background: #f8fafc;
 }
 
 .action-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    color: white;
+    font-size: 1.15rem;
 }
 
-.chat-icon { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35); }
-.whatsapp-icon { background: #25D366; }
-.plan-icon { background: #8b5cf6; }
-.shop-icon { background: #0ea5e9; }
-.task-icon { background: #10b981; }
-.money-icon { background: #f59e0b; }
+.action-icon.chat-icon { background: #eef2ff; color: #4f46e5; }
+.action-icon.shop-icon { background: #f0fdf4; color: #16a34a; }
+.action-icon.task-icon { background: #fef3c7; color: #d97706; }
+.action-icon.money-icon { background: #fdf2f8; color: #db2777; }
+.action-icon.plan-icon { background: #f5f3ff; color: #7c3aed; }
+.action-icon.whatsapp-icon { background: #dcfce7; color: #15803d; }
 
 .quick-action-card span {
     font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--text-main);
+    font-weight: 700;
+    color: #334155;
     text-align: center;
+    white-space: nowrap;
 }
 
 /* Plan Ekle Özel Hero Butonu (Ana Sayfa) */
 .plan-hero-action-card {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #9333ea 100%);
     color: white;
-    border-radius: var(--radius-md);
+    border-radius: 18px;
     padding: 14px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);
     transition: transform 0.15s, box-shadow 0.15s;
     margin-bottom: 20px;
 }
@@ -2118,28 +2174,27 @@ body {
 }
 
 /* ==========================================================
-   ALT NAVİGASYON BARI (BOTTOM NAVIGATION)
-   ========================================================== */
-/* ==========================================================
-   ALT NAVİGASYON BARI (NATIVE APP TAB BAR)
+   ALT NAVİGASYON BARI (MOBİL FLOATING ISLAND CAPSULE TAB BAR)
    ========================================================== */
 .bottom-nav {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100vw;
-    max-width: 100%;
-    background: rgba(255, 255, 255, 0.9);
+    bottom: calc(10px + var(--safe-bottom));
+    left: 10px;
+    right: 10px;
+    margin: 0 auto;
+    max-width: 520px;
+    height: 64px;
+    background: rgba(15, 23, 42, 0.94);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid rgba(226, 232, 240, 0.85);
-    padding: 6px 4px calc(6px + var(--safe-bottom)) 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-around;
     align-items: center;
+    padding: 0 6px;
     z-index: 999;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .nav-item {
@@ -2150,26 +2205,27 @@ body {
     align-items: center;
     justify-content: center;
     gap: 3px;
-    color: #64748b;
+    color: #94a3b8;
     cursor: pointer;
     position: relative;
-    padding: 4px 2px;
+    padding: 6px 2px;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     flex: 1;
     min-width: 0;
-    border-radius: 12px;
+    border-radius: 16px;
 }
 
 .nav-item i {
-    font-size: 1.12rem;
-    transition: transform 0.2s ease, color 0.2s ease;
+    font-size: 1.15rem;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
 
 .nav-item span {
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 0.64rem;
+    font-weight: 600;
     letter-spacing: -0.2px;
     white-space: nowrap;
+    transition: color 0.2s ease;
 }
 
 .nav-item:active {
@@ -2177,31 +2233,37 @@ body {
 }
 
 .nav-item.active {
-    color: #4f46e5;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .nav-item.active i {
-    transform: translateY(-2px) scale(1.1);
-    color: #4f46e5;
+    transform: translateY(-2px) scale(1.12);
+    color: #38bdf8;
+}
+
+.nav-item.active span {
+    color: #ffffff;
+    font-weight: 800;
 }
 
 .nav-badge {
     position: absolute;
-    top: 0px;
-    right: 16%;
+    top: 3px;
+    right: calc(50% - 16px);
     background: #ef4444;
-    color: white;
+    color: #ffffff;
     font-size: 0.6rem;
     font-weight: 800;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 50%;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0 3px;
-    border: 1.5px solid #ffffff;
-    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    border: 1.5px solid #0f172a;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
 }
 
 /* ==========================================================
@@ -2232,7 +2294,9 @@ body {
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 88vh;
+    max-height: 88dvh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     position: relative;
 }
 
