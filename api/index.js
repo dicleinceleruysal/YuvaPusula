@@ -1,6 +1,13 @@
 const https = require('https');
 const dbManager = require('../database.js');
 
+// Veritabanını başlat
+try {
+    dbManager.initDatabase();
+} catch (e) {
+    console.warn('DB başlatma uyarısı:', e);
+}
+
 let cachedRates = null;
 let lastRatesFetchTime = 0;
 const RATES_CACHE_DURATION_MS = 25000;
@@ -162,8 +169,19 @@ function sendJson(res, statusCode, data) {
 }
 
 module.exports = async function handler(req, res) {
+    // Veritabanı başlatma kontrolü
+    try {
+        dbManager.initDatabase();
+    } catch (e) {}
+
     // CORS Preflight
     if (req.method === 'OPTIONS') {
+        if (res.status && typeof res.status === 'function') {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            return res.status(204).end();
+        }
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -173,7 +191,18 @@ module.exports = async function handler(req, res) {
         return;
     }
 
+    // Pathname çözümleme (Vercel Serverless, Standalone & Rewrite desteği)
     let pathname = (req.url || '').split('?')[0];
+
+    if (req.query && req.query.all) {
+        const allPath = Array.isArray(req.query.all) ? req.query.all.join('/') : req.query.all;
+        pathname = '/api/' + allPath;
+    } else if (req.headers && req.headers['x-matched-path']) {
+        pathname = req.headers['x-matched-path'];
+    } else if (req.headers && req.headers['x-vercel-matched-path']) {
+        pathname = req.headers['x-vercel-matched-path'];
+    }
+
     if (!pathname.startsWith('/api')) {
         pathname = '/api' + (pathname.startsWith('/') ? pathname : '/' + pathname);
     }

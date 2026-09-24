@@ -1,8 +1,10 @@
 {
+  "version": 2,
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/[...all]?all=$1"
     }
   ]
 }
