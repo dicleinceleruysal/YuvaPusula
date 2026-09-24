@@ -196,7 +196,7 @@ function sendJson(res, statusCode, data) {
     res.end(JSON.stringify(data));
 }
 
-const server = http.createServer(async (req, res) => {
+async function appHandler(req, res) {
     // CORS Preflight
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
@@ -427,10 +427,14 @@ const server = http.createServer(async (req, res) => {
     // STATİK DOSYA SUNUCUSU (PWA)
     // ==========================================================
     let reqUrl = pathname;
-    if (reqUrl === '/') reqUrl = '/index.html';
+    if (reqUrl === '/' || reqUrl === '') reqUrl = '/index.html';
 
-    const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '');
-    const filePath = path.join(BASE_DIR, safePath);
+    const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '').replace(/^[\\\/]/, '');
+    let filePath = path.join(BASE_DIR, safePath);
+
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(BASE_DIR, 'index.html');
+    }
 
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
@@ -453,7 +457,9 @@ const server = http.createServer(async (req, res) => {
         const readStream = fs.createReadStream(filePath);
         readStream.pipe(res);
     });
-});
+}
+
+const server = http.createServer(appHandler);
 
 if (require.main === module) {
     server.listen(PORT, '0.0.0.0', () => {
@@ -475,6 +481,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = (req, res) => {
-    server.emit('request', req, res);
-};
+module.exports = appHandler;

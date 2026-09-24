@@ -4,12 +4,11 @@
   "description": "YuvaPusula - Aile İçi Paylaşım, Bütçe, Görev ve Planlama Rehberi",
   "main": "server.js",
   "scripts": {
-    "build": "echo 'Build complete'",
     "start": "node server.js",
     "dev": "node server.js"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "keywords": ["pwa", "family", "planning", "tasks", "shopping"],
   "author": "Uysal Ailesi",
