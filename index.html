@@ -129,8 +129,86 @@
     <!-- 2. ANA UYGULAMA EKRANI (MAIN APP) -->
     <div id="mainApp" class="app-container hidden">
 
-        <!-- ÜST BAŞLIK / HEADER -->
-        <header class="app-header">
+        <!-- DESKTOP SOL YAN MENÜ (SIDEBAR) -->
+        <aside class="desktop-sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">
+                    <img src="icons/icon.svg" alt="YuvaPusula">
+                </div>
+                <div class="sidebar-brand-text">
+                    <h2 id="sidebarFamilyTitle">Uysal Ailesi</h2>
+                    <span><i class="fa-solid fa-compass"></i> YuvaPusula Rehberi</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="sidebar-nav-item active" data-tab-target="tabPano" onclick="switchTab('tabPano')">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Aile Panosu</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabChat" onclick="switchTab('tabChat')">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span>Aile Sohbeti</span>
+                    <span class="sidebar-badge hidden" id="sidebarChatBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabPlans" onclick="switchTab('tabPlans')">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Planlar & Keşif</span>
+                    <span class="sidebar-badge hidden" id="sidebarPlansBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabShopping" onclick="switchTab('tabShopping')">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Alışveriş Listesi</span>
+                    <span class="sidebar-badge hidden" id="sidebarShoppingBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks')">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Görev & Sorumluluk</span>
+                    <span class="sidebar-badge hidden" id="sidebarTasksBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabExpenses" onclick="switchTab('tabExpenses')">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Bütçe & Yatırım</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers')">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Aile Bireyleri</span>
+                </button>
+            </nav>
+
+            <!-- Hızlı İşlem Ekle Butonu -->
+            <div class="sidebar-quick-action">
+                <button class="btn-sidebar-create" onclick="openPlanCategoryPicker()">
+                    <i class="fa-solid fa-plus"></i> <span>Yeni Plan / Not</span>
+                </button>
+            </div>
+
+            <!-- Alt Profil ve Aile Kartı -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="openSwitchUserModal()" title="Kullanıcı Değiştir">
+                    <div class="sidebar-user-avatar" id="sidebarUserAvatar">👨</div>
+                    <div class="sidebar-user-info">
+                        <span id="sidebarUserName">Ahmet</span>
+                        <small id="sidebarUserRole">Baba</small>
+                    </div>
+                    <i class="fa-solid fa-repeat sidebar-switch-icon"></i>
+                </div>
+                <div class="sidebar-actions">
+                    <button class="sidebar-btn-sm" onclick="copyInviteCode()" title="Davet Kodunu Kopyala">
+                        <i class="fa-solid fa-copy"></i> Davet Kodu
+                    </button>
+                    <button class="sidebar-btn-sm btn-logout" onclick="logout()" title="Çıkış Yap">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- SAĞ ANA İÇERİK SARMALAYICI (MAIN WRAPPER) -->
+        <div class="app-main-wrapper">
+
+            <!-- ÜST BAŞLIK / HEADER -->
+            <header class="app-header">
             <div class="header-top">
                 <div class="family-branding">
                     <div class="family-avatar-icon" style="background: transparent; padding: 0;">
@@ -709,42 +787,43 @@
             </section>
         </main>
 
-        <!-- ALT MOBİL NAVİGASYON BARI (BOTTOM NAVIGATION) -->
+        <!-- ALT MOBİL NAVİGASYON BARI (BOTTOM NAVIGATION - MOBİL) -->
         <nav class="bottom-nav">
-            <button class="nav-item active" onclick="switchTab('tabPano', this)">
+            <button class="nav-item active" data-tab-target="tabPano" onclick="switchTab('tabPano', this)">
                 <i class="fa-solid fa-house"></i>
                 <span>Pano</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabChat', this)">
+            <button class="nav-item" data-tab-target="tabChat" onclick="switchTab('tabChat', this)">
                 <i class="fa-solid fa-comment-dots"></i>
                 <span>Sohbet</span>
                 <span class="nav-badge hidden" id="navChatBadge">0</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabPlans', this)">
+            <button class="nav-item" data-tab-target="tabPlans" onclick="switchTab('tabPlans', this)">
                 <i class="fa-solid fa-compass"></i>
                 <span>Planlar</span>
                 <span class="nav-badge hidden" id="navPlansBadge">0</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabShopping', this)">
+            <button class="nav-item" data-tab-target="tabShopping" onclick="switchTab('tabShopping', this)">
                 <i class="fa-solid fa-cart-shopping"></i>
                 <span>Alışveriş</span>
                 <span class="nav-badge hidden" id="navShoppingBadge">0</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabTasks', this)">
+            <button class="nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks', this)">
                 <i class="fa-solid fa-circle-check"></i>
                 <span>Görevler</span>
                 <span class="nav-badge hidden" id="navTasksBadge">0</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabExpenses', this)">
+            <button class="nav-item" data-tab-target="tabExpenses" onclick="switchTab('tabExpenses', this)">
                 <i class="fa-solid fa-wallet"></i>
                 <span>Bütçe</span>
             </button>
-            <button class="nav-item" onclick="switchTab('tabMembers', this)">
+            <button class="nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers', this)">
                 <i class="fa-solid fa-users"></i>
                 <span>Ailem</span>
             </button>
         </nav>
-    </div>
+        </div> <!-- /app-main-wrapper -->
+    </div> <!-- /mainApp -->
 
     <!-- ==================== MODALLAR ==================== -->
 

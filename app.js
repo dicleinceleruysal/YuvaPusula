@@ -1154,6 +1154,16 @@ function renderApp() {
     document.getElementById('headerUserName').textContent = user.name;
     document.getElementById('headerUserRole').textContent = user.role;
     
+    // Desktop Sidebar Bilgileri
+    const sidebarTitleEl = document.getElementById('sidebarFamilyTitle');
+    if (sidebarTitleEl) sidebarTitleEl.textContent = `${family.name} Ailesi`;
+    const sidebarAvatarEl = document.getElementById('sidebarUserAvatar');
+    if (sidebarAvatarEl) sidebarAvatarEl.textContent = user.avatar;
+    const sidebarUserEl = document.getElementById('sidebarUserName');
+    if (sidebarUserEl) sidebarUserEl.textContent = user.name;
+    const sidebarRoleEl = document.getElementById('sidebarUserRole');
+    if (sidebarRoleEl) sidebarRoleEl.textContent = user.role;
+
     document.getElementById('welcomeUserName').textContent = user.name.split(' ')[0];
     document.getElementById('welcomeFamilyText').textContent = `${family.name} panosunda bugün ${family.posts.length} duyuru ve ${family.tasks.filter(t=>!t.completed).length} aktif görev var.`;
 
@@ -1207,31 +1217,35 @@ function updateQuickStats() {
     const elCountAlisveris = document.getElementById('countHubAlisveris');
     if (elCountAlisveris) elCountAlisveris.textContent = `${countAlisveris} İstek`;
 
-    // Navigasyon Rozetleri
+    // Navigasyon Rozetleri (Mobil & Masaüstü Sidebar)
     const plansBadge = document.getElementById('navPlansBadge');
-    if (plansBadge) {
-        if (pendingPlans > 0) {
-            plansBadge.textContent = pendingPlans;
-            plansBadge.classList.remove('hidden');
-        } else {
-            plansBadge.classList.add('hidden');
-        }
+    const sidePlansBadge = document.getElementById('sidebarPlansBadge');
+    if (pendingPlans > 0) {
+        if (plansBadge) { plansBadge.textContent = pendingPlans; plansBadge.classList.remove('hidden'); }
+        if (sidePlansBadge) { sidePlansBadge.textContent = pendingPlans; sidePlansBadge.classList.remove('hidden'); }
+    } else {
+        if (plansBadge) plansBadge.classList.add('hidden');
+        if (sidePlansBadge) sidePlansBadge.classList.add('hidden');
     }
 
     const shopBadge = document.getElementById('navShoppingBadge');
+    const sideShopBadge = document.getElementById('sidebarShoppingBadge');
     if (pendingShop > 0) {
-        shopBadge.textContent = pendingShop;
-        shopBadge.classList.remove('hidden');
+        if (shopBadge) { shopBadge.textContent = pendingShop; shopBadge.classList.remove('hidden'); }
+        if (sideShopBadge) { sideShopBadge.textContent = pendingShop; sideShopBadge.classList.remove('hidden'); }
     } else {
-        shopBadge.classList.add('hidden');
+        if (shopBadge) shopBadge.classList.add('hidden');
+        if (sideShopBadge) sideShopBadge.classList.add('hidden');
     }
 
     const taskBadge = document.getElementById('navTasksBadge');
+    const sideTaskBadge = document.getElementById('sidebarTasksBadge');
     if (pendingTask > 0) {
-        taskBadge.textContent = pendingTask;
-        taskBadge.classList.remove('hidden');
+        if (taskBadge) { taskBadge.textContent = pendingTask; taskBadge.classList.remove('hidden'); }
+        if (sideTaskBadge) { sideTaskBadge.textContent = pendingTask; sideTaskBadge.classList.remove('hidden'); }
     } else {
-        taskBadge.classList.add('hidden');
+        if (taskBadge) taskBadge.classList.add('hidden');
+        if (sideTaskBadge) sideTaskBadge.classList.add('hidden');
     }
 }
 
@@ -3389,27 +3403,18 @@ function switchTab(tabId, navBtn) {
         renderChat();
     }
 
-    if (navBtn) {
-        document.querySelectorAll('.bottom-nav .nav-item').forEach(b => b.classList.remove('active'));
-        navBtn.classList.add('active');
-    } else {
-        const navIndexMap = {
-            'tabPano': 0,
-            'tabChat': 1,
-            'tabPlans': 2,
-            'tabShopping': 3,
-            'tabTasks': 4,
-            'tabExpenses': 5,
-            'tabMembers': 6
-        };
-        const allNavs = document.querySelectorAll('.bottom-nav .nav-item');
-        allNavs.forEach(b => b.classList.remove('active'));
-        if (allNavs[navIndexMap[tabId]]) {
-            allNavs[navIndexMap[tabId]].classList.add('active');
+    // Hem Mobil Bottom Nav hem de Masaüstü Sidebar Öğelerini Senkronize Et
+    document.querySelectorAll('[data-tab-target]').forEach(el => {
+        if (el.getAttribute('data-tab-target') === tabId) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
         }
-    }
+    });
 
     // Scroll başa al
+    const mainWrapper = document.querySelector('.app-main-wrapper');
+    if (mainWrapper) mainWrapper.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
