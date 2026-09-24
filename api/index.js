@@ -170,8 +170,10 @@ module.exports = async function handler(req, res) {
         return;
     }
 
-    const urlParts = (req.url || '').split('?');
-    const pathname = urlParts[0];
+    let pathname = (req.url || '').split('?')[0];
+    if (!pathname.startsWith('/api')) {
+        pathname = '/api' + (pathname.startsWith('/') ? pathname : '/' + pathname);
+    }
 
     try {
         // 1. Giriş Yap (Telefon No ile)
