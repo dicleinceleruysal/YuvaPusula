@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  
+  <!-- Outer Glow Circle -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="8" />
+  
+  <!-- House / Family Shape -->
+  <g filter="url(#shadow)">
+    <!-- Roof -->
+    <path d="M256 110 L120 230 L155 230 L155 380 Q155 390 165 390 L347 390 Q357 390 357 380 L357 230 L392 230 Z" fill="#ffffff" />
+    
+    <!-- Heart in the center of home -->
+    <path d="M256 240 
+             C256 220, 230 205, 215 220 
+             C195 240, 210 270, 256 310 
+             C302 270, 317 240, 297 220 
+             C282 205, 256 220, 256 240 Z" 
+          fill="url(#heartGrad)" />
+    
+    <!-- Chimney -->
+    <path d="M315 160 L340 160 L340 210 L315 190 Z" fill="#ffffff" />
+  </g>
+</svg>

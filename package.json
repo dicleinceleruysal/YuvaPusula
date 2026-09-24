@@ -1,0 +1,13 @@
+{
+  "name": "ailem-pwa",
+  "version": "1.0.0",
+  "description": "Aile İçi Paylaşım ve Planlama PWA Uygulaması",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["pwa", "family", "planning", "tasks", "shopping"],
+  "author": "Uysal Ailesi",
+  "license": "MIT"
+}

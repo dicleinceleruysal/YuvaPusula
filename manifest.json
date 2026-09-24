@@ -1,0 +1,19 @@
+{
+  "name": "Ailem - Aile İçi Paylaşım ve Yaşam Alanı",
+  "short_name": "Ailem",
+  "description": "Aile içi ortak liste, görevler, duyurular ve bütçe takip uygulaması",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "productivity", "utilities"]
+}
