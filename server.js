@@ -455,20 +455,24 @@ const server = http.createServer(async (req, res) => {
     });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('====================================================');
-    console.log('🚀 AİLEM PWA & SQLITE VERİTABANI SUNUCUSU ÇALIŞIYOR');
-    console.log('====================================================');
-    console.log(`💾 Veritabanı:                  ${path.join(BASE_DIR, 'database.sqlite')}`);
-    console.log(`💻 Bilgisayardan erişim:        http://localhost:${PORT}`);
-    
-    const ips = getLocalIpAddresses();
-    if (ips.length > 0) {
-        ips.forEach(ip => {
-            console.log(`📱 Telefondan erişim (Aynı Wi-Fi): http://${ip}:${PORT}`);
-        });
-        console.log('----------------------------------------------------');
-        console.log('✨ Tüm aile üyeleri aynı veritabanını ortaklaşa kullanır!');
-    }
-    console.log('====================================================');
-});
+if (require.main === module) {
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log('====================================================');
+        console.log('🚀 AİLEM PWA & SQLITE VERİTABANI SUNUCUSU ÇALIŞIYOR');
+        console.log('====================================================');
+        console.log(`💾 Veritabanı:                  ${path.join(BASE_DIR, 'database.sqlite')}`);
+        console.log(`💻 Bilgisayardan erişim:        http://localhost:${PORT}`);
+        
+        const ips = getLocalIpAddresses();
+        if (ips.length > 0) {
+            ips.forEach(ip => {
+                console.log(`📱 Telefondan erişim (Aynı Wi-Fi): http://${ip}:${PORT}`);
+            });
+            console.log('----------------------------------------------------');
+            console.log('✨ Tüm aile üyeleri aynı veritabanını ortaklaşa kullanır!');
+        }
+        console.log('====================================================');
+    });
+}
+
+module.exports = server;

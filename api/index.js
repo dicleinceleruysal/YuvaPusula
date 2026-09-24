@@ -128,20 +128,23 @@ async function getAltinkaynakLiveRates(forceRefresh = false) {
 }
 
 function parseJsonBody(req) {
-    if (req.body && typeof req.body === 'object') {
-        return Promise.resolve(req.body);
+    if (req.body) {
+        if (typeof req.body === 'object') return Promise.resolve(req.body);
+        if (typeof req.body === 'string') {
+            try { return Promise.resolve(JSON.parse(req.body)); } catch (e) { return Promise.resolve({}); }
+        }
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', () => {
             try {
                 resolve(body ? JSON.parse(body) : {});
             } catch (err) {
-                reject(err);
+                resolve({});
             }
         });
-        req.on('error', reject);
+        req.on('error', () => resolve({}));
     });
 }
 
