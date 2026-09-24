@@ -2,16 +2,19 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
+const isServerless = !!(process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+
 let DatabaseSync = null;
-try {
-    const sqlite = require('node:sqlite');
-    DatabaseSync = sqlite.DatabaseSync;
-} catch (e) {
-    // node:sqlite is not available (Node < 22 on Vercel/serverless)
-    DatabaseSync = null;
+if (!isServerless) {
+    try {
+        const sqlite = require('node:sqlite');
+        DatabaseSync = sqlite.DatabaseSync;
+    } catch (e) {
+        // node:sqlite is not available (Node < 22)
+        DatabaseSync = null;
+    }
 }
 
-const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
 const DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.sqlite') : path.join(__dirname, 'database.sqlite');
 const JSON_DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.json') : path.join(__dirname, 'database.json');
 
@@ -39,7 +42,7 @@ function saveJsonStore() {
 
 // Veritabanı tablolarını oluştur (SQLite DDL)
 function initDatabase() {
-    if (DatabaseSync) {
+    if (DatabaseSync && !isServerless) {
         try {
             if (!db) db = new DatabaseSync(DB_PATH);
             // 1. Aileler Tablosu
