@@ -1183,6 +1183,7 @@ function renderApp() {
     renderBudget();
     renderMembers();
     updateQuickStats();
+    switchTab(appState.currentTab || 'tabPano');
 }
 
 function updateQuickStats() {

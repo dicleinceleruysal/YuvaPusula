@@ -37,6 +37,10 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+.hidden {
+    display: none !important;
+}
+
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: radial-gradient(circle at 10% 20%, #0f172a 0%, #090d16 100%);
@@ -294,8 +298,6 @@ body {
 
 .btn-primary:active {
     transform: scale(0.98);
-}
-
 }
 
 /* ==========================================================
@@ -3207,8 +3209,8 @@ body {
         height: calc(100vh - 48px);
         background: #f8fafc;
         border-radius: 24px;
-        display: flex !important;
-        flex-direction: row !important;
+        display: flex;
+        flex-direction: row;
         box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
         overflow: hidden;
         margin: 0 auto;
@@ -3220,9 +3222,9 @@ body {
         min-height: 100vh;
         background: transparent;
         box-shadow: none;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         padding: 40px 20px;
         margin: auto;
     }
