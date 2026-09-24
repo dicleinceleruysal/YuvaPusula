@@ -60,8 +60,8 @@ Sıcak bir yuva samimiyetini, pusulanın yol gösterici netliğiyle birleştirir
 ### Adımlar
 1. Projeyi bilgisayarınıza klonlayın veya indirin:
    ```bash
-   git clone https://github.com/dicleinceleruysal/ailem.git
-   cd ailem
+   git clone https://github.com/dicleinceleruysal/YuvaPusula.git
+   cd YuvaPusula
    ```
 
 2. Sunucuyu başlatın:
