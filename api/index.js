@@ -1,5 +1,5 @@
 const https = require('https');
-const dbManager = require('../database.js');
+const dbManager = require('./database.js');
 
 // Veritabanını başlat
 try {
