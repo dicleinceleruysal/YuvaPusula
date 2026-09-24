@@ -3735,6 +3735,153 @@ body {
     }
 }
 
+/* --------------------------------------------------------------------------
+   4. KÜÇÜK MOBİL CİHAZLAR (@media max-width: 420px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 420px) {
+    .app-content {
+        padding: 12px 12px calc(76px + var(--safe-bottom));
+    }
+
+    .quick-actions-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .quick-action-card {
+        padding: 10px 8px;
+    }
+
+    .budget-summary-card {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .altinkaynak-rates-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .invest-grid {
+        grid-template-columns: repeat(1, 1fr);
+        gap: 8px;
+    }
+
+    .bottom-nav .nav-item {
+        padding: 6px 2px;
+        font-size: 0.64rem;
+    }
+
+    .bottom-nav .nav-item i {
+        font-size: 16px;
+    }
+
+    .plan-hero-action-card {
+        padding: 12px 14px;
+    }
+
+    .plan-hero-text strong {
+        font-size: 0.85rem;
+    }
+
+    .plan-hero-text p {
+        font-size: 0.68rem;
+    }
+
+    .modal-card {
+        max-width: 94vw;
+        padding: 20px 16px;
+        border-radius: 18px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   5. TABLET PORTRE & ORTA BOY CİHAZLAR (@media 600px - 899px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 600px) and (max-width: 899px) {
+    .app-container {
+        max-width: 680px;
+        margin: 20px auto;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        min-height: calc(100vh - 40px);
+    }
+
+    .posts-feed {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .altinkaynak-rates-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .budget-summary-card {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+
+    .invest-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .plans-list-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .tasks-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .members-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   6. GENİŞ EKRANLAR (@media min-width: 1400px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+    .app-container {
+        max-width: 1480px;
+    }
+
+    .desktop-sidebar {
+        width: 300px;
+        min-width: 300px;
+    }
+
+    .app-content {
+        max-width: 1260px;
+        padding: 32px 48px 80px 48px;
+    }
+
+    .posts-feed {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .plans-list-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+}
+
+
 
 
 
