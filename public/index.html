@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>YuvaPusula - Aile Yaşamı, Bütçe & Zaman Rehberi</title>
+    
+    <!-- PWA Settings & Standard Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="application-name" content="YuvaPusula">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="YuvaPusula">
+    <meta name="msapplication-TileColor" content="#1e1b4b">
+    <meta name="msapplication-navbutton-color" content="#1e1b4b">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- App Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=12">
+</head>
+<body>
+
+    <!-- Çevrimdışı Durum Çubuğu (Offline Bar) -->
+    <div id="offlineIndicator" class="offline-indicator hidden">
+        <i class="fa-solid fa-cloud-slash"></i> <span>Çevrimdışı moddasınız. Kaydedilen verileriniz yerel depolamada güvende.</span>
+    </div>
+
+    <!-- PWA Kurulum Bildirimi (Mobile Banner) -->
+    <div id="pwaInstallBanner" class="pwa-banner hidden">
+        <div class="pwa-banner-content">
+            <div class="pwa-icon">
+                <img src="icons/icon.svg" style="width: 28px; height: 28px; border-radius: 6px;" alt="YuvaPusula Logo">
+            </div>
+            <div class="pwa-text">
+                <strong>YuvaPusula'yı Telefona Yükle</strong>
+                <p>Ana ekrana ekleyin, aile rehberinize anında ulaşın</p>
+            </div>
+        </div>
+        <div class="pwa-banner-actions">
+            <button id="btnInstallPwa" class="btn-install">Yükle</button>
+            <button id="btnClosePwaBanner" class="btn-close-banner"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <!-- 1. GİRİŞ / KAYIT VE AİLE KURULUM EKRANI (AUTH SCREEN) -->
+    <section id="authScreen" class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="app-logo" style="background: transparent; box-shadow: none; padding: 0;">
+                    <img src="icons/icon.svg" style="width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 8px 24px rgba(30, 27, 75, 0.4);" alt="YuvaPusula">
+                </div>
+                <h2 style="margin-top: 10px;">YuvaPusula</h2>
+                <p>Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için güvenilir aile rehberiniz</p>
+            </div>
+
+            <div class="auth-steps">
+                <!-- Adım Seçici (3 Mod) -->
+                <div class="auth-tabs">
+                    <button class="auth-tab-btn active" id="tabLogin" onclick="switchAuthMode('login')">
+                        <i class="fa-solid fa-right-to-bracket"></i> Giriş Yap
+                    </button>
+                    <button class="auth-tab-btn" id="tabNewFamily" onclick="switchAuthMode('create')">
+                        <i class="fa-solid fa-plus-circle"></i> Yeni Aile Kur
+                    </button>
+                    <button class="auth-tab-btn" id="tabJoinFamily" onclick="switchAuthMode('join')">
+                        <i class="fa-solid fa-key"></i> Aileye Katıl
+                    </button>
+                </div>
+
+                <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                    <!-- Telefon Alanı (Her Modda Ortak) -->
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-phone"></i> Telefon Numaranız</label>
+                        <input type="tel" id="userPhone" placeholder="05XX XXX XX XX" required>
+                    </div>
+
+                    <!-- İsim Alanı (Yeni Aile ve Katıl Modunda) -->
+                    <div id="authNameField" class="form-group hidden">
+                        <label><i class="fa-solid fa-user"></i> Adınız Soyadınız</label>
+                        <input type="text" id="userName" placeholder="Örn: Ahmet Uysal">
+                    </div>
+
+                    <!-- Rol Alanı (Yeni Aile ve Katıl Modunda) -->
+                    <div id="authRoleField" class="form-group hidden">
+                        <label><i class="fa-solid fa-id-badge"></i> Ailedeki Rolünüz</label>
+                        <select id="userRole">
+                            <option value="Baba">👨 Baba</option>
+                            <option value="Anne">👩 Anne</option>
+                            <option value="Oğul">👦 Oğul</option>
+                            <option value="Kız">👧 Kız</option>
+                            <option value="Dede">👴 Dede</option>
+                            <option value="Büyükanne">👵 Büyükanne</option>
+                            <option value="Diğer">🌟 Diğer Aile Bireyi</option>
+                        </select>
+                    </div>
+
+                    <!-- Yeni Aile Oluşturma Alanı -->
+                    <div id="createFamilyFields" class="form-group hidden">
+                        <label><i class="fa-solid fa-house-chimney-user"></i> Aile Adı (Soyadı veya Tanım)</label>
+                        <input type="text" id="familyNameInput" placeholder="Örn: Uysal">
+                        <small class="field-hint">Uygulama adı <b>"[Aile Adı] Ailesi - YuvaPusula"</b> olarak ayarlanacaktır.</small>
+                    </div>
+
+                    <!-- Mevcut Aileye Katılma Alanı -->
+                    <div id="joinFamilyFields" class="form-group hidden">
+                        <label><i class="fa-solid fa-hashtag"></i> 6 Haneli Aile Davet Kodu</label>
+                        <input type="text" id="familyCodeInput" placeholder="Örn: UYS123" maxlength="8" style="text-transform: uppercase;">
+                        <small class="field-hint">Ailenizdeki bir bireyden davet kodunu isteyebilirsiniz.</small>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btnAuthSubmit">
+                        <i class="fa-solid fa-compass"></i> YuvaPusula'ya Giriş Yap
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. ANA UYGULAMA EKRANI (MAIN APP) -->
+    <div id="mainApp" class="app-container hidden">
+
+        <!-- DESKTOP SOL YAN MENÜ (SIDEBAR) -->
+        <aside class="desktop-sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">
+                    <img src="icons/icon.svg" alt="YuvaPusula">
+                </div>
+                <div class="sidebar-brand-text">
+                    <h2 id="sidebarFamilyTitle">Uysal Ailesi</h2>
+                    <span><i class="fa-solid fa-compass"></i> YuvaPusula Rehberi</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="sidebar-nav-item active" data-tab-target="tabPano" onclick="switchTab('tabPano')">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Aile Panosu</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabChat" onclick="switchTab('tabChat')">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span>Aile Sohbeti</span>
+                    <span class="sidebar-badge hidden" id="sidebarChatBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabPlans" onclick="switchTab('tabPlans')">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Planlar & Keşif</span>
+                    <span class="sidebar-badge hidden" id="sidebarPlansBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabShopping" onclick="switchTab('tabShopping')">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Alışveriş Listesi</span>
+                    <span class="sidebar-badge hidden" id="sidebarShoppingBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks')">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Görev & Sorumluluk</span>
+                    <span class="sidebar-badge hidden" id="sidebarTasksBadge">0</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabExpenses" onclick="switchTab('tabExpenses')">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Bütçe & Yatırım</span>
+                </button>
+                <button class="sidebar-nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers')">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Aile Bireyleri</span>
+                </button>
+            </nav>
+
+            <!-- Hızlı İşlem Ekle Butonu -->
+            <div class="sidebar-quick-action">
+                <button class="btn-sidebar-create" onclick="openPlanCategoryPicker()">
+                    <i class="fa-solid fa-plus"></i> <span>Yeni Plan / Not</span>
+                </button>
+            </div>
+
+            <!-- Alt Profil ve Aile Kartı -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="openSwitchUserModal()" title="Kullanıcı Değiştir">
+                    <div class="sidebar-user-avatar" id="sidebarUserAvatar">👨</div>
+                    <div class="sidebar-user-info">
+                        <span id="sidebarUserName">Ahmet</span>
+                        <small id="sidebarUserRole">Baba</small>
+                    </div>
+                    <i class="fa-solid fa-repeat sidebar-switch-icon"></i>
+                </div>
+                <div class="sidebar-actions">
+                    <button class="sidebar-btn-sm" onclick="copyInviteCode()" title="Davet Kodunu Kopyala">
+                        <i class="fa-solid fa-copy"></i> Davet Kodu
+                    </button>
+                    <button class="sidebar-btn-sm btn-logout" onclick="logout()" title="Çıkış Yap">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- SAĞ ANA İÇERİK SARMALAYICI (MAIN WRAPPER) -->
+        <div class="app-main-wrapper">
+
+            <!-- ÜST BAŞLIK / HEADER -->
+            <header class="app-header">
+            <div class="header-top">
+                <div class="family-branding">
+                    <div class="family-avatar-icon" style="background: transparent; padding: 0;">
+                        <img src="icons/icon.svg" style="width: 36px; height: 36px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" alt="YuvaPusula Logo">
+                    </div>
+                    <div>
+                        <h1 id="dynamicAppTitle">Uysal Ailesi</h1>
+                        <span class="family-tagline"><i class="fa-solid fa-compass"></i> YuvaPusula • Zaman & Bütçe Rehberi</span>
+                    </div>
+                </div>
+
+                <div class="header-actions-right">
+                    <button class="header-chat-btn" onclick="switchTab('tabChat')" title="Aile Sohbeti">
+                        <i class="fa-solid fa-comment-dots"></i>
+                        <span id="headerChatBadge" class="chat-badge-dot hidden">0</span>
+                    </button>
+                    <div class="user-profile-btn" onclick="openProfileModal()">
+                        <div class="user-avatar" id="headerUserAvatar">👨</div>
+                        <div class="user-badge-info">
+                            <span id="headerUserName">Ahmet</span>
+                            <small id="headerUserRole">Baba</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hızlı Aile Bilgi Barı -->
+            <div class="header-quick-info">
+                <div class="quick-stat-pill" onclick="switchTab('tabChat')">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span id="quickUnreadMessages">0</span> Sohbet
+                </div>
+                <div class="quick-stat-pill" onclick="switchTab('tabPlans')">
+                    <i class="fa-solid fa-compass"></i>
+                    <span id="quickPendingPlans">0</span> Plan
+                </div>
+                <div class="quick-stat-pill" onclick="switchTab('tabShopping')">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span id="quickPendingShopping">0</span> Alınacak
+                </div>
+                <div class="quick-stat-pill" onclick="switchTab('tabTasks')">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span id="quickPendingTasks">0</span> Görev
+                </div>
+                <div class="quick-stat-pill" onclick="switchTab('tabMembers')">
+                    <i class="fa-solid fa-users"></i>
+                    <span id="quickMemberCount">1</span> Üye
+                </div>
+            </div>
+        </header>
+
+        <!-- İÇERİK SEKMELERİ (TAB PANELS) -->
+        <main class="app-content">
+
+            <!-- TAB 1: AİLE PANOSU / DUYURULAR -->
+            <section id="tabPano" class="tab-panel active">
+                <!-- Hoşgeldin Kartı -->
+                <div class="welcome-card">
+                    <div class="welcome-text">
+                        <h3>Hoş geldin, <span id="welcomeUserName">Ahmet</span> 👋</h3>
+                        <p id="welcomeFamilyText">Bugün ailece harika bir gün geçirmeniz dileğiyle!</p>
+                    </div>
+                    <button class="btn-action-sm" onclick="openModal('modalNewPost')">
+                        <i class="fa-solid fa-bullhorn"></i> Not Paylaş
+                    </button>
+                </div>
+
+                <!-- Hızlı İletişim / Aile Kısayolları -->
+                <div class="section-title">
+                    <h4><i class="fa-solid fa-bolt"></i> Hızlı Aile İletişimi</h4>
+                </div>
+                <div class="quick-actions-grid-4">
+                    <button class="quick-action-card" onclick="openFamilyGroupChat()">
+                        <div class="action-icon chat-icon"><i class="fa-solid fa-comment-dots"></i></div>
+                        <span>Aile Sohbeti</span>
+                    </button>
+                    <button class="quick-action-card" onclick="openModal('modalNewShopping')">
+                        <div class="action-icon shop-icon"><i class="fa-solid fa-cart-plus"></i></div>
+                        <span>Eşya Ekle</span>
+                    </button>
+                    <button class="quick-action-card" onclick="openModal('modalNewTask')">
+                        <div class="action-icon task-icon"><i class="fa-solid fa-circle-check"></i></div>
+                        <span>Görev Ata</span>
+                    </button>
+                    <button class="quick-action-card" onclick="openModal('modalNewExpense')">
+                        <div class="action-icon money-icon"><i class="fa-solid fa-receipt"></i></div>
+                        <span>Gider Ekle</span>
+                    </button>
+                </div>
+
+                <!-- Özel Tek Buton: Aile Planı & Keşif Ekle -->
+                <div class="plan-hero-action-card" onclick="openPlanCategoryPicker()">
+                    <div class="plan-hero-left">
+                        <div class="plan-hero-icon">
+                            <i class="fa-solid fa-compass"></i>
+                        </div>
+                        <div class="plan-hero-text">
+                            <strong>✨ Aile Planı & Keşif Ekle</strong>
+                            <p>Seyahat, Restoran/Kafe, Etkinlik veya Alışveriş Hayali</p>
+                        </div>
+                    </div>
+                    <div class="plan-hero-badge">
+                        <span>Oluştur</span> <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Aile Pano Notları & Mesaj Akışı -->
+                <div class="section-title">
+                    <h4><i class="fa-solid fa-comments"></i> Aile Panosu & Duyurular</h4>
+                    <span class="count-badge" id="postCountBadge">0 Not</span>
+                </div>
+
+                <div id="postsList" class="posts-feed">
+                    <!-- Dinamik Notlar Gelecek -->
+                </div>
+            </section>
+
+            <!-- TAB 2: AİLE MESAJLAŞMA & SOHBET ALANI (GRUP & BİREYSEL) -->
+            <section id="tabChat" class="tab-panel">
+                <div class="chat-app-wrapper">
+                    <!-- Sohbet Kanal Seçici (Grup vs Özel) -->
+                    <div class="chat-channels-bar">
+                        <div class="chat-nav-tabs">
+                            <button class="chat-tab-btn active" id="btnChannelGroup" onclick="switchChatChannel('group')">
+                                <i class="fa-solid fa-people-group"></i> Aile Grubu
+                                <span id="groupUnreadBadge" class="chat-unread-pill hidden">0</span>
+                            </button>
+                            <button class="chat-tab-btn" id="btnChannelDirect" onclick="switchChatChannel('direct')">
+                                <i class="fa-solid fa-user-lock"></i> Özel Mesajlar
+                                <span id="directUnreadBadge" class="chat-unread-pill hidden">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Bireysel Kişi Seçim Çubuğu -->
+                        <div id="directChatMemberList" class="direct-members-scroll hidden">
+                            <!-- Dinamik Aile Üyeleri Butonları -->
+                        </div>
+                    </div>
+
+                    <!-- Aktif Sohbet Alanı -->
+                    <div class="chat-active-card">
+                        <div class="chat-active-header">
+                            <div class="chat-user-meta">
+                                <div class="chat-avatar" id="activeChatAvatar">👨‍👩‍👧‍👦</div>
+                                <div class="chat-info-texts">
+                                    <h4 id="activeChatTitle">Aile Grubu</h4>
+                                    <span id="activeChatSubtitle" class="chat-status-text">🟢 Tüm Aile Bireyleri • Çevrim İçi</span>
+                                </div>
+                            </div>
+                            <div class="chat-header-actions">
+                                <button class="chat-action-btn" id="btnToggleNotifications" onclick="requestAndToggleNotifications()" title="Bildirim Ayarı">
+                                    <i class="fa-solid fa-bell"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mesaj Listesi / Akış -->
+                        <div class="chat-messages-container" id="chatMessagesContainer">
+                            <!-- Dinamik Mesaj Baloncukları -->
+                        </div>
+
+                        <!-- Hızlı Yanıt Çipleri -->
+                        <div class="quick-replies-bar">
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Eve geliyorum 🚗')">🚗 Eve geliyorum</span>
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Marketten bir şey lazım mı? 🛒')">🛒 Marketten bir şey lazım mı?</span>
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Tamamdır 👍')">👍 Tamamdır</span>
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Akşam ne yiyoruz? 🍲')">🍲 Akşam ne yiyoruz?</span>
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Seni seviyorum ❤️')">❤️ Seni seviyorum</span>
+                            <span class="quick-reply-chip" onclick="sendQuickReply('Görüşürüz 👋')">👋 Görüşürüz</span>
+                        </div>
+
+                        <!-- Hızlı Emoji Çubuğu -->
+                        <div class="quick-emoji-bar">
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('❤️')">❤️</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('👍')">👍</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('😊')">😊</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('😂')">😂</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('🎉')">🎉</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('🏠')">🏠</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('☕')">☕</button>
+                            <button type="button" class="btn-emoji" onclick="appendChatEmoji('🙏')">🙏</button>
+                        </div>
+
+                        <!-- Mesaj Gönderme Formu -->
+                        <form class="chat-input-bar" onsubmit="handleSendChatMessage(event)">
+                            <input type="text" id="chatTextInput" placeholder="Bir mesaj yazın..." autocomplete="off" required>
+                            <button type="submit" class="btn-send-message" id="btnSendChat">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: AİLE PLANLARI & KEŞİFLER (KATEGORİK HUB) -->
+            <section id="tabPlans" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>🗺️ Aile Planları & Keşifler</h3>
+                        <p class="subtitle">Her kategoriye özel organize yaşam ve hayal alanı</p>
+                    </div>
+                    <button class="btn-primary-sm" onclick="openPlanCategoryPicker()">
+                        <i class="fa-solid fa-plus"></i> Plan Ekle
+                    </button>
+                </div>
+
+                <!-- 4 AYRI KATEGORİ SEÇİM HUB'I -->
+                <div class="plans-category-hub">
+                    <div class="hub-card active" id="hubBtnSeyahat" onclick="switchPlansHub('Seyahat')">
+                        <div class="hub-icon hub-travel">✈️</div>
+                        <div class="hub-info">
+                            <strong>Seyahat</strong>
+                            <small id="countHubSeyahat">0 Rota</small>
+                        </div>
+                    </div>
+                    <div class="hub-card" id="hubBtnRestoran" onclick="switchPlansHub('Restoran')">
+                        <div class="hub-icon hub-food">🍽️</div>
+                        <div class="hub-info">
+                            <strong>Restoran & Kafe</strong>
+                            <small id="countHubRestoran">0 Mekan</small>
+                        </div>
+                    </div>
+                    <div class="hub-card" id="hubBtnEtkinlik" onclick="switchPlansHub('Etkinlik')">
+                        <div class="hub-icon hub-event">🎭</div>
+                        <div class="hub-info">
+                            <strong>Etkinlik</strong>
+                            <small id="countHubEtkinlik">0 Bilet</small>
+                        </div>
+                    </div>
+                    <div class="hub-card" id="hubBtnAlisveris" onclick="switchPlansHub('Alisveris')">
+                        <div class="hub-icon hub-shop">🛍️</div>
+                        <div class="hub-info">
+                            <strong>Alışveriş / Hayal</strong>
+                            <small id="countHubAlisveris">0 İstek</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇİLİ KATEGORİ BAŞLIK VE HIZLI AKSİYON BARI -->
+                <div class="active-hub-header">
+                    <div class="active-hub-title-box">
+                        <h4 id="activeHubTitle">✈️ Seyahat Rotalarımız</h4>
+                        <span id="activeHubSubtitle" class="active-hub-desc">Yurt içi ve yurt dışı tatil & keşif rotalarımız</span>
+                    </div>
+                    <button class="btn-hub-add" id="btnHubAddCategory" onclick="openAddPlanModalForCurrentCategory()">
+                        <i class="fa-solid fa-plus"></i> Ekle
+                    </button>
+                </div>
+
+                <!-- Kategoriye Özel Alt Filtreler (Örn: Seyahat için Yurt İçi / Dışı) -->
+                <div class="category-chips" id="plansSubFilters">
+                    <!-- Dinamik Alt Filtre Butonları Gelecek -->
+                </div>
+
+                <!-- Durum Filtreleri (Planlandı / Gerçekleşti) -->
+                <div class="category-chips status-filter-row">
+                    <button class="chip active" onclick="filterPlansStatus('ALL', this)">Tüm Durumlar</button>
+                    <button class="chip" onclick="filterPlansStatus('PENDING', this)">🎯 Hedeflenenler</button>
+                    <button class="chip" onclick="filterPlansStatus('COMPLETED', this)">⭐ Gerçekleşenler</button>
+                </div>
+
+                <div class="list-container" id="plansList">
+                    <!-- Dinamik Plan Kartları Gelecek -->
+                </div>
+            </section>
+
+            <!-- TAB 3: ORTAK ALIŞVERİŞ LİSTESİ -->
+            <section id="tabShopping" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>🛒 Alışveriş Listesi</h3>
+                        <p class="subtitle">Bitince anında işaretleyin, herkes görsün</p>
+                    </div>
+                    <button class="btn-primary-sm" onclick="openModal('modalNewShopping')">
+                        <i class="fa-solid fa-plus"></i> Ekle
+                    </button>
+                </div>
+
+                <!-- Filtreler -->
+                <div class="category-chips" id="shoppingCategoryFilter">
+                    <button class="chip active" onclick="filterShopping('ALL', this)">Tümü</button>
+                    <button class="chip" onclick="filterShopping('Market', this)">🥛 Market</button>
+                    <button class="chip" onclick="filterShopping('Manav', this)">🍏 Manav</button>
+                    <button class="chip" onclick="filterShopping('Kasap', this)">🥩 Kasap</button>
+                    <button class="chip" onclick="filterShopping('Giyim', this)">👗 Giyim</button>
+                    <button class="chip" onclick="filterShopping('Eşya', this)">🛋️ Eşya</button>
+                    <button class="chip" onclick="filterShopping('Çocuk', this)">🧸 Çocuk</button>
+                    <button class="chip" onclick="filterShopping('Kozmetik', this)">💄 Kozmetik</button>
+                    <button class="chip" onclick="filterShopping('Eczane', this)">💊 Eczane</button>
+                    <button class="chip" onclick="filterShopping('Ev', this)">🧼 Ev & Temizlik</button>
+                </div>
+
+                <div class="list-container" id="shoppingItemsList">
+                    <!-- Dinamik Alışveriş Maddeleri -->
+                </div>
+            </section>
+
+            <!-- TAB 3: GÖREVLER VE SORUMLULUKLAR -->
+            <section id="tabTasks" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>✅ Aile Görevleri</h3>
+                        <p class="subtitle">Ev işleri, ödevler ve sorumluluk dağılımı</p>
+                    </div>
+                    <button class="btn-primary-sm" onclick="openModal('modalNewTask')">
+                        <i class="fa-solid fa-plus"></i> Görev Ver
+                    </button>
+                </div>
+
+                <!-- Görev Durum Tabları -->
+                <div class="category-chips">
+                    <button class="chip active" onclick="filterTasks('ALL', this)">Tümü</button>
+                    <button class="chip" onclick="filterTasks('PENDING', this)">⏳ Devam Edenler</button>
+                    <button class="chip" onclick="filterTasks('DONE', this)">🎉 Tamamlananlar</button>
+                </div>
+
+                <div class="list-container" id="tasksList">
+                    <!-- Dinamik Görevler -->
+                </div>
+            </section>
+
+            <!-- TAB 4: AİLE BÜTÇESİ, SABİT GİDERLER VE YATIRIMLAR -->
+            <section id="tabExpenses" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>💰 Aile Finansı & Bütçe</h3>
+                        <p class="subtitle">Maaşlar, sabit giderler, harcamalar ve yatırımlar</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-primary-sm" onclick="openMySalaryModal()">
+                            <i class="fa-solid fa-money-bill-wave"></i> Maaşım
+                        </button>
+                        <button class="btn-secondary-sm" id="btnBudgetAction" onclick="openCurrentBudgetActionModal()">
+                            <i class="fa-solid fa-plus"></i> <span id="budgetActionBtnText">Harcama Ekle</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4'LÜ MASTER BÜTÇE KARTI DENGESİ -->
+                <div class="master-budget-grid">
+                    <div class="master-stat-card bg-income">
+                        <div class="stat-header">
+                            <span class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
+                            <span class="stat-title">Toplam Maaşlar</span>
+                        </div>
+                        <div class="stat-value" id="statTotalSalaries">0,00 ₺</div>
+                        <span class="stat-desc" id="statSalaryCount">0 aile geliri</span>
+                    </div>
+
+                    <div class="master-stat-card bg-fixed">
+                        <div class="stat-header">
+                            <span class="stat-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+                            <span class="stat-title">Sabit Giderler</span>
+                        </div>
+                        <div class="stat-value" id="statTotalFixedExpenses">0,00 ₺</div>
+                        <span class="stat-desc" id="statFixedStatus">0 / 0 Ödendi</span>
+                    </div>
+
+                    <div class="master-stat-card bg-variable">
+                        <div class="stat-header">
+                            <span class="stat-icon"><i class="fa-solid fa-cart-shopping"></i></span>
+                            <span class="stat-title">Harcamalar</span>
+                        </div>
+                        <div class="stat-value" id="totalExpenseAmount">0,00 ₺</div>
+                        <span class="stat-desc" id="totalExpenseCount">0 adet harcama</span>
+                    </div>
+
+                    <div class="master-stat-card bg-net" id="cardNetBudget">
+                        <div class="stat-header">
+                            <span class="stat-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+                            <span class="stat-title">Kalan Net Bütçe</span>
+                        </div>
+                        <div class="stat-value" id="statNetRemaining">0,00 ₺</div>
+                        <span class="stat-desc" id="statNetDesc">Maaş - Gider - Harcama</span>
+                    </div>
+                </div>
+
+                <!-- 3'LÜ ALT SEKME GEÇİŞİ (SUB-TABS) -->
+                <div class="budget-subtabs-nav">
+                    <button class="budget-subtab-btn active" id="subtabBtnExpenses" onclick="switchBudgetSubTab('expenses')">
+                        <i class="fa-solid fa-receipt"></i> Harcamalar
+                    </button>
+                    <button class="budget-subtab-btn" id="subtabBtnFixed" onclick="switchBudgetSubTab('fixed')">
+                        <i class="fa-solid fa-calendar-check"></i> Sabit Giderler
+                        <span class="subtab-badge hidden" id="fixedUnpaidBadge">0</span>
+                    </button>
+                    <button class="budget-subtab-btn" id="subtabBtnInvestments" onclick="switchBudgetSubTab('investments')">
+                        <i class="fa-solid fa-gem"></i> Yatırımlar & Birikim
+                        <span class="subtab-badge-val" id="investmentTotalBadge">0 ₺</span>
+                    </button>
+                </div>
+
+                <!-- SUB-VIEW 1: HARCAMALAR & MAAŞ DAĞILIMI -->
+                <div id="budgetViewExpenses" class="budget-subview">
+                    <!-- Aile Maaşları Dağılım Listesi (Akordeon / Mini Kartlar) -->
+                    <div class="section-title">
+                        <h4><i class="fa-solid fa-users"></i> Aile Fertleri Maaş Dağılımı</h4>
+                        <button class="btn-text-sm" onclick="openMySalaryModal()">+ Maaşımı Güncelle</button>
+                    </div>
+                    <div class="salaries-family-list" id="salariesListContainer">
+                        <!-- Dinamik Maaş Kartları -->
+                    </div>
+
+                    <!-- Değişken Harcamalar Listesi -->
+                    <div class="section-title" style="margin-top: 20px;">
+                        <h4><i class="fa-solid fa-receipt"></i> Günlük / Değişken Harcamalar</h4>
+                        <button class="btn-text-sm" onclick="openModal('modalNewExpense')">+ Yeni Harcama</button>
+                    </div>
+                    <div class="list-container" id="expensesList">
+                        <!-- Dinamik Harcama Kayıtları -->
+                    </div>
+                </div>
+
+                <!-- SUB-VIEW 2: SABİT GİDERLER (KİRA, FATURA, AİDAT, KREDİ) -->
+                <div id="budgetViewFixed" class="budget-subview hidden">
+                    <div class="fixed-expenses-banner">
+                        <div class="fixed-banner-left">
+                            <span class="fixed-banner-icon">📑</span>
+                            <div>
+                                <strong>Aylık Düzenli Sabit Giderler</strong>
+                                <small>Kira, aidat, faturalar ve kredi ödemelerinizi tek dokunuşla takip edin</small>
+                            </div>
+                        </div>
+                        <button class="btn-primary-sm" onclick="openModal('modalNewFixedExpense')">
+                            <i class="fa-solid fa-plus"></i> Sabit Gider Ekle
+                        </button>
+                    </div>
+
+                    <!-- Sabit Gider Durum Filtreleri -->
+                    <div class="category-chips">
+                        <button class="chip active" onclick="filterFixedExpenses('ALL', this)">Tümü</button>
+                        <button class="chip" onclick="filterFixedExpenses('UNPAID', this)">⏳ Ödenmeyenler</button>
+                        <button class="chip" onclick="filterFixedExpenses('PAID', this)">✅ Ödenenler</button>
+                    </div>
+
+                    <div class="list-container" id="fixedExpensesList">
+                        <!-- Dinamik Sabit Gider Kartları -->
+                    </div>
+                </div>
+
+                <!-- SUB-VIEW 3: YATIRIMLAR VE BİRİKİM PORTFÖYÜ -->
+                <div id="budgetViewInvestments" class="budget-subview hidden">
+                    <!-- ALTINKAYNAK CANLI PİYASA KUR BARI -->
+                    <div class="altinkaynak-ticker-card">
+                        <div class="altinkaynak-header-row">
+                            <div class="altinkaynak-brand">
+                                <span class="live-pulse-dot"></span>
+                                <strong><i class="fa-solid fa-chart-line"></i> Altınkaynak Canlı Piyasalar</strong>
+                            </div>
+                            <button class="btn-refresh-rates" onclick="fetchLiveMarketRates(true)" title="Fiyatları Şimdi Güncelle">
+                                <i class="fa-solid fa-arrows-rotate" id="iconRefreshRates"></i> Güncelle
+                            </button>
+                        </div>
+                        <div class="altinkaynak-rates-grid">
+                            <div class="rate-box rate-gold">
+                                <div class="rate-top">
+                                    <span class="rate-icon">🪙</span>
+                                    <span class="rate-name">Gram Altın</span>
+                                </div>
+                                <div class="rate-val" id="tickerGramGold">- ₺</div>
+                                <small class="rate-sub" id="tickerGramGoldSub">Alış: - | Satış: -</small>
+                            </div>
+                            <div class="rate-box rate-usd">
+                                <div class="rate-top">
+                                    <span class="rate-icon">💵</span>
+                                    <span class="rate-name">Dolar ($)</span>
+                                </div>
+                                <div class="rate-val" id="tickerUsd">- ₺</div>
+                                <small class="rate-sub" id="tickerUsdSub">Alış: - | Satış: -</small>
+                            </div>
+                            <div class="rate-box rate-eur">
+                                <div class="rate-top">
+                                    <span class="rate-icon">💶</span>
+                                    <span class="rate-name">Euro (€)</span>
+                                </div>
+                                <div class="rate-val" id="tickerEur">- ₺</div>
+                                <small class="rate-sub" id="tickerEurSub">Alış: - | Satış: -</small>
+                            </div>
+                            <div class="rate-box rate-ceyrek">
+                                <div class="rate-top">
+                                    <span class="rate-icon">✨</span>
+                                    <span class="rate-name">Çeyrek Altın</span>
+                                </div>
+                                <div class="rate-val" id="tickerCeyrek">- ₺</div>
+                                <small class="rate-sub" id="tickerCeyrekSub">Alış: - | Satış: -</small>
+                            </div>
+                        </div>
+                        <div class="rate-footer-note">
+                            <span>Veri Kaynağı: <b>altinkaynak.com</b></span>
+                            <span id="rateLastUpdatedTime">Son Güncelleme: -</span>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-hero-card">
+                        <div class="portfolio-hero-info">
+                            <span class="portfolio-tag">💎 Toplam Aile Portföyü (TL)</span>
+                            <h2 id="heroPortfolioTotal">0,00 ₺</h2>
+                            <p id="heroPortfolioDesc">Altın, Dolar, Euro ve TL Birikimleri</p>
+                        </div>
+                        <button class="btn-primary-sm" onclick="openModal('modalNewInvestment')">
+                            <i class="fa-solid fa-plus"></i> Yatırım Ekle
+                        </button>
+                    </div>
+
+                    <div class="section-title">
+                        <h4><i class="fa-solid fa-vault"></i> Varlık & Portföy Kalemleri</h4>
+                    </div>
+
+                    <div class="investments-grid" id="investmentsList">
+                        <!-- Dinamik Yatırım Kartları -->
+                    </div>
+
+                    <!-- Yatırım İşlem Geçmişi -->
+                    <div class="section-title" style="margin-top: 24px;">
+                        <h4><i class="fa-solid fa-clock-rotate-left"></i> Son Yatırım Hareketleri (Alış / Satış)</h4>
+                    </div>
+                    <div class="list-container" id="investmentHistoryList">
+                        <!-- Dinamik Alış/Satış Geçmişi -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: AİLE BİLGİSİ, ÜYELER VE AYARLAR -->
+            <section id="tabMembers" class="tab-panel">
+                <!-- Aile Kimlik Kartı -->
+                <div class="family-identity-card">
+                    <div class="family-emblem">🏠</div>
+                    <h2 id="settingsFamilyName">Uysal Ailesi</h2>
+                    <p>Davet Kodunu paylaşarak ailenizin diğer fertlerini hemen uygulamaya ekleyin:</p>
+                    
+                    <div class="invite-code-box">
+                        <span class="code-label">AİLE DAVET KODU</span>
+                        <span class="code-value" id="settingsInviteCode">UYS123</span>
+                        <div class="code-actions">
+                            <button class="btn-copy" onclick="copyInviteCode()"><i class="fa-solid fa-copy"></i> Kopyala</button>
+                            <button class="btn-share" onclick="shareInviteCode()"><i class="fa-brands fa-whatsapp"></i> WhatsApp'la Gönder</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Üyeler Listesi -->
+                <div class="section-title">
+                    <h4><i class="fa-solid fa-users"></i> Aile Fertleri (<span id="memberCountBadge">0</span>)</h4>
+                    <button class="btn-text-sm" onclick="openModal('modalAddMember')">+ Yeni Üye Ekle</button>
+                </div>
+
+                <div class="members-grid" id="membersList">
+                    <!-- Dinamik Üye Kartları -->
+                </div>
+
+                <!-- PWA ve Cihaz Ayarları -->
+                <div class="section-title">
+                    <h4><i class="fa-solid fa-mobile-screen"></i> Telefon Yükleme & Kısayol</h4>
+                </div>
+                <div class="settings-card">
+                    <div class="setting-item">
+                        <div>
+                            <strong>PWA Mobil Yükleme Rehberi</strong>
+                            <p>iPhone için: Safari'de <b>Paylaş</b> ➔ <b>Ana Ekrana Ekle</b><br>Android için: Chrome menüsünden <b>Uygulamayı Yükle</b></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Çıkış / Hesap Değiştir -->
+                <div class="settings-actions">
+                    <button class="btn-secondary" onclick="openSwitchUserModal()">
+                        <i class="fa-solid fa-repeat"></i> Aile Bireyi Değiştir
+                    </button>
+                    <button class="btn-danger" onclick="logout()">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Çıkış Yap
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- ALT MOBİL NAVİGASYON BARI (BOTTOM NAVIGATION - MOBİL) -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab-target="tabPano" onclick="switchTab('tabPano', this)">
+                <i class="fa-solid fa-house"></i>
+                <span>Pano</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabChat" onclick="switchTab('tabChat', this)">
+                <i class="fa-solid fa-comment-dots"></i>
+                <span>Sohbet</span>
+                <span class="nav-badge hidden" id="navChatBadge">0</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabPlans" onclick="switchTab('tabPlans', this)">
+                <i class="fa-solid fa-compass"></i>
+                <span>Planlar</span>
+                <span class="nav-badge hidden" id="navPlansBadge">0</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabShopping" onclick="switchTab('tabShopping', this)">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span>Alışveriş</span>
+                <span class="nav-badge hidden" id="navShoppingBadge">0</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks', this)">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Görevler</span>
+                <span class="nav-badge hidden" id="navTasksBadge">0</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabExpenses" onclick="switchTab('tabExpenses', this)">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Bütçe</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers', this)">
+                <i class="fa-solid fa-users"></i>
+                <span>Ailem</span>
+            </button>
+        </nav>
+        </div> <!-- /app-main-wrapper -->
+    </div> <!-- /mainApp -->
+
+    <!-- ==================== MODALLAR ==================== -->
+
+    <!-- MODAL: YENİ NOT / DUYURU -->
+    <div id="modalNewPost" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bullhorn"></i> Aileye Not / Duyuru Paylaş</h3>
+                <button class="btn-close" onclick="closeModal('modalNewPost')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleNewPost(event)">
+                <div class="form-group">
+                    <label>Duyuru Başlığı</label>
+                    <input type="text" id="postTitle" placeholder="Örn: Akşam Yemeği Saati" required>
+                </div>
+                <div class="form-group">
+                    <label>Mesajınız</label>
+                    <textarea id="postContent" rows="3" placeholder="Örn: Bu akşam saat 19:30'da hep beraber toplanıyoruz!" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Etiket / Tür</label>
+                    <select id="postTag">
+                        <option value="Duyuru">📢 Genel Duyuru</option>
+                        <option value="Önemli">⭐ Önemli Hatırlatma</option>
+                        <option value="Yemek">🍲 Yemek / Sofra</option>
+                        <option value="Sevgi">❤️ Aile Mesajı</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Paylaş</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ ALIŞVERİŞ MADDESİ -->
+    <div id="modalNewShopping" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-cart-plus"></i> Alışveriş Maddesi Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewShopping')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddShoppingItem(event)">
+                <div class="form-group">
+                    <label>Alınacak Ürün / Malzeme</label>
+                    <input type="text" id="shoppingTitle" placeholder="Örn: Süt, Ekmek, Domates..." required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Miktar / Adet</label>
+                        <input type="text" id="shoppingQuantity" placeholder="Örn: 2 Litre / 1 Paket" value="1 Adet">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Kategori</label>
+                        <select id="shoppingCategory">
+                            <option value="Market">🥛 Market</option>
+                            <option value="Manav">🍏 Manav</option>
+                            <option value="Kasap">🥩 Kasap</option>
+                            <option value="Giyim">👗 Giyim</option>
+                            <option value="Eşya">🛋️ Eşya</option>
+                            <option value="Çocuk">🧸 Çocuk & Bebek</option>
+                            <option value="Kozmetik">💄 Kozmetik & Bakım</option>
+                            <option value="Eczane">💊 Eczane</option>
+                            <option value="Ev">🧼 Ev & Temizlik</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Listeye Ekle</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ GÖREV -->
+    <div id="modalNewTask" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-circle-check"></i> Yeni Görev / Sorumluluk</h3>
+                <button class="btn-close" onclick="closeModal('modalNewTask')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddTask(event)">
+                <div class="form-group">
+                    <label>Görev Tanımı</label>
+                    <input type="text" id="taskTitle" placeholder="Örn: Çiçekleri sula, Çöpü dök, Odayı topla" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Kime Atansın?</label>
+                        <select id="taskAssignee" required>
+                            <!-- Dinamik Üyeler Gelecek -->
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Bitiş Zamanı</label>
+                        <select id="taskDueDate">
+                            <option value="Bugün">📅 Bugün</option>
+                            <option value="Yarın">📅 Yarın</option>
+                            <option value="Hafta Sonu">📅 Bu Hafta Sonu</option>
+                            <option value="Düzenli">🔄 Düzenli Günlük</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Görevi Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ HARCAMA -->
+    <div id="modalNewExpense" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-receipt"></i> Yeni Harcama Kaydı</h3>
+                <button class="btn-close" onclick="closeModal('modalNewExpense')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddExpense(event)">
+                <div class="form-group">
+                    <label>Harcama Açıklaması</label>
+                    <input type="text" id="expenseTitle" placeholder="Örn: Haftalık Market Alışverişi" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Tutar (₺)</label>
+                        <input type="number" step="0.5" id="expenseAmount" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Kategori</label>
+                        <select id="expenseCategory">
+                            <option value="Mutfak">🛒 Mutfak & Gıda</option>
+                            <option value="Fatura">⚡ Fatura & Aidat</option>
+                            <option value="Kira">🏠 Kira / Ev</option>
+                            <option value="Eğitim">🎒 Okul & Eğitim</option>
+                            <option value="Sağlık">💊 Sağlık</option>
+                            <option value="Eğlence">🍿 Eğlence & Gezi</option>
+                            <option value="Diğer">📦 Diğer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Kim Ödedi?</label>
+                    <select id="expensePayer">
+                        <!-- Dinamik Üyeler Gelecek -->
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Harcamayı Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AİLE BİREYİ EKLE -->
+    <div id="modalAddMember" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-plus"></i> Aile Bireyi Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalAddMember')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddMember(event)">
+                <div class="form-group">
+                    <label>Adı Soyadı</label>
+                    <input type="text" id="newMemberName" placeholder="Örn: Ayşe Uysal" required>
+                </div>
+                <div class="form-group">
+                    <label>Telefon Numarası</label>
+                    <input type="tel" id="newMemberPhone" placeholder="05XX XXX XX XX" required>
+                </div>
+                <div class="form-group">
+                    <label>Ailedeki Rolü</label>
+                    <select id="newMemberRole" required>
+                        <option value="Anne">👩 Anne</option>
+                        <option value="Baba">👨 Baba</option>
+                        <option value="Oğul">👦 Oğul</option>
+                        <option value="Kız">👧 Kız</option>
+                        <option value="Dede">👴 Dede</option>
+                        <option value="Büyükanne">👵 Büyükanne</option>
+                        <option value="Diğer">🌟 Diğer</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Üyeyi Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PLAN KATEGORİSİ SEÇİCİ -->
+    <div id="modalPlanCategoryPicker" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-compass"></i> Hangi Planı Eklemek İstersiniz?</h3>
+                <button class="btn-close" onclick="closeModal('modalPlanCategoryPicker')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Aşağıdan eklemek istediğiniz plan kategorisini seçin:</p>
+            <div class="plan-picker-grid">
+                <div class="plan-picker-card" onclick="openPlanFormWithCategory('Seyahat')">
+                    <div class="picker-icon hub-travel">✈️</div>
+                    <div class="picker-text">
+                        <strong>Seyahat & Tatil</strong>
+                        <small>Yurt içi / yurt dışı rota, ulaşım, bütçe & gezilecek yerler</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right picker-arrow"></i>
+                </div>
+                <div class="plan-picker-card" onclick="openPlanFormWithCategory('Restoran')">
+                    <div class="picker-icon hub-food">🍽️</div>
+                    <div class="picker-text">
+                        <strong>Restoran & Kafe</strong>
+                        <small>Denenecek lezzet, harita konumu, fiyat & menü notu</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right picker-arrow"></i>
+                </div>
+                <div class="plan-picker-card" onclick="openPlanFormWithCategory('Etkinlik')">
+                    <div class="picker-icon hub-event">🎭</div>
+                    <div class="picker-text">
+                        <strong>Etkinlik & Gösteri</strong>
+                        <small>Konser, tiyatro, sinema, tarih/saat, salon & bilet linki</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right picker-arrow"></i>
+                </div>
+                <div class="plan-picker-card" onclick="openPlanFormWithCategory('Alisveris')">
+                    <div class="picker-icon hub-shop">🛍️</div>
+                    <div class="picker-text">
+                        <strong>Alışveriş & Hayaller (Wishlist)</strong>
+                        <small>Büyük istekler, satın alma linki, fiyat & öncelik</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right picker-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ AİLE PLANI -->
+    <div id="modalNewPlan" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-compass"></i> Yeni Aile Planı Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewPlan')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddPlan(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-layer-group"></i> Plan Kategorisi</label>
+                    <select id="planCategorySelect" onchange="onPlanCategoryChange(this.value)">
+                        <option value="Seyahat">✈️ Seyahat (Tatil & Gezi)</option>
+                        <option value="Restoran">🍽️ Restoran / Kafe (Lezzet & Mekan)</option>
+                        <option value="Etkinlik">🎭 Etkinlik (Konser / Tiyatro / Sinema / Sergi)</option>
+                        <option value="Alisveris">🛍️ Alışveriş (İstek / Hayal / Büyük İhtiyaç)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label id="planTitleLabel"><i class="fa-solid fa-heading"></i> Plan / Mekan / Etkinlik Adı</label>
+                    <input type="text" id="planTitleInput" placeholder="Örn: Kapadokya Tatili" required>
+                </div>
+
+                <!-- 1. SEYAHAT ALANLARI -->
+                <div id="sectionSeyahatFields">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-earth-americas"></i> Seyahat Kapsamı</label>
+                            <select id="planTravelType">
+                                <option value="Yurtici">🇹🇷 Yurt İçi</option>
+                                <option value="Yurtdisi">🌍 Yurt Dışı</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-calendar"></i> Hedef Tarih / Dönem</label>
+                            <input type="text" id="planTravelDate" placeholder="Örn: Sonbahar / Temmuz 2026">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-plane"></i> Ulaşım Şekli</label>
+                            <select id="planTravelTransport">
+                                <option value="🚗 Şahsi Araç">🚗 Şahsi Araç</option>
+                                <option value="✈️ Uçak">✈️ Uçak</option>
+                                <option value="🚆 Tren / YHT">🚆 Tren / YHT</option>
+                                <option value="🚌 Otobüs / Tur">🚌 Otobüs / Tur</option>
+                                <option value="🚢 Gemi / Feribot">🚢 Gemi / Feribot</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-coins"></i> Tahmini Bütçe (₺)</label>
+                            <input type="number" id="planTravelBudget" placeholder="Örn: 25000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-map-location-dot"></i> Gezilecek Yerler & Rota Notları</label>
+                        <textarea id="planTravelNotes" rows="2" placeholder="Örn: Balon turu, Göreme açık hava müzesi, testi kebabı"></textarea>
+                    </div>
+                </div>
+
+                <!-- 2. RESTORAN / KAFE ALANLARI -->
+                <div id="sectionRestoranFields" class="hidden">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-location-dot"></i> Konum / Semt / Adres</label>
+                        <input type="text" id="planRestLocation" placeholder="Örn: Çengelköy, İstanbul / Moda Kadıköy">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-utensils"></i> Denenecek Lezzet / Menü Notu</label>
+                        <input type="text" id="planRestDish" placeholder="Örn: San Sebastian Cheesecake & Menemen">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-money-bill-wave"></i> Fiyat Düzeyi</label>
+                            <select id="planRestPrice">
+                                <option value="₺ Uygun">₺ Uygun</option>
+                                <option value="₺₺ Orta">₺₺ Orta</option>
+                                <option value="₺₺₺ Özel Gün / Gurme">₺₺₺ Özel Gün / Gurme</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-link"></i> Harita / Menü Linki</label>
+                            <input type="url" id="planRestLink" placeholder="https://maps.google.com/...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ETKİNLİK ALANLARI -->
+                <div id="sectionEtkinlikFields" class="hidden">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-calendar-day"></i> Tarih & Saat</label>
+                            <input type="text" id="planEventDate" placeholder="Örn: 15 Ekim 2026 - 20:30">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-building"></i> Mekan / Salon</label>
+                            <input type="text" id="planEventVenue" placeholder="Örn: Zorlu PSM / Harbiye">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-ticket"></i> Bilet / Etkinlik Linki</label>
+                        <input type="url" id="planEventLink" placeholder="https://biletix.com/... veya passo...">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-users"></i> Kimler Katılacak?</label>
+                        <input type="text" id="planEventAttendees" placeholder="Örn: Tüm Aile / Anne & Baba">
+                    </div>
+                </div>
+
+                <!-- 4. ALIŞVERİŞ ALANLARI -->
+                <div id="sectionAlisverisFields" class="hidden">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-link"></i> Ürün / Satın Alma Linki</label>
+                        <input type="url" id="planShopLink" placeholder="https://trendyol.com/... veya hepsiburada...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-tag"></i> Tahmini Fiyat (₺)</label>
+                            <input type="number" id="planShopPrice" placeholder="Örn: 4500">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-star"></i> Öncelik</label>
+                            <select id="planShopPriority">
+                                <option value="⭐ Yüksek / Acil">⭐ Yüksek / Acil</option>
+                                <option value="⏳ Yakında">⏳ Yakında</option>
+                                <option value="💭 Hayal / Gelecek">💭 Hayal / Gelecek</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-note-sticky"></i> Neden İstendi / Detay Notu</label>
+                        <input type="text" id="planShopNote" placeholder="Örn: Salon için yeni kahve köşesi">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-plus-circle"></i> Planı Kaydet
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AYLIK MAAŞ GÜNCELLEME -->
+    <div id="modalMySalary" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-money-bill-wave"></i> Aylık Maaşımı Belirle</h3>
+                <button class="btn-close" onclick="closeModal('modalMySalary')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                Belirlediğiniz maaş aile toplam bütçe havuzuna dahil edilir. Ayın ilk günü otomatik bildirim gönderilir.
+            </p>
+            <form onsubmit="handleSaveSalary(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-coins"></i> Aylık Net Maaşınız (₺)</label>
+                    <input type="number" step="100" id="salaryAmountInput" placeholder="Örn: 45000" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-calendar-day"></i> Maaş Günü</label>
+                        <select id="salaryPayDayInput">
+                            <option value="1">Her Ayın 1'i</option>
+                            <option value="5">Her Ayın 5'i</option>
+                            <option value="10">Her Ayın 10'u</option>
+                            <option value="15">Her Ayın 15'i</option>
+                            <option value="20">Her Ayın 20'si</option>
+                            <option value="25">Her Ayın 25'i</option>
+                            <option value="30">Her Ayın Son Günü</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-user"></i> Kaydeden</label>
+                        <input type="text" id="salaryUserNameDisplay" readonly disabled style="background: rgba(255,255,255,0.05);">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-note-sticky"></i> Not / Açıklama (İsteğe bağlı)</label>
+                    <input type="text" id="salaryNoteInput" placeholder="Örn: Ana maaş + Yemek kartı">
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-check"></i> Maaşımı Kaydet
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ SABİT GİDER -->
+    <div id="modalNewFixedExpense" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice-dollar"></i> Yeni Sabit Gider Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewFixedExpense')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddFixedExpense(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-heading"></i> Sabit Gider Tanımı</label>
+                    <input type="text" id="fixedTitle" placeholder="Örn: Ev Kirası, Elektrik Faturası, Aidat" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-money-bill"></i> Aylık Tutar (₺)</label>
+                        <input type="number" step="10" id="fixedAmount" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-tags"></i> Kategori</label>
+                        <select id="fixedCategory">
+                            <option value="Kira">🏠 Kira</option>
+                            <option value="Fatura">⚡ Elektrik / Su / Gaz</option>
+                            <option value="Aidat">🏢 Site & Bina Aidatı</option>
+                            <option value="Kredi">💳 Kredi / Taksit</option>
+                            <option value="İnternet">📶 İnternet & TV</option>
+                            <option value="Sigorta">🛡️ Sigorta & Kasko</option>
+                            <option value="Eğitim">🎒 Okul / Kurs Taksiti</option>
+                            <option value="Abonelik">📺 Dijital Abonelikler</option>
+                            <option value="Diğer">📦 Diğer Düzenli Gider</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-calendar"></i> Son Ödeme Günü</label>
+                        <input type="number" min="1" max="31" id="fixedDueDay" placeholder="Örn: 15" value="1" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-user-check"></i> Ödeyen / Sorumlu</label>
+                        <select id="fixedPayer">
+                            <!-- Dinamik Üyeler -->
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-sticky-note"></i> Not / Detay</label>
+                    <input type="text" id="fixedNotes" placeholder="Örn: Otomatik ödeme talimatında">
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-plus-circle"></i> Sabit Gideri Kaydet
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ YATIRIM PORTFÖYÜ EKLE (ALTIN, DOLAR, EURO, TL) -->
+    <div id="modalNewInvestment" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gem"></i> Yeni Yatırım & Birikim Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewInvestment')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                Varlık türünü ve miktarını seçin; güncel TL değeri <b>Altınkaynak</b> piyasa kuruyla anında hesaplanır.
+            </p>
+            <form onsubmit="handleAddInvestment(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-layer-group"></i> Yatırım Varlık Türü</label>
+                    <select id="invCategory" onchange="onInvestmentCategoryChange(this.value)">
+                        <option value="Altın">🪙 Altın (Gram Altın / Çeyrek)</option>
+                        <option value="Dolar">💵 Dolar ($ - USD)</option>
+                        <option value="Euro">💶 Euro (€ - EUR)</option>
+                        <option value="TL">🇹🇷 Türk Lirası (₺ - Nakit Birikim)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-tag"></i> Varlık Başlığı / Açıklama</label>
+                    <input type="text" id="invTitle" placeholder="Örn: Gram Altın, Nakit Dolar, Vadeli TL" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-scale-unbalanced"></i> Miktar</label>
+                        <input type="number" step="any" id="invAmount" placeholder="Örn: 10" oninput="autoCalculateInvestmentTL()" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-ruler"></i> Birim</label>
+                        <input type="text" id="invUnit" placeholder="Gram / USD / EUR / TL" value="Gram" required>
+                    </div>
+                </div>
+
+                <!-- Anlık Altınkaynak Kur Bilgisi ve Canlı TL Hesaplama -->
+                <div class="live-calc-badge" id="invLiveRateBadge">
+                    <i class="fa-solid fa-bolt"></i> Altınkaynak Kuru: <span id="invLiveRateText">Yükleniyor...</span>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-turkish-lira-sign"></i> Toplam Güncel TL Değeri (₺)</label>
+                    <input type="number" step="any" id="invValueTl" placeholder="0.00" required>
+                    <small style="font-size:0.7rem; color:var(--text-muted); margin-top:3px; display:block;">
+                        💡 Miktar girdikçe Altınkaynak kuruyla otomatik hesaplanır, isterseniz elle değiştirebilirsiniz.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-note-sticky"></i> Saklama Yeri / Ek Not</label>
+                    <input type="text" id="invNotes" placeholder="Örn: Banka altın hesabı / Kasa / Döviz cüzdanı">
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-vault"></i> Portföye Ekle
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YATIRIM EKLE / BOZDUR (PORTFÖY GÜNCELLEME) -->
+    <div id="modalInvestmentAdjust" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="adjustModalTitle"><i class="fa-solid fa-arrows-rotate"></i> Yatırım Güncelle</h3>
+                <button class="btn-close" onclick="closeModal('modalInvestmentAdjust')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="adjust-investment-info" id="adjustInvestmentInfoBox">
+                <strong id="adjustInvName">Gram Altın</strong>
+                <span id="adjustInvCurrentStats">Mevcut: 20 Gram (₺ 65.000)</span>
+            </div>
+            <form onsubmit="handleAdjustInvestment(event)">
+                <input type="hidden" id="adjustInvId">
+                <div class="adjust-type-toggle">
+                    <label class="adjust-type-btn active" id="btnTypeBuy" onclick="setAdjustType('buy')">
+                        <i class="fa-solid fa-circle-plus"></i> Ekle / Satın Al
+                    </label>
+                    <label class="adjust-type-btn" id="btnTypeSell" onclick="setAdjustType('sell')">
+                        <i class="fa-solid fa-circle-minus"></i> Bozdur / Sat
+                    </label>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label id="lblAdjustAmount"><i class="fa-solid fa-calculator"></i> Eklenecek Miktar</label>
+                        <input type="number" step="any" id="adjustAmountDelta" placeholder="0" oninput="autoCalculateAdjustTL()" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label id="lblAdjustValue"><i class="fa-solid fa-turkish-lira-sign"></i> TL Değeri (₺)</label>
+                        <input type="number" step="10" id="adjustValueDelta" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-comment"></i> İşlem Notu</label>
+                    <input type="text" id="adjustNote" placeholder="Örn: Ay başı birikimi yapıldı / Bozduruldu">
+                </div>
+                <button type="submit" class="btn-primary" id="btnSubmitAdjust">
+                    <i class="fa-solid fa-check"></i> İşlemi Onayla
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: KULLANICI DEĞİŞTİR (SWITCH USER) -->
+    <div id="modalSwitchUser" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-repeat"></i> Aktif Aile Bireyini Seç</h3>
+                <button class="btn-close" onclick="closeModal('modalSwitchUser')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="switch-user-list" id="switchUserListContainer">
+                <!-- Üye Listesi Butonları -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: iOS SAFARI PWA KURULUM REHBERİ -->
+    <div id="modalIosInstall" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 420px; text-align: center;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> YuvaPusula'yı iPhone'a Yükle</h3>
+                <button class="btn-close" onclick="closeModal('modalIosInstall')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 20px;">
+                <img src="icons/icon.svg" style="width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 12px auto; display: block; box-shadow: 0 8px 24px rgba(30,27,75,0.3);" alt="YuvaPusula">
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Ana Ekrana Ekleyin</h4>
+                <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">
+                    Safari tarayıcısında 2 basit adımda tam ekran bir mobil uygulama deneyimi kazanın:
+                </p>
+
+                <div class="ios-guide-box">
+                    <div class="ios-step">
+                        <div class="ios-step-num">1</div>
+                        <div class="ios-step-text">
+                            Safari'nin en alt veya üst menüsündeki <strong>Paylaş <i class="fa-solid fa-arrow-up-from-bracket" style="color: #0284c7;"></i> (Share)</strong> simgesine dokunun.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">2</div>
+                        <div class="ios-step-text">
+                            Açılan menüyü aşağı kaydırıp <strong>'Ana Ekrana Ekle' <i class="fa-regular fa-square-plus" style="color: #10b981;"></i> (Add to Home Screen)</strong> seçeneğine tıklayın.
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" style="margin-top: 10px; width: 100%;" onclick="closeModal('modalIosInstall')">
+                    <i class="fa-solid fa-check"></i> Anladım
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anlık Gelen Mesaj Bildirim Kartı (In-App Floating Banner) -->
+    <div id="inAppMsgBanner" class="in-app-msg-banner hidden" onclick="openActiveChatFromBanner()">
+        <div class="in-app-msg-left">
+            <span class="in-app-msg-avatar" id="inAppMsgAvatar">👨</span>
+            <div class="in-app-msg-body">
+                <span class="in-app-msg-sender" id="inAppMsgSender">Ahmet Uysal</span>
+                <span class="in-app-msg-text" id="inAppMsgText">Yeni bir mesaj gönderdi...</span>
+            </div>
+        </div>
+        <button class="in-app-msg-close" onclick="closeInAppMsgBanner(event)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Toast Bildirimi -->
+    <div id="toastNotification" class="toast hidden">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMessage">İşlem başarılı!</span>
+    </div>
+
+    <!-- App Logic -->
+    <script src="client.js?v=13"></script>
+</body>
+</html>

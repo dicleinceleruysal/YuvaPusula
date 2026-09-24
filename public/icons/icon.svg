@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Arka Plan Zengin İndigo-Mor Gradyan -->
+    <linearGradient id="yuvaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="40%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+
+    <!-- Pusula Kuzey İğnesi Gradyanı (Zümrüt Yeşili - Rehberlik) -->
+    <linearGradient id="northGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <!-- Pusula Güney İğnesi Gradyanı (Altın Sarısı - Yuva Sıcaklığı) -->
+    <linearGradient id="southGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+
+    <!-- Yuva Çatısı & Yıldız Gradyanı -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#a855f7" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- Yumuşak Gölgelendirme -->
+    <filter id="glowShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    
+    <filter id="starGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- PWA İkonu Yuvarlatılmış Arka Plan -->
+  <rect width="512" height="512" rx="120" fill="url(#yuvaBg)" />
+
+  <!-- Dış Pusula Kadran Halkası -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#ringGrad)" stroke-width="4" stroke-dasharray="6 8" opacity="0.6" />
+  <circle cx="256" cy="256" r="182" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+
+  <!-- Pusula Yön Çentikleri (K, G, D, B) -->
+  <circle cx="256" cy="62" r="4" fill="#34d399" />
+  <circle cx="256" cy="450" r="4" fill="#fbbf24" />
+  <circle cx="62" cy="256" r="4" fill="#818cf8" />
+  <circle cx="450" cy="256" r="4" fill="#818cf8" />
+
+  <g filter="url(#glowShadow)">
+    <!-- YUVA (Ev) Gövdesi & Çatısı -->
+    <!-- Çatı Silueti -->
+    <path d="M256 108 L126 218 L152 248 L256 160 L360 248 L386 218 Z" fill="url(#goldGrad)" />
+    
+    <!-- Ev Gövdesi (Saydam / Modern Hatlar) -->
+    <path d="M152 248 L152 384 Q152 400 168 400 L344 400 Q360 400 360 384 L360 248 L256 160 Z" 
+          fill="rgba(255, 255, 255, 0.08)" 
+          stroke="rgba(255, 255, 255, 0.4)" 
+          stroke-width="3.5" />
+
+    <!-- PUSULA YILDIZI & İĞNESİ (Merkez Rehberlik Sembolü) -->
+    <!-- Doğu & Batı Yardımcı İğneleri -->
+    <polygon points="256,256 220,256 256,270" fill="rgba(255,255,255,0.3)" />
+    <polygon points="256,256 220,256 256,242" fill="rgba(255,255,255,0.6)" />
+    <polygon points="256,256 292,256 256,242" fill="rgba(255,255,255,0.3)" />
+    <polygon points="256,256 292,256 256,270" fill="rgba(255,255,255,0.6)" />
+
+    <!-- Kuzey İğnesi (Gelecek & Yön - Zümrüt Yeşili) -->
+    <polygon points="256,150 240,256 256,256" fill="#10b981" />
+    <polygon points="256,150 272,256 256,256" fill="url(#northGrad)" />
+
+    <!-- Güney İğnesi (Yuva & Güven - Sıcak Amber Sarısı) -->
+    <polygon points="256,362 240,256 256,256" fill="#d97706" />
+    <polygon points="256,362 272,256 256,256" fill="url(#southGrad)" />
+
+    <!-- Merkez Pusula Göbeği (Parlak Çekirdek) -->
+    <circle cx="256" cy="256" r="16" fill="#ffffff" filter="url(#starGlow)" />
+    <circle cx="256" cy="256" r="9" fill="#1e1b4b" />
+    <circle cx="256" cy="256" r="4" fill="#38bdf8" />
+
+    <!-- Yuva Kapı Kemeri (Sıcak Karşılama) -->
+    <path d="M228 400 L228 340 Q228 312 256 312 Q284 312 284 340 L284 400" 
+          fill="none" 
+          stroke="url(#goldGrad)" 
+          stroke-width="4" 
+          stroke-linecap="round" />
+  </g>
+
+  <!-- Mini Kuzey Yıldızı Işıltısı -->
+  <g transform="translate(256, 126)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="3" fill="#ffffff" />
+    <line x1="-8" y1="0" x2="8" y2="0" stroke="#ffffff" stroke-width="1.5" />
+    <line x1="0" y1="-8" x2="0" y2="8" stroke="#ffffff" stroke-width="1.5" />
+  </g>
+</svg>

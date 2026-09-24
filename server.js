@@ -430,10 +430,15 @@ async function appHandler(req, res) {
     if (reqUrl === '/' || reqUrl === '') reqUrl = '/index.html';
 
     const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '').replace(/^[\\\/]/, '');
-    let filePath = path.join(BASE_DIR, safePath);
-
+    let filePath = path.join(BASE_DIR, 'public', safePath);
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        filePath = path.join(BASE_DIR, 'index.html');
+        filePath = path.join(BASE_DIR, safePath);
+    }
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(BASE_DIR, 'public', 'index.html');
+        if (!fs.existsSync(filePath)) {
+            filePath = path.join(BASE_DIR, 'index.html');
+        }
     }
 
     fs.stat(filePath, (err, stats) => {
