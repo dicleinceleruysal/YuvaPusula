@@ -17,5 +17,8 @@
     "shopping"
   ],
   "author": "Uysal Ailesi",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0"
+  }
 }

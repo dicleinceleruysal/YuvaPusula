@@ -219,7 +219,7 @@ async function appHandler(req, res) {
             // 1. Giriş Yap (Telefon No ile)
             if (pathname === '/api/auth/login' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const found = dbManager.findUserAndFamilyByPhone(body.phone || '');
+                const found = await dbManager.findUserAndFamilyByPhone(body.phone || '');
                 if (found) {
                     return sendJson(res, 200, { success: true, user: found.user, family: found.family });
                 } else {
@@ -242,14 +242,14 @@ async function appHandler(req, res) {
                     avatar: body.avatar || '👤'
                 };
 
-                const family = dbManager.createFamily(formattedName, inviteCode, user);
+                const family = await dbManager.createFamily(formattedName, inviteCode, user);
                 return sendJson(res, 200, { success: true, user, family });
             }
 
             // 3. Aileye Katıl (Davet Kodu ile)
             if (pathname === '/api/auth/join' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const family = dbManager.findFamilyByCode(body.inviteCode || '');
+                const family = await dbManager.findFamilyByCode(body.inviteCode || '');
                 if (!family) {
                     return sendJson(res, 404, { success: false, message: 'Geçersiz davet kodu.' });
                 }
@@ -262,14 +262,14 @@ async function appHandler(req, res) {
                     avatar: body.avatar || '👤'
                 };
 
-                const updatedFamily = dbManager.addUserToFamily(family.id, user);
+                const updatedFamily = await dbManager.addUserToFamily(family.id, user);
                 return sendJson(res, 200, { success: true, user, family: updatedFamily });
             }
 
             // 4. Güncel Aile Verilerini Getir
             if (pathname.startsWith('/api/family/') && req.method === 'GET') {
                 const familyId = pathname.replace('/api/family/', '');
-                const family = dbManager.getFullFamilyData(familyId);
+                const family = await dbManager.getFullFamilyData(familyId);
                 if (family) {
                     return sendJson(res, 200, { success: true, family });
                 }
@@ -279,133 +279,133 @@ async function appHandler(req, res) {
             // 5. Pano Gönderisi Ekle / Sil
             if (pathname === '/api/posts' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addPost(body.familyId, body.post);
+                const updatedFamily = await dbManager.addPost(body.familyId, body.post);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/posts/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deletePost(body.familyId, body.postId);
+                const updatedFamily = await dbManager.deletePost(body.familyId, body.postId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 7. Plan İşlemleri
             if (pathname === '/api/plans/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addPlan(body.familyId, body.plan);
+                const updatedFamily = await dbManager.addPlan(body.familyId, body.plan);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.togglePlan(body.familyId, body.planId);
+                const updatedFamily = await dbManager.togglePlan(body.familyId, body.planId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deletePlan(body.familyId, body.planId);
+                const updatedFamily = await dbManager.deletePlan(body.familyId, body.planId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 8. Alışveriş Listesi İşlemleri
             if (pathname === '/api/shopping/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addShoppingItem(body.familyId, body.item);
+                const updatedFamily = await dbManager.addShoppingItem(body.familyId, body.item);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/shopping/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.toggleShoppingItem(body.familyId, body.itemId);
+                const updatedFamily = await dbManager.toggleShoppingItem(body.familyId, body.itemId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/shopping/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteShoppingItem(body.familyId, body.itemId);
+                const updatedFamily = await dbManager.deleteShoppingItem(body.familyId, body.itemId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 9. Görev İşlemleri
             if (pathname === '/api/tasks/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addTask(body.familyId, body.task);
+                const updatedFamily = await dbManager.addTask(body.familyId, body.task);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/tasks/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.toggleTask(body.familyId, body.taskId);
+                const updatedFamily = await dbManager.toggleTask(body.familyId, body.taskId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/tasks/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteTask(body.familyId, body.taskId);
+                const updatedFamily = await dbManager.deleteTask(body.familyId, body.taskId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 10. Harcama İşlemleri
             if (pathname === '/api/expenses/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addExpense(body.familyId, body.expense);
+                const updatedFamily = await dbManager.addExpense(body.familyId, body.expense);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/expenses/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteExpense(body.familyId, body.expenseId);
+                const updatedFamily = await dbManager.deleteExpense(body.familyId, body.expenseId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 11. Maaş İşlemleri
             if (pathname === '/api/salaries/set' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.setSalary(body.familyId, body.salary);
+                const updatedFamily = await dbManager.setSalary(body.familyId, body.salary);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/salaries/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteSalary(body.familyId, body.salaryId);
+                const updatedFamily = await dbManager.deleteSalary(body.familyId, body.salaryId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 12. Sabit Gider İşlemleri
             if (pathname === '/api/fixed-expenses/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addFixedExpense(body.familyId, body.fixed);
+                const updatedFamily = await dbManager.addFixedExpense(body.familyId, body.fixed);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/fixed-expenses/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.toggleFixedExpense(body.familyId, body.id);
+                const updatedFamily = await dbManager.toggleFixedExpense(body.familyId, body.id);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/fixed-expenses/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteFixedExpense(body.familyId, body.id);
+                const updatedFamily = await dbManager.deleteFixedExpense(body.familyId, body.id);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 13. Yatırım ve Birikim İşlemleri
             if (pathname === '/api/investments/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addInvestment(body.familyId, body.investment);
+                const updatedFamily = await dbManager.addInvestment(body.familyId, body.investment);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/investments/adjust' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.adjustInvestment(body.familyId, body.investmentId, body.adjustment);
+                const updatedFamily = await dbManager.adjustInvestment(body.familyId, body.investmentId, body.adjustment);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/investments/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.deleteInvestment(body.familyId, body.investmentId);
+                const updatedFamily = await dbManager.deleteInvestment(body.familyId, body.investmentId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
             // 14. Mesajlaşma İşlemleri (Aile Grubu & Bireysel)
             if (pathname === '/api/messages/send' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.addMessage(body.familyId, body.message);
+                const updatedFamily = await dbManager.addMessage(body.familyId, body.message);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/messages/read' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const updatedFamily = dbManager.markMessagesAsRead(body.familyId, body.currentUserId, body.chatPartnerId);
+                const updatedFamily = await dbManager.markMessagesAsRead(body.familyId, body.currentUserId, body.chatPartnerId);
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
