@@ -2085,8 +2085,14 @@ body {
     display: block;
 }
 
-.btn-member-msg {
+.member-card-actions {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-member-msg {
     background: var(--primary-light);
     color: var(--primary);
     border: 1px solid rgba(79, 70, 229, 0.2);
@@ -2105,6 +2111,29 @@ body {
 .btn-member-msg:active {
     background: var(--primary);
     color: white;
+}
+
+.btn-member-delete {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-full);
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-member-delete:hover,
+.btn-member-delete:active {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
 }
 
 .settings-card {

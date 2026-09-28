@@ -324,6 +324,45 @@ async function addUserToFamily(familyId, user) {
     return null;
 }
 
+// 4.1 Aile Üyesi Sil / Çıkar
+async function deleteMember(familyId, memberId) {
+    const sql = getNeon();
+    if (sql) {
+        try {
+            const res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            if (res && res.length > 0) {
+                const family = res[0].data;
+                const target = (family.members || []).find(m => m.id === memberId);
+                family.members = (family.members || []).filter(m => m.id !== memberId);
+
+                await sql`UPDATE families SET data = ${JSON.stringify(family)}, updated_at = NOW() WHERE id = ${familyId}`;
+
+                if (target && target.phone) {
+                    try {
+                        await sql`DELETE FROM users WHERE (phone = ${target.phone} OR id = ${memberId}) AND family_id = ${familyId}`;
+                    } catch (err) {}
+                }
+                return family;
+            }
+        } catch (e) {
+            console.error('Neon deleteMember error:', e);
+        }
+    }
+
+    loadJsonStore();
+    const family = jsonStore.families.find(f => f.id === familyId);
+    if (family) {
+        const target = (family.members || []).find(m => m.id === memberId);
+        family.members = (family.members || []).filter(m => m.id !== memberId);
+        if (target && target.phone) {
+            jsonStore.users = jsonStore.users.filter(u => !(u.phone === target.phone && u.family_id === familyId));
+        }
+        saveJsonStore();
+        return family;
+    }
+    return null;
+}
+
 // 5. Güncel Aile Verilerini Getir
 async function getFullFamilyData(familyId) {
     const sql = getNeon();
@@ -680,6 +719,7 @@ module.exports = {
     createFamily,
     findFamilyByCode,
     addUserToFamily,
+    deleteMember,
     getFullFamilyData,
     addPost,
     deletePost,

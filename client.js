@@ -277,6 +277,23 @@ const AilemAPI = {
         return null;
     },
 
+    async deleteMember(familyId, memberId) {
+        try {
+            const res = await fetch('/api/members/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, memberId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {
+            console.warn('API deleteMember hatası:', e);
+        }
+        return null;
+    },
+
     async fetchFamily(familyId) {
         try {
             const res = await fetch(`/api/family/${familyId}`);
@@ -1973,6 +1990,7 @@ function renderMembers() {
 
     container.innerHTML = members.map(m => {
         const isMe = appState.currentUser && m.id === appState.currentUser.id;
+        const safeName = (m.name || 'Üye').replace(/'/g, "\\'");
         return `
             <div class="member-card">
                 <div class="member-avatar">${m.avatar || '👤'}</div>
@@ -1981,11 +1999,16 @@ function renderMembers() {
                     <small>${m.role}</small>
                     <span class="member-phone"><i class="fa-solid fa-phone"></i> ${m.phone}</span>
                 </div>
-                ${!isMe ? `
-                    <button class="btn-member-msg" onclick="openDirectChat('${m.id}')" title="Özel Mesaj Gönder">
-                        <i class="fa-solid fa-comment-dots"></i> Mesaj
-                    </button>
-                ` : ''}
+                <div class="member-card-actions">
+                    ${!isMe ? `
+                        <button class="btn-member-msg" onclick="openDirectChat('${m.id}')" title="Özel Mesaj Gönder">
+                            <i class="fa-solid fa-comment-dots"></i> Mesaj
+                        </button>
+                        <button class="btn-member-delete" onclick="handleDeleteMember('${m.id}', '${safeName}')" title="Üyeyi Aileden Çıkar">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    ` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -2924,6 +2947,30 @@ async function handleAddMember(e) {
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
     showToast(`${name} aileye eklendi ve sisteme kaydedildi! 🎉`);
+}
+
+// Aile Üyesi Sil / Çıkar
+async function handleDeleteMember(memberId, memberName) {
+    if (!confirm(`"${memberName}" isimli aile üyesini aileden çıkarmak ve hesabını silmek istediğinize emin misiniz?`)) {
+        return;
+    }
+
+    if (appState.familyData && appState.familyData.id) {
+        const updatedFamily = await AilemAPI.deleteMember(appState.familyData.id, memberId);
+        if (updatedFamily) {
+            appState.familyData = updatedFamily;
+        } else {
+            if (appState.familyData.members) {
+                appState.familyData.members = appState.familyData.members.filter(m => m.id !== memberId);
+            }
+        }
+    }
+
+    saveStateToStorage();
+    renderMembers();
+    updateMemberSelectDropdowns();
+    updateQuickStats();
+    showToast(`"${memberName}" aileden çıkarıldı.`);
 }
 
 // ==========================================================

@@ -280,6 +280,13 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, user, family: updatedFamily });
             }
 
+            // 3.2 Aile Üyesi Sil / Çıkar
+            if (pathname === '/api/members/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteMember(body.familyId, body.memberId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 4. Güncel Aile Verilerini Getir
             if (pathname.startsWith('/api/family/') && req.method === 'GET') {
                 const familyId = pathname.replace('/api/family/', '');
