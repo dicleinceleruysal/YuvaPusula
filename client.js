@@ -260,6 +260,23 @@ const AilemAPI = {
         return null;
     },
 
+    async addMember(familyId, user) {
+        try {
+            const res = await fetch('/api/members/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, user })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {
+            console.warn('API addMember hatası:', e);
+        }
+        return null;
+    },
+
     async fetchFamily(familyId) {
         try {
             const res = await fetch(`/api/family/${familyId}`);
@@ -2869,11 +2886,16 @@ async function handleDeleteInvestment(id) {
 }
 
 // Yeni Üye Ekle
-function handleAddMember(e) {
+async function handleAddMember(e) {
     e.preventDefault();
     const name = document.getElementById('newMemberName').value.trim();
     const phone = document.getElementById('newMemberPhone').value.trim();
     const role = document.getElementById('newMemberRole').value;
+
+    if (!name || !phone) {
+        showToast('Lütfen isim ve telefon numarasını eksiksiz girin.');
+        return;
+    }
 
     const newMember = {
         id: 'usr_' + Date.now(),
@@ -2883,7 +2905,17 @@ function handleAddMember(e) {
         avatar: ROLE_AVATARS[role] || '👤'
     };
 
-    appState.familyData.members.push(newMember);
+    // 1. Sunucu ve Veritabanına (Neon / SQLite) kaydet
+    if (appState.familyData && appState.familyData.id) {
+        const updatedFamily = await AilemAPI.addMember(appState.familyData.id, newMember);
+        if (updatedFamily) {
+            appState.familyData = updatedFamily;
+        } else {
+            if (!appState.familyData.members) appState.familyData.members = [];
+            appState.familyData.members.push(newMember);
+        }
+    }
+
     saveStateToStorage();
     closeModal('modalAddMember');
     renderMembers();
@@ -2891,7 +2923,7 @@ function handleAddMember(e) {
     updateQuickStats();
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
-    showToast(`${name} aileye eklendi! 🎉`);
+    showToast(`${name} aileye eklendi ve sisteme kaydedildi! 🎉`);
 }
 
 // ==========================================================

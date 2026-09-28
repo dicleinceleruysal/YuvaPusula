@@ -266,6 +266,20 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, user, family: updatedFamily });
             }
 
+            // 3.1 Aile Üyesi Ekle (Hesap İçinden)
+            if (pathname === '/api/members/add' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const user = {
+                    id: body.user.id || ('usr_' + Date.now()),
+                    phone: body.user.phone,
+                    name: body.user.name,
+                    role: body.user.role,
+                    avatar: body.user.avatar || '👤'
+                };
+                const updatedFamily = await dbManager.addUserToFamily(body.familyId, user);
+                return sendJson(res, 200, { success: true, user, family: updatedFamily });
+            }
+
             // 4. Güncel Aile Verilerini Getir
             if (pathname.startsWith('/api/family/') && req.method === 'GET') {
                 const familyId = pathname.replace('/api/family/', '');

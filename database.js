@@ -138,30 +138,92 @@ async function initDatabase() {
     isInitialized = true;
 }
 
+function normalizePhone(p) {
+    if (!p) return '';
+    let digits = String(p).replace(/\D/g, '');
+    if (digits.startsWith('90') && digits.length === 12) {
+        digits = digits.substring(2);
+    }
+    if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.substring(1);
+    }
+    return digits;
+}
+
 // 1. Kullanıcı ve Aile Bul (Giriş Yap)
 async function findUserAndFamilyByPhone(phone) {
+    const raw = (phone || '').trim();
+    const norm = normalizePhone(raw);
+    const withZero = '0' + norm;
+    const with90 = '90' + norm;
+    const withPlus90 = '+90' + norm;
+
     const sql = getNeon();
     if (sql) {
         try {
-            const users = await sql`SELECT * FROM users WHERE phone = ${phone} LIMIT 1`;
-            if (!users || users.length === 0) return null;
-            const u = users[0];
-            const families = await sql`SELECT data FROM families WHERE id = ${u.family_id} LIMIT 1`;
-            if (!families || families.length === 0) return null;
-            return {
-                user: { id: u.id, phone: u.phone, name: u.name, role: u.role, avatar: u.avatar },
-                family: families[0].data
-            };
+            // 1. users tablosunda ara
+            const users = await sql`
+                SELECT * FROM users 
+                WHERE phone = ${raw} 
+                   OR phone = ${norm} 
+                   OR phone = ${withZero} 
+                   OR phone = ${with90} 
+                   OR phone = ${withPlus90}
+                LIMIT 1
+            `;
+            if (users && users.length > 0) {
+                const u = users[0];
+                const families = await sql`SELECT data FROM families WHERE id = ${u.family_id} LIMIT 1`;
+                if (families && families.length > 0) {
+                    return {
+                        user: { id: u.id, phone: u.phone, name: u.name, role: u.role, avatar: u.avatar },
+                        family: families[0].data
+                    };
+                }
+            }
+
+            // 2. Eğer users tablosunda yoksa, families verisindeki members dizisini tara
+            const allFam = await sql`SELECT id, data FROM families`;
+            for (const f of allFam) {
+                const famData = f.data;
+                if (famData && Array.isArray(famData.members)) {
+                    const foundMember = famData.members.find(m => normalizePhone(m.phone) === norm || (m.phone || '').trim() === raw);
+                    if (foundMember) {
+                        try {
+                            await sql`
+                                INSERT INTO users (id, phone, family_id, name, role, avatar)
+                                VALUES (${foundMember.id || ('usr_' + Date.now())}, ${foundMember.phone}, ${f.id}, ${foundMember.name}, ${foundMember.role}, ${foundMember.avatar})
+                                ON CONFLICT (phone) DO UPDATE SET family_id = ${f.id}, name = ${foundMember.name}, role = ${foundMember.role}, avatar = ${foundMember.avatar}
+                            `;
+                        } catch (insErr) {}
+                        return { user: foundMember, family: famData };
+                    }
+                }
+            }
         } catch (e) {
             console.error('Neon findUser error:', e);
         }
     }
 
     loadJsonStore();
-    const user = jsonStore.users.find(u => u.phone === phone);
-    if (!user) return null;
-    const family = await getFullFamilyData(user.family_id);
-    return { user, family };
+    // 1. JSON users listesinde ara
+    const user = jsonStore.users.find(u => normalizePhone(u.phone) === norm || (u.phone || '').trim() === raw);
+    if (user) {
+        const family = await getFullFamilyData(user.family_id);
+        if (family) return { user, family };
+    }
+
+    // 2. JSON families members dizisinde ara
+    for (const fam of jsonStore.families) {
+        if (fam.members && Array.isArray(fam.members)) {
+            const m = fam.members.find(mem => normalizePhone(mem.phone) === norm || (mem.phone || '').trim() === raw);
+            if (m) {
+                return { user: m, family: fam };
+            }
+        }
+    }
+
+    return null;
 }
 
 // 2. Yeni Aile Kur
