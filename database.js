@@ -2,10 +2,29 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
+// Load .env in local development if present
+try {
+    const envPath = path.join(__dirname, '..', '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split('\n').forEach(line => {
+            const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (m) {
+                const k = m[1];
+                let v = (m[2] || '').trim();
+                if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+                if (v.startsWith("'") && v.endsWith("'")) v = v.slice(1, -1);
+                if (!process.env[k]) process.env[k] = v;
+            }
+        });
+    }
+} catch (e) {}
+
 let neonClient = null;
 function getNeon() {
-    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL;
+    let dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL;
     if (!dbUrl) return null;
+    dbUrl = dbUrl.replace('&channel_binding=require', '').replace('channel_binding=require&', '').replace('channel_binding=require', '').trim();
     if (!neonClient) {
         try {
             const { neon } = require('@neondatabase/serverless');
