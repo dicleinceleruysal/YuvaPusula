@@ -20,9 +20,11 @@ try {
     }
 } catch (e) {}
 
+const DEFAULT_DB_URL = 'postgresql://neondb_owner:npg_7JUsvmRGAjn2@ep-dawn-base-b54308pb-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require';
+
 let neonClient = null;
 function getNeon() {
-    let dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL;
+    let dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL || DEFAULT_DB_URL;
     if (!dbUrl) return null;
     dbUrl = dbUrl.replace('&channel_binding=require', '').replace('channel_binding=require&', '').replace('channel_binding=require', '').trim();
     if (!neonClient) {
