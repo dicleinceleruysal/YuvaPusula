@@ -2375,7 +2375,12 @@ function switchBudgetSubTab(tabKey) {
 
     if (viewExp) viewExp.classList.toggle('hidden', tabKey !== 'expenses');
     if (viewFixed) viewFixed.classList.toggle('hidden', tabKey !== 'fixed');
-    if (viewInv) viewInv.classList.toggle('hidden', tabKey !== 'investments');
+    if (viewInv) {
+        viewInv.classList.toggle('hidden', tabKey !== 'investments');
+        if (tabKey === 'investments') {
+            fetchLiveMarketRates();
+        }
+    }
 
     // Header Ekle Buton Metnini Güncelle
     const btnActionText = document.getElementById('budgetActionBtnText');
@@ -2600,45 +2605,74 @@ function filterFixedExpenses(status, btn) {
 
 // 4. Altınkaynak Canlı Piyasa ve Yatırımlar Portföy Yönetimi
 async function fetchLiveMarketRates(forceRefresh = false) {
-    const btnRefresh = document.getElementById('btnRefreshRates');
+    const btnRefresh = document.querySelector('.btn-refresh-rates') || document.getElementById('btnRefreshRates');
+    const iconRefresh = document.getElementById('iconRefreshRates');
+    if (iconRefresh) iconRefresh.classList.add('fa-spin');
     if (btnRefresh) btnRefresh.classList.add('spinning');
 
-    const result = await AilemAPI.getMarketRates(forceRefresh);
-    if (btnRefresh) {
-        setTimeout(() => btnRefresh.classList.remove('spinning'), 600);
-    }
+    try {
+        const result = await AilemAPI.getMarketRates(forceRefresh);
+        if (result && result.rates) {
+            appState.marketRates = result.rates;
+            appState.lastMarketRatesFetch = Date.now();
 
-    if (result && result.rates) {
-        appState.marketRates = result.rates;
-        appState.lastMarketRatesFetch = Date.now();
+            // Ticker UI güncelle
+            const elGold = document.getElementById('tickerGramGold');
+            const elGoldSub = document.getElementById('tickerGramGoldSub');
+            const elUsd = document.getElementById('tickerUsd');
+            const elUsdSub = document.getElementById('tickerUsdSub');
+            const elEur = document.getElementById('tickerEur');
+            const elEurSub = document.getElementById('tickerEurSub');
+            const elCeyrek = document.getElementById('tickerCeyrek');
+            const elCeyrekSub = document.getElementById('tickerCeyrekSub');
+            const elTime = document.getElementById('rateLastUpdatedTime') || document.getElementById('ratesLastUpdated');
 
-        // Ticker UI güncelle
-        const elGold = document.getElementById('tickerGramGold');
-        const elUsd = document.getElementById('tickerUsd');
-        const elEur = document.getElementById('tickerEur');
-        const elCeyrek = document.getElementById('tickerCeyrek');
-        const elTime = document.getElementById('ratesLastUpdated');
+            if (elGold && result.rates.ALTIN) {
+                elGold.textContent = (result.rates.ALTIN.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                if (elGoldSub) {
+                    elGoldSub.textContent = `Alış: ${(result.rates.ALTIN.buy || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ | Satış: ${(result.rates.ALTIN.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+                }
+            }
+            if (elUsd && result.rates.USD) {
+                elUsd.textContent = (result.rates.USD.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                if (elUsdSub) {
+                    elUsdSub.textContent = `Alış: ${(result.rates.USD.buy || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ | Satış: ${(result.rates.USD.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+                }
+            }
+            if (elEur && result.rates.EUR) {
+                elEur.textContent = (result.rates.EUR.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                if (elEurSub) {
+                    elEurSub.textContent = `Alış: ${(result.rates.EUR.buy || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ | Satış: ${(result.rates.EUR.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+                }
+            }
+            if (elCeyrek && result.rates.CEYREK) {
+                elCeyrek.textContent = (result.rates.CEYREK.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                if (elCeyrekSub) {
+                    elCeyrekSub.textContent = `Alış: ${(result.rates.CEYREK.buy || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ | Satış: ${(result.rates.CEYREK.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+                }
+            }
+            if (elTime) {
+                const timeStr = result.timestamp ? new Date(result.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                elTime.textContent = `Son Güncelleme: ${timeStr}`;
+            }
 
-        if (elGold && result.rates.ALTIN) {
-            elGold.textContent = (result.rates.ALTIN.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        }
-        if (elUsd && result.rates.USD) {
-            elUsd.textContent = (result.rates.USD.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        }
-        if (elEur && result.rates.EUR) {
-            elEur.textContent = (result.rates.EUR.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        }
-        if (elCeyrek && result.rates.CEYREK) {
-            elCeyrek.textContent = (result.rates.CEYREK.sell || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        }
-        if (elTime) {
-            elTime.textContent = result.lastUpdated ? `${result.lastUpdated}` : new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-        }
+            // Portföydeki yatırım kalemlerinin TL karşılıklarını anlık kura göre güncelle
+            if (appState.familyData) {
+                recalculateInvestmentsWithLiveRates();
+                renderBudget();
+            }
 
-        // Portföydeki yatırım kalemlerinin TL karşılıklarını anlık kura göre güncelle
-        if (appState.familyData) {
-            recalculateInvestmentsWithLiveRates();
-            renderBudget();
+            // Açık olan yatırım modalı varsa kurunu yenile
+            autoCalculateInvestmentTL();
+        }
+    } catch (e) {
+        console.warn('Canlı kur alma hatası:', e);
+    } finally {
+        if (iconRefresh) {
+            setTimeout(() => iconRefresh.classList.remove('fa-spin'), 600);
+        }
+        if (btnRefresh) {
+            setTimeout(() => btnRefresh.classList.remove('spinning'), 600);
         }
     }
 }
@@ -2705,10 +2739,10 @@ function autoCalculateInvestmentTL() {
     const infoText = document.getElementById('invLiveRateInfo') || document.getElementById('invLiveRateText');
 
     const rates = appState.marketRates || {
-        ALTIN: { sell: 3500 },
-        USD: { sell: 38.5 },
-        EUR: { sell: 42.0 },
-        CEYREK: { sell: 5750 },
+        ALTIN: { sell: 6616 },
+        USD: { sell: 49.13 },
+        EUR: { sell: 55.83 },
+        CEYREK: { sell: 11090 },
         TL: { sell: 1 }
     };
 
@@ -2718,17 +2752,17 @@ function autoCalculateInvestmentTL() {
     if (cat === 'Altın') {
         const unit = document.getElementById('invUnit')?.value || 'Gram';
         if (unit.toLowerCase().includes('çeyrek') || unit.toLowerCase().includes('ceyrek')) {
-            unitRate = (rates.CEYREK && rates.CEYREK.sell) ? rates.CEYREK.sell : 5700;
+            unitRate = (rates.CEYREK && rates.CEYREK.sell) ? rates.CEYREK.sell : 11090;
             rateLabel = `1 Çeyrek Altın = ${unitRate.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ (Altınkaynak)`;
         } else {
-            unitRate = (rates.ALTIN && rates.ALTIN.sell) ? rates.ALTIN.sell : 3500;
+            unitRate = (rates.ALTIN && rates.ALTIN.sell) ? rates.ALTIN.sell : 6616;
             rateLabel = `1 Gram Altın = ${unitRate.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ (Altınkaynak)`;
         }
     } else if (cat === 'Dolar') {
-        unitRate = (rates.USD && rates.USD.sell) ? rates.USD.sell : 38.5;
+        unitRate = (rates.USD && rates.USD.sell) ? rates.USD.sell : 49.13;
         rateLabel = `1 Dolar (USD) = ${unitRate.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ (Altınkaynak)`;
     } else if (cat === 'Euro') {
-        unitRate = (rates.EUR && rates.EUR.sell) ? rates.EUR.sell : 42.0;
+        unitRate = (rates.EUR && rates.EUR.sell) ? rates.EUR.sell : 55.83;
         rateLabel = `1 Euro (EUR) = ${unitRate.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ (Altınkaynak)`;
     } else if (cat === 'TL') {
         unitRate = 1;
@@ -3500,6 +3534,9 @@ function switchTab(tabId, navBtn) {
 
     if (tabId === 'tabChat') {
         renderChat();
+    } else if (tabId === 'tabExpenses') {
+        renderBudget();
+        fetchLiveMarketRates();
     }
 
     // Hem Mobil Bottom Nav hem de Masaüstü Sidebar Öğelerini Senkronize Et
@@ -3522,7 +3559,12 @@ function switchTab(tabId, navBtn) {
 // ==========================================================
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (modalId === 'modalNewInvestment') {
+            autoCalculateInvestmentTL();
+        }
+    }
 }
 
 function closeModal(modalId) {

@@ -18,13 +18,14 @@ function parseTrNumber(str) {
     return parseFloat(clean) || 0;
 }
 
-function fetchHttpsJson(url) {
+function fetchHttpsJson(url, timeoutMs = 8000) {
     return new Promise((resolve) => {
-        https.get(url, {
+        const req = https.get(url, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json'
-            }
+            },
+            timeout: timeoutMs
         }, (res) => {
             let data = '';
             res.on('data', chunk => { data += chunk; });
@@ -35,7 +36,12 @@ function fetchHttpsJson(url) {
                     resolve([]);
                 }
             });
-        }).on('error', () => resolve([]));
+        });
+        req.on('timeout', () => {
+            req.destroy();
+            resolve([]);
+        });
+        req.on('error', () => resolve([]));
     });
 }
 
