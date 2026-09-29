@@ -262,14 +262,21 @@ module.exports = async function handler(req, res) {
         if (pathname === '/api/members/add' && req.method === 'POST') {
             const body = await parseJsonBody(req);
             const user = {
-                id: body.user.id || ('usr_' + Date.now()),
-                phone: body.user.phone,
-                name: body.user.name,
-                role: body.user.role,
-                avatar: body.user.avatar || '👤'
+                id: (body.user && body.user.id) || ('usr_' + Date.now()),
+                phone: body.user ? body.user.phone : '',
+                name: body.user ? body.user.name : 'Yeni Üye',
+                role: body.user ? body.user.role : 'Birey',
+                avatar: (body.user && body.user.avatar) || '👤'
             };
-            const updatedFamily = await dbManager.addUserToFamily(body.familyId, user);
+            const updatedFamily = await dbManager.addUserToFamily(body.familyId, user, body.familyData || null);
             return sendJson(res, 200, { success: true, user, family: updatedFamily });
+        }
+
+        // 3.11 Aileyi Tam Senkronize Et (İstemci Verisi ile)
+        if (pathname === '/api/family/sync' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const synced = await dbManager.syncFamily(body.family);
+            return sendJson(res, 200, { success: true, family: synced });
         }
 
         // 3.2 Aile Üyesi Sil / Çıkar

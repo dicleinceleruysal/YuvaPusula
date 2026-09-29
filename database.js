@@ -284,15 +284,26 @@ async function findFamilyByCode(inviteCode) {
 }
 
 // 4. Aileye Yeni Kullanıcı Ekle
-async function addUserToFamily(familyId, user) {
+async function addUserToFamily(familyId, user, fallbackFamilyData = null) {
     const sql = getNeon();
     if (sql) {
         try {
-            const res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            let res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            if (!res || res.length === 0) {
+                const allFams = await sql`SELECT id, data FROM families`;
+                if (allFams && allFams.length === 1) {
+                    familyId = allFams[0].id;
+                    res = allFams;
+                } else if (fallbackFamilyData) {
+                    await syncFamily(fallbackFamilyData);
+                    res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+                }
+            }
+
             if (res && res.length > 0) {
                 const family = res[0].data;
                 if (!family.members) family.members = [];
-                const idx = family.members.findIndex(m => m.phone === user.phone);
+                const idx = family.members.findIndex(m => normalizePhone(m.phone) === normalizePhone(user.phone) || m.phone === user.phone);
                 if (idx >= 0) {
                     family.members[idx] = user;
                 } else {
@@ -308,20 +319,69 @@ async function addUserToFamily(familyId, user) {
     }
 
     loadJsonStore();
-    const family = jsonStore.families.find(f => f.id === familyId);
+    let family = jsonStore.families.find(f => f.id === familyId);
+    if (!family && fallbackFamilyData) {
+        await syncFamily(fallbackFamilyData);
+        family = jsonStore.families.find(f => f.id === familyId);
+    }
     if (family) {
         if (!family.members) family.members = [];
-        const idx = family.members.findIndex(m => m.phone === user.phone);
+        const idx = family.members.findIndex(m => normalizePhone(m.phone) === normalizePhone(user.phone) || m.phone === user.phone);
         if (idx >= 0) family.members[idx] = user;
         else family.members.push(user);
         
-        const uIdx = jsonStore.users.findIndex(u => u.phone === user.phone);
+        const uIdx = jsonStore.users.findIndex(u => normalizePhone(u.phone) === normalizePhone(user.phone) || u.phone === user.phone);
         if (uIdx >= 0) jsonStore.users[uIdx] = { ...user, family_id: familyId };
         else jsonStore.users.push({ ...user, family_id: familyId });
         saveJsonStore();
         return family;
     }
     return null;
+}
+
+// 4.0 Aile ve Üyelerini Tam Senkronize Et
+async function syncFamily(familyData) {
+    if (!familyData || !familyData.id) return null;
+    const sql = getNeon();
+    if (sql) {
+        try {
+            await sql`
+                INSERT INTO families (id, name, invite_code, data)
+                VALUES (${familyData.id}, ${familyData.name || 'Bizim Aile'}, ${familyData.inviteCode || 'UYS123'}, ${JSON.stringify(familyData)})
+                ON CONFLICT (id) DO UPDATE SET name = ${familyData.name || 'Bizim Aile'}, invite_code = ${familyData.inviteCode || 'UYS123'}, data = ${JSON.stringify(familyData)}, updated_at = NOW();
+            `;
+            if (Array.isArray(familyData.members)) {
+                for (const m of familyData.members) {
+                    if (m && m.phone) {
+                        await sql`
+                            INSERT INTO users (id, phone, family_id, name, role, avatar)
+                            VALUES (${m.id || ('usr_' + Date.now())}, ${m.phone}, ${familyData.id}, ${m.name || 'Aile Üyesi'}, ${m.role || 'Birey'}, ${m.avatar || '👤'})
+                            ON CONFLICT (phone) DO UPDATE SET family_id = ${familyData.id}, name = ${m.name}, role = ${m.role}, avatar = ${m.avatar};
+                        `;
+                    }
+                }
+            }
+            return familyData;
+        } catch (e) {
+            console.error('Neon syncFamily error:', e);
+        }
+    }
+
+    loadJsonStore();
+    const idx = jsonStore.families.findIndex(f => f.id === familyData.id);
+    if (idx >= 0) jsonStore.families[idx] = familyData;
+    else jsonStore.families.push(familyData);
+    if (Array.isArray(familyData.members)) {
+        familyData.members.forEach(m => {
+            if (m && m.phone) {
+                const uIdx = jsonStore.users.findIndex(u => normalizePhone(u.phone) === normalizePhone(m.phone) || u.phone === m.phone);
+                if (uIdx >= 0) jsonStore.users[uIdx] = { ...m, family_id: familyData.id };
+                else jsonStore.users.push({ ...m, family_id: familyData.id });
+            }
+        });
+    }
+    saveJsonStore();
+    return familyData;
 }
 
 // 4.1 Aile Üyesi Sil / Çıkar
@@ -719,6 +779,7 @@ module.exports = {
     createFamily,
     findFamilyByCode,
     addUserToFamily,
+    syncFamily,
     deleteMember,
     getFullFamilyData,
     addPost,

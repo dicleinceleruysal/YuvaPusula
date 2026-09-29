@@ -260,12 +260,12 @@ const AilemAPI = {
         return null;
     },
 
-    async addMember(familyId, user) {
+    async addMember(familyId, user, familyData = null) {
         try {
             const res = await fetch('/api/members/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ familyId, user })
+                body: JSON.stringify({ familyId, user, familyData })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -273,6 +273,23 @@ const AilemAPI = {
             }
         } catch (e) {
             console.warn('API addMember hatası:', e);
+        }
+        return null;
+    },
+
+    async syncFamily(family) {
+        try {
+            const res = await fetch('/api/family/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ family })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {
+            console.warn('API syncFamily hatası:', e);
         }
         return null;
     },
@@ -768,13 +785,12 @@ async function syncWithServer(silent = false) {
         saveStateToStorage();
         renderApp();
     } else {
-        // Sunucuda bu aile verisi yoksa veya oturum geçersizse
-        if (!silent) {
-            localStorage.removeItem('ailem_current_user');
-            localStorage.removeItem('ailem_family_data');
-            appState.currentUser = null;
-            appState.familyData = null;
-            renderApp();
+        // Eğer sunucu sıfırlanmış veya aile sunucuda yoksa, mevcut aileyi sunucuya otomatik senkronize et (Self-healing)!
+        if (appState.familyData && appState.familyData.id && appState.familyData.members && appState.familyData.members.length > 0) {
+            const synced = await AilemAPI.syncFamily(appState.familyData);
+            if (synced) {
+                console.log('✅ Aile ve üyeleri sunucuya başarıyla senkronize edildi.');
+            }
         }
     }
 }
@@ -1092,6 +1108,7 @@ async function handleAuthSubmit(event) {
         appState.familyData = newFamily;
         saveStateToStorage();
         renderApp();
+        AilemAPI.syncFamily(newFamily);
         showToast(`${formattedFamilyName} kuruldu! 🏠`);
     } else {
         // Aileye Katılma Modu
@@ -1130,6 +1147,7 @@ async function handleAuthSubmit(event) {
         appState.familyData = family;
         saveStateToStorage();
         renderApp();
+        AilemAPI.syncFamily(family);
         showToast(`${family.name} ailesine katıldınız! 👋`);
     }
 }
@@ -2930,12 +2948,13 @@ async function handleAddMember(e) {
 
     // 1. Sunucu ve Veritabanına (Neon / SQLite) kaydet
     if (appState.familyData && appState.familyData.id) {
-        const updatedFamily = await AilemAPI.addMember(appState.familyData.id, newMember);
+        const updatedFamily = await AilemAPI.addMember(appState.familyData.id, newMember, appState.familyData);
         if (updatedFamily) {
             appState.familyData = updatedFamily;
         } else {
             if (!appState.familyData.members) appState.familyData.members = [];
             appState.familyData.members.push(newMember);
+            await AilemAPI.syncFamily(appState.familyData);
         }
     }
 
@@ -2946,7 +2965,7 @@ async function handleAddMember(e) {
     updateQuickStats();
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
-    showToast(`${name} aileye eklendi ve sisteme kaydedildi! 🎉`);
+    showToast(`${name} aileye eklendi ve veritabanına kaydedildi! 🎉`);
 }
 
 // Aile Üyesi Sil / Çıkar
