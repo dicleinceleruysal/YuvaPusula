@@ -1,5 +1,5 @@
 // YuvaPusula Progressive Web App Service Worker
-const CACHE_NAME = 'yuvapusula-pwa-v3';
+const CACHE_NAME = 'yuvapusula-pwa-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',

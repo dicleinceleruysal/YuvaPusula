@@ -199,15 +199,16 @@ module.exports = async function handler(req, res) {
         }
 
         // Pathname çözümleme (Vercel Serverless, Standalone & Rewrite desteği)
-        let pathname = (req.url || '').split('?')[0];
+        let rawUrl = req.url || '';
+        let pathname = rawUrl.split('?')[0];
 
         if (req.query && req.query.all) {
             const allPath = Array.isArray(req.query.all) ? req.query.all.join('/') : req.query.all;
             pathname = '/api/' + allPath;
-        } else if (req.headers && req.headers['x-matched-path'] && req.headers['x-matched-path'].startsWith('/api')) {
-            pathname = req.headers['x-matched-path'];
-        } else if (req.headers && req.headers['x-vercel-matched-path'] && req.headers['x-vercel-matched-path'].startsWith('/api')) {
-            pathname = req.headers['x-vercel-matched-path'];
+        } else if (pathname === '/' || pathname === '/api' || pathname === '/api/' || pathname === '/api/index.js' || pathname === '/api/index') {
+            if (req.headers && req.headers['x-matched-path'] && req.headers['x-matched-path'].startsWith('/api') && !req.headers['x-matched-path'].endsWith('/index.js') && !req.headers['x-matched-path'].endsWith('/index')) {
+                pathname = req.headers['x-matched-path'];
+            }
         }
 
         if (!pathname.startsWith('/api')) {
