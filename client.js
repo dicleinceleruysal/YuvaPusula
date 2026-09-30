@@ -749,8 +749,9 @@ async function syncWithServer(silent = false) {
     if (!appState.familyData || !appState.familyData.id) return;
     const fresh = await AilemAPI.fetchFamily(appState.familyData.id);
     if (fresh) {
+        const normFresh = normalizeFamilyData(fresh);
         const prevMessages = appState.familyData.messages || [];
-        const newMessages = fresh.messages || [];
+        const newMessages = normFresh.messages || [];
 
         // Yeni gelen mesaj kontrolü (Başkası mesaj attığında anlık bildirim ver)
         if (newMessages.length > prevMessages.length) {
@@ -781,7 +782,7 @@ async function syncWithServer(silent = false) {
             }
         }
 
-        appState.familyData = fresh;
+        appState.familyData = normFresh;
         saveStateToStorage();
         renderApp();
     } else {
@@ -927,6 +928,28 @@ function initPWA() {
     } catch (e) {}
 }
 
+function normalizeFamilyData(fam) {
+    if (!fam) return fam;
+    if (!fam.members) fam.members = [];
+    if (!fam.posts) fam.posts = [];
+    if (!fam.plans) fam.plans = [];
+    fam.plans = fam.plans.map(p => ({
+        ...p,
+        completed: p.completed !== undefined ? !!p.completed : (p.status === 'COMPLETED'),
+        status: p.status || (p.completed ? 'COMPLETED' : 'PENDING')
+    }));
+    if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
+    fam.shopping = fam.shoppingList;
+    if (!fam.tasks) fam.tasks = [];
+    if (!fam.expenses) fam.expenses = [];
+    if (!fam.salaries) fam.salaries = [];
+    if (!fam.fixedExpenses) fam.fixedExpenses = [];
+    if (!fam.investments) fam.investments = [];
+    if (!fam.investmentHistory) fam.investmentHistory = [];
+    if (!fam.messages) fam.messages = [];
+    return fam;
+}
+
 // LocalStorage'dan Durum Yükleme
 function loadStateFromStorage() {
     try {
@@ -935,13 +958,7 @@ function loadStateFromStorage() {
 
         if (storedUser && storedFamily) {
             appState.currentUser = JSON.parse(storedUser);
-            appState.familyData = JSON.parse(storedFamily);
-            if (!appState.familyData.plans) {
-                appState.familyData.plans = [];
-            }
-            if (!appState.familyData.messages) {
-                appState.familyData.messages = [];
-            }
+            appState.familyData = normalizeFamilyData(JSON.parse(storedFamily));
         }
     } catch (e) {
         console.error('State yükleme hatası:', e);
@@ -1242,18 +1259,25 @@ function updateQuickStats() {
     const family = appState.familyData;
     if (!family) return;
 
-    if (!family.plans) family.plans = [];
-    const allPlans = family.plans;
+    const allPlans = family.plans || [];
     const pendingPlans = allPlans.filter(p => !p.completed).length;
-    const pendingShop = family.shoppingList.filter(s => !s.completed).length;
-    const pendingTask = family.tasks.filter(t => !t.completed).length;
+    const shoppingItems = family.shoppingList || family.shopping || [];
+    const pendingShop = shoppingItems.filter(s => !s.completed).length;
+    const taskItems = family.tasks || [];
+    const pendingTask = taskItems.filter(t => !t.completed).length;
+    const memberItems = family.members || [];
 
     const quickPlansEl = document.getElementById('quickPendingPlans');
     if (quickPlansEl) quickPlansEl.textContent = pendingPlans;
 
-    document.getElementById('quickPendingShopping').textContent = pendingShop;
-    document.getElementById('quickPendingTasks').textContent = pendingTask;
-    document.getElementById('quickMemberCount').textContent = family.members.length;
+    const quickShopEl = document.getElementById('quickPendingShopping');
+    if (quickShopEl) quickShopEl.textContent = pendingShop;
+
+    const quickTasksEl = document.getElementById('quickPendingTasks');
+    if (quickTasksEl) quickTasksEl.textContent = pendingTask;
+
+    const quickMemberEl = document.getElementById('quickMemberCount');
+    if (quickMemberEl) quickMemberEl.textContent = memberItems.length;
 
     // Hub Kategori Sayaçları
     const countSeyahat = allPlans.filter(p => p.category === 'Seyahat').length;
@@ -1598,7 +1622,8 @@ function renderPlans() {
 // Alışveriş Listesi
 function renderShopping() {
     const container = document.getElementById('shoppingItemsList');
-    let items = appState.familyData.shoppingList || [];
+    if (!container || !appState.familyData) return;
+    let items = appState.familyData.shoppingList || appState.familyData.shopping || [];
 
     if (appState.shoppingFilter !== 'ALL') {
         items = items.filter(item => item.category === appState.shoppingFilter);
@@ -2131,10 +2156,10 @@ async function handleAddPlan(e) {
     // 1. SQLite API Çağrısı
     const updatedFamily = await AilemAPI.addPlan(appState.familyData.id, newPlan);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         if (!appState.familyData.plans) appState.familyData.plans = [];
-        appState.familyData.plans.push(newPlan);
+        appState.familyData.plans.unshift(newPlan);
     }
 
     saveStateToStorage();
@@ -2150,10 +2175,13 @@ async function handleAddPlan(e) {
 async function togglePlanStatus(id) {
     const updatedFamily = await AilemAPI.togglePlan(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        const plan = appState.familyData.plans.find(p => p.id === id);
-        if (plan) plan.completed = !plan.completed;
+        const plan = (appState.familyData.plans || []).find(p => p.id === id);
+        if (plan) {
+            plan.completed = !plan.completed;
+            plan.status = plan.completed ? 'COMPLETED' : 'PENDING';
+        }
     }
 
     saveStateToStorage();
@@ -2165,9 +2193,9 @@ async function togglePlanStatus(id) {
 async function deletePlan(id) {
     const updatedFamily = await AilemAPI.deletePlan(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.plans = appState.familyData.plans.filter(p => p.id !== id);
+        appState.familyData.plans = (appState.familyData.plans || []).filter(p => p.id !== id);
     }
 
     saveStateToStorage();
@@ -2196,9 +2224,10 @@ async function handleNewPost(e) {
 
     const updatedFamily = await AilemAPI.addPost(appState.familyData.id, newPost);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.posts.push(newPost);
+        if (!appState.familyData.posts) appState.familyData.posts = [];
+        appState.familyData.posts.unshift(newPost);
     }
 
     saveStateToStorage();
@@ -2212,9 +2241,9 @@ async function handleNewPost(e) {
 async function deletePost(id) {
     const updatedFamily = await AilemAPI.deletePost(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.posts = appState.familyData.posts.filter(p => p.id !== id);
+        appState.familyData.posts = (appState.familyData.posts || []).filter(p => p.id !== id);
     }
     saveStateToStorage();
     renderPano();
@@ -2239,9 +2268,11 @@ async function handleAddShoppingItem(e) {
 
     const updatedFamily = await AilemAPI.addShoppingItem(appState.familyData.id, newItem);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.shoppingList.push(newItem);
+        if (!appState.familyData.shoppingList) appState.familyData.shoppingList = appState.familyData.shopping || [];
+        appState.familyData.shoppingList.unshift(newItem);
+        appState.familyData.shopping = appState.familyData.shoppingList;
     }
 
     saveStateToStorage();
@@ -2255,10 +2286,12 @@ async function handleAddShoppingItem(e) {
 async function toggleShoppingItem(id) {
     const updatedFamily = await AilemAPI.toggleShoppingItem(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
+        if (!appState.familyData.shoppingList) appState.familyData.shoppingList = appState.familyData.shopping || [];
         const item = appState.familyData.shoppingList.find(i => i.id === id);
         if (item) item.completed = !item.completed;
+        appState.familyData.shopping = appState.familyData.shoppingList;
     }
 
     saveStateToStorage();
@@ -2269,9 +2302,11 @@ async function toggleShoppingItem(id) {
 async function deleteShoppingItem(id) {
     const updatedFamily = await AilemAPI.deleteShoppingItem(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
+        if (!appState.familyData.shoppingList) appState.familyData.shoppingList = appState.familyData.shopping || [];
         appState.familyData.shoppingList = appState.familyData.shoppingList.filter(i => i.id !== id);
+        appState.familyData.shopping = appState.familyData.shoppingList;
     }
 
     saveStateToStorage();
@@ -2305,9 +2340,10 @@ async function handleAddTask(e) {
 
     const updatedFamily = await AilemAPI.addTask(appState.familyData.id, newTask);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.tasks.push(newTask);
+        if (!appState.familyData.tasks) appState.familyData.tasks = [];
+        appState.familyData.tasks.unshift(newTask);
     }
 
     saveStateToStorage();
@@ -2321,8 +2357,9 @@ async function handleAddTask(e) {
 async function toggleTask(id) {
     const updatedFamily = await AilemAPI.toggleTask(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
+        if (!appState.familyData.tasks) appState.familyData.tasks = [];
         const task = appState.familyData.tasks.find(t => t.id === id);
         if (task) task.completed = !task.completed;
     }
@@ -2336,8 +2373,9 @@ async function toggleTask(id) {
 async function deleteTask(id) {
     const updatedFamily = await AilemAPI.deleteTask(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
+        if (!appState.familyData.tasks) appState.familyData.tasks = [];
         appState.familyData.tasks = appState.familyData.tasks.filter(t => t.id !== id);
     }
 
@@ -2456,7 +2494,7 @@ async function handleSaveSalary(e) {
 
     const updatedFamily = await AilemAPI.setSalary(family.id, salaryData);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         if (!appState.familyData.salaries) appState.familyData.salaries = [];
         const idx = appState.familyData.salaries.findIndex(s => s.userId === user.id);
@@ -2497,9 +2535,10 @@ async function handleAddExpense(e) {
 
     const updatedFamily = await AilemAPI.addExpense(appState.familyData.id, newExpense);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.expenses.push(newExpense);
+        if (!appState.familyData.expenses) appState.familyData.expenses = [];
+        appState.familyData.expenses.unshift(newExpense);
     }
 
     saveStateToStorage();
@@ -2514,9 +2553,9 @@ async function deleteExpense(id) {
     if (!confirm('Bu harcamayı silmek istediğinize emin misiniz?')) return;
     const updatedFamily = await AilemAPI.deleteExpense(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
-        appState.familyData.expenses = appState.familyData.expenses.filter(e => e.id !== id);
+        appState.familyData.expenses = (appState.familyData.expenses || []).filter(e => e.id !== id);
     }
 
     saveStateToStorage();
@@ -2552,10 +2591,10 @@ async function handleAddFixedExpense(e) {
 
     const updatedFamily = await AilemAPI.addFixedExpense(appState.familyData.id, newFixed);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         if (!appState.familyData.fixedExpenses) appState.familyData.fixedExpenses = [];
-        appState.familyData.fixedExpenses.push(newFixed);
+        appState.familyData.fixedExpenses.unshift(newFixed);
     }
 
     saveStateToStorage();
@@ -2570,7 +2609,7 @@ async function handleAddFixedExpense(e) {
 async function handleToggleFixedExpense(id) {
     const updatedFamily = await AilemAPI.toggleFixedExpense(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         const item = (appState.familyData.fixedExpenses || []).find(f => f.id === id);
         if (item) item.isPaid = !item.isPaid;
@@ -2585,7 +2624,7 @@ async function handleDeleteFixedExpense(id) {
     if (!confirm('Bu sabit gideri silmek istediğinize emin misiniz?')) return;
     const updatedFamily = await AilemAPI.deleteFixedExpense(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         appState.familyData.fixedExpenses = (appState.familyData.fixedExpenses || []).filter(f => f.id !== id);
     }
@@ -2811,10 +2850,10 @@ async function handleAddInvestment(e) {
 
     const updatedFamily = await AilemAPI.addInvestment(appState.familyData.id, newInv);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         if (!appState.familyData.investments) appState.familyData.investments = [];
-        appState.familyData.investments.push(newInv);
+        appState.familyData.investments.unshift(newInv);
     }
 
     saveStateToStorage();
@@ -2926,7 +2965,7 @@ async function handleAdjustInvestment(e) {
 
     const updatedFamily = await AilemAPI.adjustInvestment(appState.familyData.id, invId, adjustment);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         const inv = (appState.familyData.investments || []).find(i => i.id === invId);
         if (inv) {
@@ -2950,7 +2989,7 @@ async function handleDeleteInvestment(id) {
     if (!confirm('Bu yatırım kalemini ve geçmişini silmek istediğinize emin misiniz?')) return;
     const updatedFamily = await AilemAPI.deleteInvestment(appState.familyData.id, id);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         appState.familyData.investments = (appState.familyData.investments || []).filter(i => i.id !== id);
     }
@@ -2984,7 +3023,7 @@ async function handleAddMember(e) {
     if (appState.familyData && appState.familyData.id) {
         const updatedFamily = await AilemAPI.addMember(appState.familyData.id, newMember, appState.familyData);
         if (updatedFamily) {
-            appState.familyData = updatedFamily;
+            appState.familyData = normalizeFamilyData(updatedFamily);
         } else {
             if (!appState.familyData.members) appState.familyData.members = [];
             appState.familyData.members.push(newMember);
@@ -3011,7 +3050,7 @@ async function handleDeleteMember(memberId, memberName) {
     if (appState.familyData && appState.familyData.id) {
         const updatedFamily = await AilemAPI.deleteMember(appState.familyData.id, memberId);
         if (updatedFamily) {
-            appState.familyData = updatedFamily;
+            appState.familyData = normalizeFamilyData(updatedFamily);
         } else {
             if (appState.familyData.members) {
                 appState.familyData.members = appState.familyData.members.filter(m => m.id !== memberId);
@@ -3483,7 +3522,7 @@ async function handleSendChatMessage(e) {
     // Sunucuya gönder
     const updatedFamily = await AilemAPI.sendMessage(family.id, newMsg);
     if (updatedFamily) {
-        appState.familyData = updatedFamily;
+        appState.familyData = normalizeFamilyData(updatedFamily);
     } else {
         if (!appState.familyData.messages) appState.familyData.messages = [];
         appState.familyData.messages.push(newMsg);

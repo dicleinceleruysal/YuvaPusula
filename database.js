@@ -425,13 +425,39 @@ async function deleteMember(familyId, memberId) {
     return null;
 }
 
+function normalizeFamily(fam) {
+    if (!fam) return fam;
+    if (!fam.members) fam.members = [];
+    if (!fam.posts) fam.posts = [];
+    if (!fam.plans) fam.plans = [];
+    fam.plans = fam.plans.map(p => ({
+        ...p,
+        completed: p.completed !== undefined ? !!p.completed : (p.status === 'COMPLETED'),
+        status: p.status || (p.completed ? 'COMPLETED' : 'PENDING')
+    }));
+    if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
+    fam.shopping = fam.shoppingList;
+    if (!fam.tasks) fam.tasks = [];
+    if (!fam.expenses) fam.expenses = [];
+    if (!fam.salaries) fam.salaries = [];
+    if (!fam.fixedExpenses) fam.fixedExpenses = [];
+    if (!fam.investments) fam.investments = [];
+    if (!fam.investmentHistory) fam.investmentHistory = [];
+    if (!fam.messages) fam.messages = [];
+    return fam;
+}
+
 // 5. Güncel Aile Verilerini Getir
 async function getFullFamilyData(familyId) {
     const sql = getNeon();
     if (sql) {
         try {
-            const res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
-            if (res && res.length > 0) return res[0].data;
+            let res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            if ((!res || res.length === 0)) {
+                const allFams = await sql`SELECT id, data FROM families`;
+                if (allFams && allFams.length === 1) res = allFams;
+            }
+            if (res && res.length > 0) return normalizeFamily(res[0].data);
             return null;
         } catch (e) {
             console.error('Neon getFullFamilyData error:', e);
@@ -439,7 +465,9 @@ async function getFullFamilyData(familyId) {
     }
 
     loadJsonStore();
-    return jsonStore.families.find(f => f.id === familyId) || null;
+    let fam = jsonStore.families.find(f => f.id === familyId);
+    if (!fam && jsonStore.families.length === 1) fam = jsonStore.families[0];
+    return fam ? normalizeFamily(fam) : null;
 }
 
 // Ortak Aile Güncelleme Yardımcısı
@@ -447,10 +475,18 @@ async function updateFamilyHelper(familyId, mutator) {
     const sql = getNeon();
     if (sql) {
         try {
-            const res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            let res = await sql`SELECT data FROM families WHERE id = ${familyId} LIMIT 1`;
+            if (!res || res.length === 0) {
+                const allFams = await sql`SELECT id, data FROM families`;
+                if (allFams && allFams.length === 1) {
+                    familyId = allFams[0].id;
+                    res = allFams;
+                }
+            }
             if (res && res.length > 0) {
-                let family = res[0].data;
+                let family = normalizeFamily(res[0].data);
                 family = mutator(family);
+                family = normalizeFamily(family);
                 await sql`UPDATE families SET data = ${JSON.stringify(family)}, updated_at = NOW() WHERE id = ${familyId}`;
                 return family;
             }
@@ -460,9 +496,17 @@ async function updateFamilyHelper(familyId, mutator) {
     }
 
     loadJsonStore();
-    const family = jsonStore.families.find(f => f.id === familyId);
+    let family = jsonStore.families.find(f => f.id === familyId);
+    if (!family && jsonStore.families.length === 1) {
+        family = jsonStore.families[0];
+        familyId = family.id;
+    }
     if (family) {
-        const updated = mutator(family);
+        let updated = normalizeFamily(family);
+        updated = mutator(updated);
+        updated = normalizeFamily(updated);
+        const idx = jsonStore.families.findIndex(f => f.id === familyId);
+        if (idx >= 0) jsonStore.families[idx] = updated;
         saveJsonStore();
         return updated;
     }
@@ -497,7 +541,8 @@ async function addPlan(familyId, plan) {
         fam.plans.unshift({
             id: 'plan_' + Date.now(),
             ...plan,
-            status: plan.status || 'PENDING',
+            completed: !!plan.completed,
+            status: plan.status || (plan.completed ? 'COMPLETED' : 'PENDING'),
             createdAt: new Date().toISOString()
         });
         return fam;
@@ -509,7 +554,8 @@ async function togglePlan(familyId, planId) {
         if (!fam.plans) fam.plans = [];
         const item = fam.plans.find(p => p.id === planId);
         if (item) {
-            item.status = item.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+            item.completed = !item.completed;
+            item.status = item.completed ? 'COMPLETED' : 'PENDING';
         }
         return fam;
     });
@@ -526,32 +572,36 @@ async function deletePlan(familyId, planId) {
 // Alışveriş Listesi
 async function addShoppingItem(familyId, item) {
     return await updateFamilyHelper(familyId, (fam) => {
-        if (!fam.shopping) fam.shopping = [];
-        fam.shopping.unshift({
+        if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
+        const newItem = {
             id: 'shop_' + Date.now(),
             ...item,
             completed: false,
             createdAt: new Date().toISOString()
-        });
+        };
+        fam.shoppingList.unshift(newItem);
+        fam.shopping = fam.shoppingList;
         return fam;
     });
 }
 
 async function toggleShoppingItem(familyId, itemId) {
     return await updateFamilyHelper(familyId, (fam) => {
-        if (!fam.shopping) fam.shopping = [];
-        const item = fam.shopping.find(s => s.id === itemId);
+        if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
+        const item = fam.shoppingList.find(s => s.id === itemId);
         if (item) {
             item.completed = !item.completed;
         }
+        fam.shopping = fam.shoppingList;
         return fam;
     });
 }
 
 async function deleteShoppingItem(familyId, itemId) {
     return await updateFamilyHelper(familyId, (fam) => {
-        if (!fam.shopping) fam.shopping = [];
-        fam.shopping = fam.shopping.filter(s => s.id !== itemId);
+        if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
+        fam.shoppingList = fam.shoppingList.filter(s => s.id !== itemId);
+        fam.shopping = fam.shoppingList;
         return fam;
     });
 }
