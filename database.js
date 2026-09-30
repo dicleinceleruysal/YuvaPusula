@@ -41,6 +41,26 @@ function getNeon() {
 
 const isServerless = !!(process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
 
+let webpush = null;
+try {
+    webpush = require('web-push');
+} catch (e) {}
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BAy8L7Fodzvl0ZARDLnnLt5Kc9E2mYVlcI6OXDAmKlq0zs9598HUlghuzmxz-bcL1G8wepKOSbAaLXm_dX45Xi4';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '1nv3rCQxHhTfM4tDSqSt90rBiaLmf6To3S3CDsFrutA';
+
+if (webpush) {
+    try {
+        webpush.setVapidDetails(
+            'mailto:destek@yuvapusula.app',
+            VAPID_PUBLIC_KEY,
+            VAPID_PRIVATE_KEY
+        );
+    } catch (e) {
+        console.warn('VAPID setup warning:', e.message);
+    }
+}
+
 let DatabaseSync = null;
 if (!isServerless) {
     try {
@@ -101,6 +121,15 @@ async function initDatabase() {
                     role TEXT NOT NULL,
                     avatar TEXT NOT NULL,
                     created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            `;
+            await sql`
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    endpoint TEXT PRIMARY KEY,
+                    family_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    subscription JSONB NOT NULL,
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
                 );
             `;
             isInitialized = true;
@@ -877,6 +906,101 @@ async function deleteExtraIncome(familyId, incomeId) {
     });
 }
 
+// Push Subscription İşlemleri (Uygulama Kapalıyken Bildirim Gönderme)
+async function savePushSubscription(familyId, userId, subscription) {
+    if (!subscription || !subscription.endpoint) return false;
+    const endpoint = subscription.endpoint;
+    
+    const sql = getNeon();
+    if (sql) {
+        try {
+            await sql`
+                INSERT INTO push_subscriptions (endpoint, family_id, user_id, subscription, updated_at)
+                VALUES (${endpoint}, ${familyId}, ${userId}, ${JSON.stringify(subscription)}, NOW())
+                ON CONFLICT (endpoint) DO UPDATE SET
+                    family_id = ${familyId},
+                    user_id = ${userId},
+                    subscription = ${JSON.stringify(subscription)},
+                    updated_at = NOW()
+            `;
+            return true;
+        } catch (e) {
+            console.error('Neon savePushSubscription error:', e);
+        }
+    }
+    
+    loadJsonStore();
+    if (!jsonStore.pushSubscriptions) jsonStore.pushSubscriptions = [];
+    const idx = jsonStore.pushSubscriptions.findIndex(s => s.endpoint === endpoint);
+    const entry = { endpoint, familyId, userId, subscription, updatedAt: new Date().toISOString() };
+    if (idx >= 0) {
+        jsonStore.pushSubscriptions[idx] = entry;
+    } else {
+        jsonStore.pushSubscriptions.push(entry);
+    }
+    saveJsonStore();
+    return true;
+}
+
+async function sendPushToFamily(familyId, payload, excludeUserId) {
+    if (!familyId || !webpush) return;
+    
+    let subs = [];
+    const sql = getNeon();
+    if (sql) {
+        try {
+            const rows = await sql`
+                SELECT subscription, user_id, endpoint 
+                FROM push_subscriptions 
+                WHERE family_id = ${familyId}
+            `;
+            subs = rows
+                .filter(r => !excludeUserId || r.user_id !== excludeUserId)
+                .map(r => typeof r.subscription === 'string' ? JSON.parse(r.subscription) : r.subscription);
+        } catch (e) {
+            console.error('Neon getPushSubs error:', e);
+        }
+    }
+    
+    if (subs.length === 0) {
+        loadJsonStore();
+        if (jsonStore.pushSubscriptions) {
+            subs = jsonStore.pushSubscriptions
+                .filter(s => s.familyId === familyId && (!excludeUserId || s.userId !== excludeUserId))
+                .map(s => s.subscription);
+        }
+    }
+    
+    if (!subs || subs.length === 0) return;
+    
+    const notificationPayload = JSON.stringify({
+        title: payload.title || 'YuvaPusula',
+        body: payload.body || 'Ailenizden yeni bir bildirim var!',
+        icon: payload.icon || './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        url: payload.url || './index.html?tab=chat'
+    });
+    
+    const sendPromises = subs.map(async (sub) => {
+        try {
+            await webpush.sendNotification(sub, notificationPayload);
+        } catch (err) {
+            if (err.statusCode === 404 || err.statusCode === 410) {
+                // Abonelik geçersizleşmiş
+                if (sql && sub.endpoint) {
+                    try { await sql`DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}`; } catch(e){}
+                }
+                if (jsonStore.pushSubscriptions && sub.endpoint) {
+                    jsonStore.pushSubscriptions = jsonStore.pushSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+                    saveJsonStore();
+                }
+            }
+        }
+    });
+    
+    await Promise.allSettled(sendPromises);
+}
+
 module.exports = {
     initDatabase,
     findUserAndFamilyByPhone,
@@ -911,5 +1035,8 @@ module.exports = {
     adjustInvestment,
     deleteInvestment,
     addMessage,
-    markMessagesAsRead
+    markMessagesAsRead,
+    savePushSubscription,
+    sendPushToFamily,
+    VAPID_PUBLIC_KEY
 };

@@ -1,5 +1,5 @@
 // YuvaPusula Progressive Web App Service Worker
-const CACHE_NAME = 'yuvapusula-pwa-v9';
+const CACHE_NAME = 'yuvapusula-pwa-v10';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -92,12 +92,20 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 4. Push Notification Event
+// 4. Web Push Notification Event (Uygulama Kapalıyken de Çalışır)
 self.addEventListener('push', (event) => {
-  let data = { title: 'YuvaPusula', body: 'Ailenizden yeni bir bildirim var!', icon: './icons/icon.svg' };
+  let data = {
+    title: 'YuvaPusula',
+    body: 'Ailenizden yeni bir bildirim var!',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    url: './index.html?tab=chat'
+  };
+
   if (event.data) {
     try {
-      data = event.data.json();
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
     } catch (e) {
       data.body = event.data.text();
     }
@@ -105,13 +113,15 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'YuvaPusula bildirimi',
-    icon: data.icon || './icons/icon.svg',
-    badge: './icons/icon.svg',
-    vibrate: [100, 50, 100],
+    icon: data.icon || './icons/icon-192.png',
+    badge: data.badge || './icons/icon-192.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: data.tag || `yuvapusula-push-${Date.now()}`,
+    renotify: true,
+    requireInteraction: false,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1,
-      url: data.url || './index.html'
+      url: data.url || './index.html?tab=chat'
     }
   };
 
@@ -123,13 +133,19 @@ self.addEventListener('push', (event) => {
 // 5. Notification Click Event
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : './?tab=chat';
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : './index.html?tab=chat';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let client of windowClients) {
         if ('focus' in client) {
-          client.postMessage({ action: 'openTab', tab: 'tabChat' });
+          if (targetUrl.includes('tab=')) {
+            const tabMatch = targetUrl.match(/tab=([a-zA-Z0-9]+)/);
+            if (tabMatch && tabMatch[1]) {
+              const tabName = tabMatch[1].startsWith('tab') ? tabMatch[1] : ('tab' + tabMatch[1].charAt(0).toUpperCase() + tabMatch[1].slice(1));
+              client.postMessage({ action: 'openTab', tab: tabName });
+            }
+          }
           return client.focus();
         }
       }

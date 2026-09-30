@@ -19,7 +19,8 @@
   "author": "Uysal Ailesi",
   "license": "MIT",
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0"
+    "@neondatabase/serverless": "^1.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "sharp": "^0.35.5"

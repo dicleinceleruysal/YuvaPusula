@@ -445,12 +445,41 @@ module.exports = async function handler(req, res) {
         if (pathname === '/api/messages/send' && req.method === 'POST') {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.addMessage(body.familyId, body.message);
+            
+            // Arka plan Web Push Bildirimi Gönder (Uygulama kapalıyken de gelsin)
+            const senderName = (body.message && body.message.senderName) || 'Aile Üyesi';
+            const isGroup = !body.message.receiverId || body.message.receiverId === 'group';
+            const notifTitle = isGroup ? `💬 ${senderName}` : `🔒 ${senderName} (Özel Mesaj)`;
+            const notifBody = (body.message && body.message.content) ? body.message.content : 'Yeni bir mesajınız var.';
+            
+            dbManager.sendPushToFamily(body.familyId, {
+                title: notifTitle,
+                body: notifBody,
+                icon: './icons/icon-192.png',
+                url: './index.html?tab=chat'
+            }, body.message ? body.message.senderId : null).catch(err => console.error('Push bildirim hatası:', err));
+
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/messages/read' && req.method === 'POST') {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.markMessagesAsRead(body.familyId, body.currentUserId, body.chatPartnerId);
             return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
+
+        // 14.1 Web Push Abonelik Kaydı
+        if (pathname === '/api/push/subscribe' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            if (body.familyId && body.userId && body.subscription) {
+                await dbManager.savePushSubscription(body.familyId, body.userId, body.subscription);
+                return sendJson(res, 200, { success: true, message: 'Web push aboneliği kaydedildi.' });
+            }
+            return sendJson(res, 400, { success: false, message: 'Eksik abonelik parametreleri.' });
+        }
+
+        // 14.2 VAPID Genel Anahtarını Getir
+        if (pathname === '/api/push/vapid-key' && req.method === 'GET') {
+            return sendJson(res, 200, { publicKey: dbManager.VAPID_PUBLIC_KEY });
         }
 
         // 15. Altınkaynak Canlı Piyasa & Kur Verileri

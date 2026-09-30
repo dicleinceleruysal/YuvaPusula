@@ -763,10 +763,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {}
     }, { once: true });
 
-    // Bildirim İzni Durumunu Otomatik Kontrol Et
+    // Bildirim İzni Durumunu Otomatik Kontrol Et ve Web Push Aboneliğini Sağla
     if ('Notification' in window) {
         if (Notification.permission === 'granted') {
             appState.notificationsEnabled = true;
+            if (appState.currentUser && appState.familyData) {
+                registerPushSubscription();
+            }
         } else if (Notification.permission === 'default' && localStorage.getItem('ailem_notifications_enabled') !== 'false') {
             // İlk girişte nazik izin talebi
             setTimeout(() => {
@@ -775,6 +778,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (perm === 'granted') {
                             appState.notificationsEnabled = true;
                             localStorage.setItem('ailem_notifications_enabled', 'true');
+                            registerPushSubscription();
                             showToast('Sohbet bildirimleri aktif edildi! 🔔');
                         }
                     });
@@ -788,6 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         // Canlı sunucudan en güncel veriyi çek
         await syncWithServer(false);
+        registerPushSubscription();
     }
     renderApp();
     checkMonthStartNotification();
@@ -1230,6 +1235,7 @@ async function handleAuthSubmit(event) {
             appState.familyData = apiRes.family;
             saveStateToStorage();
             renderApp();
+            registerPushSubscription();
             showToast(`${apiRes.family.name} veritabanına kaydedildi ve kuruldu! 🏠`);
             return;
         }
@@ -1254,6 +1260,7 @@ async function handleAuthSubmit(event) {
         saveStateToStorage();
         renderApp();
         AilemAPI.syncFamily(newFamily);
+        registerPushSubscription();
         showToast(`${formattedFamilyName} kuruldu! 🏠`);
     } else {
         // Aileye Katılma Modu
@@ -1265,6 +1272,7 @@ async function handleAuthSubmit(event) {
             appState.familyData = apiRes.family;
             saveStateToStorage();
             renderApp();
+            registerPushSubscription();
             showToast(`${apiRes.family.name} ailesine başarıyla katıldınız! 👋`);
             return;
         }
@@ -1293,6 +1301,7 @@ async function handleAuthSubmit(event) {
         saveStateToStorage();
         renderApp();
         AilemAPI.syncFamily(family);
+        registerPushSubscription();
         showToast(`${family.name} ailesine katıldınız! 👋`);
     }
 }
@@ -1305,6 +1314,7 @@ async function handleQuickDemoLogin() {
         appState.familyData = apiRes.family;
         saveStateToStorage();
         renderApp();
+        registerPushSubscription();
         showToast('Uysal Ailesi veritabanı hesabıyla giriş yapıldı! 🎉');
         return;
     }
@@ -1316,6 +1326,7 @@ async function handleQuickDemoLogin() {
     appState.familyData = demoFamily;
     saveStateToStorage();
     renderApp();
+    registerPushSubscription();
     showToast('Uysal Ailesi demo girişi yapıldı! 🎉');
 }
 
@@ -3676,6 +3687,61 @@ function dispatchChatMessageNotification(msg) {
     }
 }
 
+// ==========================================================
+// WEB PUSH BİLDİRİM VE VAPID ENTEGRASYONU (UYGULAMA KAPALIYKEN)
+// ==========================================================
+const VAPID_PUBLIC_KEY = 'BAy8L7Fodzvl0ZARDLnnLt5Kc9E2mYVlcI6OXDAmKlq0zs9598HUlghuzmxz-bcL1G8wepKOSbAaLXm_dX45Xi4';
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function registerPushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        return null;
+    }
+    if (!appState.currentUser || !appState.familyData) return null;
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+
+        if (!sub) {
+            const convertedVapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+            });
+        }
+
+        if (sub) {
+            await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    familyId: appState.familyData.id,
+                    userId: appState.currentUser.id,
+                    subscription: sub
+                })
+            });
+            console.log('✅ Arka plan Web Push aboneliği aktif edildi.');
+        }
+        return sub;
+    } catch (err) {
+        console.warn('Web Push abonelik kaydı:', err);
+        return null;
+    }
+}
+
 // Web Bildirimi Açma / Kapatma
 async function requestAndToggleNotifications() {
     if (!('Notification' in window)) {
@@ -3691,7 +3757,12 @@ async function requestAndToggleNotifications() {
             btn.classList.toggle('active', appState.notificationsEnabled);
             btn.title = appState.notificationsEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimler Kapalı 🔕';
         }
-        showToast(appState.notificationsEnabled ? 'Anlık mesaj bildirimleri devrede! 🔔' : 'Bildirimler kapatıldı 🔕');
+        if (appState.notificationsEnabled) {
+            await registerPushSubscription();
+            showToast('Anlık bildirimler devrede! Uygulama kapalıyken de bildirim alacaksınız. 🔔');
+        } else {
+            showToast('Bildirimler kapatıldı 🔕');
+        }
         return;
     }
 
@@ -3704,7 +3775,8 @@ async function requestAndToggleNotifications() {
             btn.classList.add('active');
             btn.title = 'Bildirimler Açık 🔔';
         }
-        showToast('Bildirim izni verildi! Anlık mesaj bildirimleri açık. 🔔');
+        await registerPushSubscription();
+        showToast('Bildirim izni verildi! Uygulama kapalıyken de bildirim alacaksınız. 🔔');
     } else {
         localStorage.setItem('ailem_notifications_enabled', 'false');
         showToast('Bildirim izni verilmedi.');
