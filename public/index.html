@@ -381,10 +381,41 @@
                                 </div>
                             </div>
                             <div class="chat-header-actions">
+                                <button class="btn-chat-test-push" onclick="testPhonePushNotification()" title="Telefon Bildirimini Test Et">
+                                    <i class="fa-solid fa-paper-plane"></i> <span>Bildirimi Test Et</span>
+                                </button>
                                 <button class="chat-action-btn" id="btnToggleNotifications" onclick="requestAndToggleNotifications()" title="Bildirim Ayarı">
                                     <i class="fa-solid fa-bell"></i>
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Bildirim İzni Uyarısı (İzin Verilmediyse) -->
+                        <div id="chatPushPermissionNotice" class="chat-push-banner hidden">
+                            <div class="chat-push-banner-content">
+                                <i class="fa-solid fa-bell-slash"></i>
+                                <div>
+                                    <strong>Uygulama Kapalıyken Bildirim Alın</strong>
+                                    <p>Yeni mesajları kaçırmamak için bildirim izni vermeniz gerekir.</p>
+                                </div>
+                            </div>
+                            <button class="btn-enable-push" onclick="testPhonePushNotification()">
+                                <i class="fa-solid fa-bell"></i> Bildirimleri Aç & Test Et
+                            </button>
+                        </div>
+
+                        <!-- iOS Safari Uyarısı (PWA Olarak Eklenmediyse) -->
+                        <div id="iosPwaPushNotice" class="chat-push-banner chat-ios-banner hidden">
+                            <div class="chat-push-banner-content">
+                                <i class="fa-brands fa-apple"></i>
+                                <div>
+                                    <strong>iPhone / iPad Bildirimleri</strong>
+                                    <p>iOS'ta bildirim alabilmek için Paylaş (⬆️) menüsünden "Ana Ekrana Ekle" yapın.</p>
+                                </div>
+                            </div>
+                            <button class="btn-enable-push" onclick="openModal('modalPwaGuide'); switchPwaGuideTab('ios');">
+                                <i class="fa-solid fa-circle-info"></i> Nasıl Yapılır?
+                            </button>
                         </div>
 
                         <!-- Mesaj Listesi / Akış -->
@@ -1568,6 +1599,11 @@
             </div>
             <div class="switch-user-list" id="switchUserListContainer">
                 <!-- Üye Listesi Butonları -->
+            </div>
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="testPhonePushNotification()">
+                    <i class="fa-solid fa-bell"></i> <span>Bu Telefona Test Bildirimi Gönder</span>
+                </button>
             </div>
         </div>
     </div>

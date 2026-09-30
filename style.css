@@ -4298,29 +4298,113 @@ body {
 /* --------------------------------------------------------------------------
    6. GENİŞ EKRANLAR (@media min-width: 1400px)
    -------------------------------------------------------------------------- */
-@media (min-width: 1400px) {
-    .app-container {
-        max-width: 1480px;
+/* --------------------------------------------------------------------------
+   7. WEB PUSH BİLDİRİM VE TEST ELEMANLARI
+   -------------------------------------------------------------------------- */
+.btn-chat-test-push {
+    background: #eef2ff;
+    color: var(--primary);
+    border: 1px solid #c7d2fe;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-chat-test-push:hover {
+    background: #e0e7ff;
+    transform: translateY(-1px);
+}
+
+.btn-chat-test-push:active {
+    transform: scale(0.96);
+}
+
+.chat-push-banner {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border-bottom: 1px solid #fde68a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
+.chat-push-banner.chat-ios-banner {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border-bottom: 1px solid #bbf7d0;
+}
+
+.chat-push-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #92400e;
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.chat-push-banner.chat-ios-banner .chat-push-banner-content {
+    color: #166534;
+}
+
+.chat-push-banner-content i {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.chat-push-banner-content p {
+    margin: 0;
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.btn-enable-push {
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-enable-push:hover {
+    background: #4338ca;
+}
+
+.btn-enable-push:active {
+    transform: scale(0.96);
+}
+
+@media (max-width: 600px) {
+    .chat-push-banner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        text-align: left;
     }
 
-    .desktop-sidebar {
-        width: 300px;
-        min-width: 300px;
+    .btn-enable-push {
+        width: 100%;
+        justify-content: center;
     }
 
-    .app-content {
-        max-width: 1260px;
-        padding: 32px 48px 80px 48px;
-    }
-
-    .posts-feed {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-    }
-
-    .plans-list-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
+    .btn-chat-test-push span {
+        display: none;
     }
 }
 

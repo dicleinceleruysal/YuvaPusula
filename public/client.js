@@ -959,17 +959,19 @@ function triggerPWAInstall() {
 }
 
 function initPWA() {
-    // 1. Service Worker Kaydı
+    // 1. Service Worker Kaydı (Hızlı ve Doğrudan Kayıt)
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => {
-                    console.log('YuvaPusula PWA Service Worker hazır:', reg.scope);
-                })
-                .catch(err => {
-                    console.log('Service Worker kayıt hatası:', err);
-                });
-        });
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                console.log('YuvaPusula PWA Service Worker hazır:', reg.scope);
+                if (window.Notification && Notification.permission === 'granted' && appState.currentUser && appState.familyData) {
+                    registerPushSubscription();
+                }
+                updatePushNotificationUI();
+            })
+            .catch(err => {
+                console.warn('Service Worker kayıt hatası:', err);
+            });
     }
 
     // 2. Çevrimdışı / Çevrimiçi Dinleyicileri
@@ -1420,6 +1422,7 @@ function renderApp() {
     renderBudget();
     renderMembers();
     updateQuickStats();
+    updatePushNotificationUI();
     switchTab(appState.currentTab || 'tabPano');
 }
 
@@ -3705,15 +3708,23 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-async function registerPushSubscription() {
+async function registerPushSubscription(forceRefresh = false) {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        return null;
+        console.warn('PushManager bu tarayıcıda desteklenmiyor.');
+        return { success: false, reason: 'unsupported' };
     }
-    if (!appState.currentUser || !appState.familyData) return null;
+    if (!appState.currentUser || !appState.familyData) {
+        return { success: false, reason: 'not_logged_in' };
+    }
 
     try {
         const reg = await navigator.serviceWorker.ready;
         let sub = await reg.pushManager.getSubscription();
+
+        if (forceRefresh && sub) {
+            try { await sub.unsubscribe(); } catch (e) {}
+            sub = null;
+        }
 
         if (!sub) {
             const convertedVapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
@@ -3724,7 +3735,7 @@ async function registerPushSubscription() {
         }
 
         if (sub) {
-            await fetch('/api/push/subscribe', {
+            const res = await fetch('/api/push/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3733,12 +3744,54 @@ async function registerPushSubscription() {
                     subscription: sub
                 })
             });
-            console.log('✅ Arka plan Web Push aboneliği aktif edildi.');
+            const data = await res.json();
+            console.log('✅ Arka plan Web Push aboneliği aktif edildi:', sub.endpoint);
+            updatePushNotificationUI();
+            return { success: true, subscription: sub, apiResponse: data };
         }
-        return sub;
     } catch (err) {
-        console.warn('Web Push abonelik kaydı:', err);
-        return null;
+        console.warn('Web Push abonelik kaydı hatası:', err);
+        if (!forceRefresh) {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const oldSub = await reg.pushManager.getSubscription();
+                if (oldSub) await oldSub.unsubscribe();
+                return await registerPushSubscription(true);
+            } catch (retryErr) {
+                console.error('Retry push subscription error:', retryErr);
+            }
+        }
+        return { success: false, error: err.message };
+    }
+    return { success: false, reason: 'unknown' };
+}
+
+function updatePushNotificationUI() {
+    const btn = document.getElementById('btnToggleNotifications');
+    const isGranted = ('Notification' in window && Notification.permission === 'granted');
+    const isEnabled = isGranted && (appState.notificationsEnabled !== false);
+    
+    if (btn) {
+        btn.classList.toggle('active', isEnabled);
+        btn.title = isEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimler Kapalı 🔕';
+    }
+
+    const noticeBanner = document.getElementById('chatPushPermissionNotice');
+    if (noticeBanner) {
+        if (!isGranted) {
+            noticeBanner.classList.remove('hidden');
+        } else {
+            noticeBanner.classList.add('hidden');
+        }
+    }
+
+    const iosBanner = document.getElementById('iosPwaPushNotice');
+    if (iosBanner) {
+        if (isIosDevice() && !isStandaloneMode()) {
+            iosBanner.classList.remove('hidden');
+        } else {
+            iosBanner.classList.add('hidden');
+        }
     }
 }
 
@@ -3752,14 +3805,10 @@ async function requestAndToggleNotifications() {
     if (Notification.permission === 'granted') {
         appState.notificationsEnabled = !appState.notificationsEnabled;
         localStorage.setItem('ailem_notifications_enabled', appState.notificationsEnabled ? 'true' : 'false');
-        const btn = document.getElementById('btnToggleNotifications');
-        if (btn) {
-            btn.classList.toggle('active', appState.notificationsEnabled);
-            btn.title = appState.notificationsEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimler Kapalı 🔕';
-        }
+        updatePushNotificationUI();
         if (appState.notificationsEnabled) {
             await registerPushSubscription();
-            showToast('Anlık bildirimler devrede! Uygulama kapalıyken de bildirim alacaksınız. 🔔');
+            showToast('Anlık bildirimler devrede! 🔔');
         } else {
             showToast('Bildirimler kapatıldı 🔕');
         }
@@ -3770,17 +3819,71 @@ async function requestAndToggleNotifications() {
     if (permission === 'granted') {
         appState.notificationsEnabled = true;
         localStorage.setItem('ailem_notifications_enabled', 'true');
-        const btn = document.getElementById('btnToggleNotifications');
-        if (btn) {
-            btn.classList.add('active');
-            btn.title = 'Bildirimler Açık 🔔';
-        }
-        await registerPushSubscription();
+        await registerPushSubscription(true);
+        updatePushNotificationUI();
         showToast('Bildirim izni verildi! Uygulama kapalıyken de bildirim alacaksınız. 🔔');
     } else {
         localStorage.setItem('ailem_notifications_enabled', 'false');
-        showToast('Bildirim izni verilmedi.');
+        updatePushNotificationUI();
+        showToast('Bildirim izni verilmedi. Telefon ayarlarından izin verebilirsiniz.');
     }
+}
+
+// Telefona Anında Test Bildirimi Gönderme
+async function testPhonePushNotification() {
+    if (!('Notification' in window)) {
+        showToast('Tarayıcınız Web Bildirimlerini desteklemiyor.');
+        return;
+    }
+
+    if (isIosDevice() && !isStandaloneMode()) {
+        showToast('⚠️ iPhone\'da bildirim için uygulamayı "Ana Ekrana Ekle"meniz gerekmektedir.');
+        openModal('modalPwaGuide');
+        switchPwaGuideTab('ios');
+        return;
+    }
+
+    if (Notification.permission !== 'granted') {
+        showToast('Bildirim izni isteniyor, lütfen "İzin Ver"e dokunun...');
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+            showToast('❌ Bildirim izni verilmedi. Telefon ayarlarından tarayıcı bildirimlerine izin verin.');
+            updatePushNotificationUI();
+            return;
+        }
+        appState.notificationsEnabled = true;
+        localStorage.setItem('ailem_notifications_enabled', 'true');
+    }
+
+    showToast('⏳ Telefon bildirim aboneliği hazırlanıyor...');
+    const subResult = await registerPushSubscription(true);
+    
+    if (!subResult || !subResult.success) {
+        showToast('❌ Bildirim aboneliği oluşturulamadı: ' + (subResult?.error || 'Bilinmeyen hata'));
+        return;
+    }
+
+    showToast('🚀 Test bildirimi telefonunuza gönderiliyor...');
+    try {
+        const response = await fetch('/api/push/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: appState.currentUser.id,
+                familyId: appState.familyData ? appState.familyData.id : null
+            })
+        });
+        const resData = await response.json();
+        if (resData && resData.success) {
+            showToast('✅ Harika! Test bildirimi telefonunuza iletildi. Üst bildirim çubuğunu kontrol edin 🔔');
+            triggerHapticAndSound();
+        } else {
+            showToast('⚠️ Bildirim sunucudan iletilemedi: ' + (resData?.message || 'Abonelik kaydı bulunamadı.'));
+        }
+    } catch (err) {
+        showToast('❌ Test bildirimi isteği başarısız: ' + err.message);
+    }
+    updatePushNotificationUI();
 }
 
 // Uygulama İçi Yüzen Mesaj Bildirim Kartı

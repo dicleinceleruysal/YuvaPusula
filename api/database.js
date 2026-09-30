@@ -1001,6 +1001,57 @@ async function sendPushToFamily(familyId, payload, excludeUserId) {
     await Promise.allSettled(sendPromises);
 }
 
+async function sendPushToUser(userId, payload) {
+    if (!userId || !webpush) return { success: false, message: 'WebPush modülü veya kullanıcı kimliği eksik.' };
+    
+    let subs = [];
+    const sql = getNeon();
+    if (sql) {
+        try {
+            const rows = await sql`
+                SELECT subscription, endpoint 
+                FROM push_subscriptions 
+                WHERE user_id = ${userId}
+            `;
+            subs = rows.map(r => typeof r.subscription === 'string' ? JSON.parse(r.subscription) : r.subscription);
+        } catch (e) {
+            console.error('Neon sendPushToUser error:', e);
+        }
+    }
+    
+    if (subs.length === 0) {
+        loadJsonStore();
+        if (jsonStore.pushSubscriptions) {
+            subs = jsonStore.pushSubscriptions
+                .filter(s => s.userId === userId)
+                .map(s => s.subscription);
+        }
+    }
+    
+    if (!subs || subs.length === 0) {
+        return { success: false, message: 'Bu kullanıcıya ait aktif bildirim aboneliği bulunamadı. Lütfen bildirim izni verin.' };
+    }
+    
+    const notificationPayload = JSON.stringify({
+        title: payload.title || 'YuvaPusula',
+        body: payload.body || 'Test bildirimi!',
+        icon: payload.icon || './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        url: payload.url || './index.html?tab=chat'
+    });
+    
+    let sentCount = 0;
+    for (const sub of subs) {
+        try {
+            await webpush.sendNotification(sub, notificationPayload);
+            sentCount++;
+        } catch (err) {
+            console.error('sendPushToUser error:', err.statusCode, err.message);
+        }
+    }
+    return { success: sentCount > 0, count: sentCount, message: `${sentCount} cihaza test bildirimi iletildi.` };
+}
+
 module.exports = {
     initDatabase,
     findUserAndFamilyByPhone,
@@ -1038,5 +1089,6 @@ module.exports = {
     markMessagesAsRead,
     savePushSubscription,
     sendPushToFamily,
+    sendPushToUser,
     VAPID_PUBLIC_KEY
 };

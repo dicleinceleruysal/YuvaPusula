@@ -482,6 +482,21 @@ module.exports = async function handler(req, res) {
             return sendJson(res, 200, { publicKey: dbManager.VAPID_PUBLIC_KEY });
         }
 
+        // 14.3 Web Push Test Bildirimi Gönder (Kendi Cihazına)
+        if (pathname === '/api/push/test' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            if (body.userId) {
+                const result = await dbManager.sendPushToUser(body.userId, {
+                    title: '🔔 YuvaPusula Bildirim Testi',
+                    body: 'Tebrikler! Telefon bildiriminiz başarıyla çalışıyor. Uygulama kapalıyken de bildirimler gelecektir.',
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=chat'
+                });
+                return sendJson(res, 200, result);
+            }
+            return sendJson(res, 400, { success: false, message: 'Kullanıcı kimliği (userId) belirtilmedi.' });
+        }
+
         // 15. Altınkaynak Canlı Piyasa & Kur Verileri
         if (pathname === '/api/market/rates' && req.method === 'GET') {
             const forceRefresh = (req.url || '').includes('refresh=true');
