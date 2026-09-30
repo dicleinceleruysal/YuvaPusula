@@ -242,6 +242,7 @@ async function createFamily(familyName, inviteCode, user) {
         tasks: [],
         expenses: [],
         salaries: [],
+        extraIncomes: [],
         fixedExpenses: [],
         investments: [],
         investmentHistory: [],
@@ -440,6 +441,7 @@ function normalizeFamily(fam) {
     if (!fam.tasks) fam.tasks = [];
     if (!fam.expenses) fam.expenses = [];
     if (!fam.salaries) fam.salaries = [];
+    if (!fam.extraIncomes) fam.extraIncomes = [];
     if (!fam.fixedExpenses) fam.fixedExpenses = [];
     if (!fam.investments) fam.investments = [];
     if (!fam.investmentHistory) fam.investmentHistory = [];
@@ -825,6 +827,32 @@ async function markMessagesAsRead(familyId, currentUserId, chatPartnerId) {
     });
 }
 
+// Ek Gelir İşlemleri (Prim, İkramiye, Kira, Freelance vb. - Ayın 1'inde Sıfırlanır)
+async function addExtraIncome(familyId, income) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.extraIncomes) fam.extraIncomes = [];
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        fam.extraIncomes.unshift({
+            id: 'inc_' + Date.now(),
+            ...income,
+            amount: parseFloat(income.amount) || 0,
+            date: income.date || new Date().toLocaleDateString('tr-TR'),
+            month: income.month || currentMonthKey,
+            createdAt: new Date().toISOString()
+        });
+        return fam;
+    });
+}
+
+async function deleteExtraIncome(familyId, incomeId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.extraIncomes) fam.extraIncomes = [];
+        fam.extraIncomes = fam.extraIncomes.filter(inc => inc.id !== incomeId);
+        return fam;
+    });
+}
+
 module.exports = {
     initDatabase,
     findUserAndFamilyByPhone,
@@ -849,6 +877,8 @@ module.exports = {
     deleteExpense,
     setSalary,
     deleteSalary,
+    addExtraIncome,
+    deleteExtraIncome,
     addFixedExpense,
     toggleFixedExpense,
     deleteFixedExpense,

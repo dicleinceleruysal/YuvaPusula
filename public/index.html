@@ -537,9 +537,12 @@
                         <h3>💰 Aile Finansı & Bütçe</h3>
                         <p class="subtitle">Maaşlar, sabit giderler, harcamalar ve yatırımlar</p>
                     </div>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn-primary-sm" onclick="openMySalaryModal()">
                             <i class="fa-solid fa-money-bill-wave"></i> Maaşım
+                        </button>
+                        <button class="btn-primary-sm" onclick="openAddExtraIncomeModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <i class="fa-solid fa-hand-holding-dollar"></i> + Ek Gelir
                         </button>
                         <button class="btn-secondary-sm" id="btnBudgetAction" onclick="openCurrentBudgetActionModal()">
                             <i class="fa-solid fa-plus"></i> <span id="budgetActionBtnText">Harcama Ekle</span>
@@ -552,10 +555,10 @@
                     <div class="master-stat-card bg-income">
                         <div class="stat-header">
                             <span class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-                            <span class="stat-title">Toplam Maaşlar</span>
+                            <span class="stat-title">Toplam Gelir</span>
                         </div>
                         <div class="stat-value" id="statTotalSalaries">0,00 ₺</div>
-                        <span class="stat-desc" id="statSalaryCount">0 aile geliri</span>
+                        <span class="stat-desc" id="statSalaryCount">Maaşlar + Ek Gelir</span>
                     </div>
 
                     <div class="master-stat-card bg-fixed">
@@ -582,7 +585,7 @@
                             <span class="stat-title">Kalan Net Bütçe</span>
                         </div>
                         <div class="stat-value" id="statNetRemaining">0,00 ₺</div>
-                        <span class="stat-desc" id="statNetDesc">Maaş - Gider - Harcama</span>
+                        <span class="stat-desc" id="statNetDesc">Gelir - Gider - Harcama</span>
                     </div>
                 </div>
 
@@ -610,6 +613,18 @@
                     </div>
                     <div class="salaries-family-list" id="salariesListContainer">
                         <!-- Dinamik Maaş Kartları -->
+                    </div>
+
+                    <!-- Bu Ayki Ek Gelirler (Prim, İkramiye, Kira vb. - Ayın 1'inde Sıfırlanır) -->
+                    <div class="section-title" style="margin-top: 20px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4><i class="fa-solid fa-hand-holding-dollar"></i> Bu Ayki Ek Gelirler</h4>
+                            <span class="extra-income-month-badge" id="extraIncomeMonthBadge">📅 Yükleniyor...</span>
+                        </div>
+                        <button class="btn-text-sm" onclick="openAddExtraIncomeModal()">+ Ek Gelir Ekle</button>
+                    </div>
+                    <div class="extra-incomes-list" id="extraIncomesListContainer">
+                        <!-- Dinamik Ek Gelir Kartları -->
                     </div>
 
                     <!-- Değişken Harcamalar Listesi -->
@@ -1229,6 +1244,62 @@
         </div>
     </div>
 
+    <!-- MODAL: YENİ EK GELİR EKLE (AYLIK - AYIN 1'İNDE SIFIRLANIR) -->
+    <div id="modalNewExtraIncome" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-hand-holding-dollar"></i> Bu Aya Ek Gelir Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewExtraIncome')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                Prim, ikramiye, kira veya freelance gibi ek kazançlarınızı bu aya kaydedin. <b>Ayın 1'inde otomatik olarak sıfırlanır</b> ve bütçenize anında dahil edilir.
+            </p>
+            <form onsubmit="handleAddExtraIncome(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-heading"></i> Ek Gelir Açıklaması / Başlık</label>
+                    <input type="text" id="extraIncomeTitle" placeholder="Örn: Proje Primi, Kira Geliri, Freelance İş" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-coins"></i> Tutar (₺)</label>
+                        <input type="number" step="any" id="extraIncomeAmount" placeholder="Örn: 7500" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-tags"></i> Kategori</label>
+                        <select id="extraIncomeCategory">
+                            <option value="Prim">🎁 Prim & İkramiye</option>
+                            <option value="Kira">🏠 Kira Geliri</option>
+                            <option value="Ek İş">💼 Ek İş & Freelance</option>
+                            <option value="Yatırım">📈 Yatırım & Kâr Payı</option>
+                            <option value="Satış">📦 İkinci El Satış</option>
+                            <option value="Hediye">💝 Hediye / Destek</option>
+                            <option value="Diğer">🌟 Diğer Ek Gelir</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-user-check"></i> Geliri Alan / Kazanan</label>
+                        <select id="extraIncomeReceiver">
+                            <!-- Dinamik Üyeler -->
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-calendar-day"></i> Tarih</label>
+                        <input type="text" id="extraIncomeDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-note-sticky"></i> Not / Açıklama (İsteğe bağlı)</label>
+                    <input type="text" id="extraIncomeNotes" placeholder="Örn: Q3 Performans primi bankaya yattı">
+                </div>
+                <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="fa-solid fa-plus-circle"></i> Ek Geliri Kaydet
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: YENİ SABİT GİDER -->
     <div id="modalNewFixedExpense" class="modal-overlay hidden">
         <div class="modal-card">
@@ -1455,6 +1526,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="client.js?v=28"></script>
+    <script src="client.js?v=30"></script>
 </body>
 </html>

@@ -36,6 +36,16 @@ const SHOPPING_ICONS = {
     'Diğer': '📦'
 };
 
+const EXTRA_INCOME_ICONS = {
+    'Prim': '🎁',
+    'Kira': '🏠',
+    'Ek İş': '💼',
+    'Yatırım': '📈',
+    'Satış': '📦',
+    'Hediye': '💝',
+    'Diğer': '🌟'
+};
+
 // Global Uygulama Durumu (State)
 let appState = {
     currentUser: null,
@@ -548,6 +558,37 @@ const AilemAPI = {
         return null;
     },
 
+    // Ek Gelir İşlemleri (Prim, İkramiye, Kira vb.)
+    async addExtraIncome(familyId, income) {
+        try {
+            const res = await fetch('/api/extra-incomes/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, income })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async deleteExtraIncome(familyId, incomeId) {
+        try {
+            const res = await fetch('/api/extra-incomes/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, incomeId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     // Sabit Gider İşlemleri
     async addFixedExpense(familyId, fixed) {
         try {
@@ -943,6 +984,7 @@ function normalizeFamilyData(fam) {
     if (!fam.tasks) fam.tasks = [];
     if (!fam.expenses) fam.expenses = [];
     if (!fam.salaries) fam.salaries = [];
+    if (!fam.extraIncomes) fam.extraIncomes = [];
     if (!fam.fixedExpenses) fam.fixedExpenses = [];
     if (!fam.investments) fam.investments = [];
     if (!fam.investmentHistory) fam.investmentHistory = [];
@@ -1735,31 +1777,55 @@ function renderBudget() {
     if (!family) return;
 
     if (!family.salaries) family.salaries = [];
+    if (!family.extraIncomes) family.extraIncomes = [];
     if (!family.fixedExpenses) family.fixedExpenses = [];
     if (!family.expenses) family.expenses = [];
     if (!family.investments) family.investments = [];
     if (!family.investmentTransactions) family.investmentTransactions = [];
 
     const salaries = family.salaries;
+    const extraIncomes = family.extraIncomes;
     const fixedExpenses = family.fixedExpenses;
     const expenses = family.expenses;
     const investments = family.investments;
 
-    // 1. Hesaplamalar
+    // 1. Aktif Ay Hesaplaması (Her ayın 1'inde otomatik olarak sıfırlanır)
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthNum = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonthKey = `${currentYear}-${currentMonthNum}`;
+    const monthNamesTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const currentMonthLabel = `${monthNamesTr[now.getMonth()]} ${currentYear}`;
+
+    // Yalnızca aktif aya ait ek gelirleri topla
+    const currentMonthExtraIncomes = extraIncomes.filter(inc => {
+        if (inc.month) return inc.month === currentMonthKey;
+        if (inc.createdAt) return inc.createdAt.startsWith(currentMonthKey);
+        return true;
+    });
+
     const totalSalaries = salaries.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const totalExtraIncomes = currentMonthExtraIncomes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const totalIncome = totalSalaries + totalExtraIncomes;
     const totalFixed = fixedExpenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const paidCount = fixedExpenses.filter(x => x.isPaid).length;
     const unpaidCount = fixedExpenses.filter(x => !x.isPaid).length;
     const totalVariable = expenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-    const netRemaining = totalSalaries - totalFixed - totalVariable;
+    const netRemaining = totalIncome - totalFixed - totalVariable;
     const totalPortfolio = investments.reduce((s, x) => s + (Number(x.currentValueTl) || 0), 0);
 
     // 2. Master 4'lü Kart Güncellemeleri
     const elStatSalaries = document.getElementById('statTotalSalaries');
-    if (elStatSalaries) elStatSalaries.textContent = formatTL(totalSalaries);
+    if (elStatSalaries) elStatSalaries.textContent = formatTL(totalIncome);
 
     const elSalaryCount = document.getElementById('statSalaryCount');
-    if (elSalaryCount) elSalaryCount.textContent = `${salaries.length} aile geliri`;
+    if (elSalaryCount) {
+        if (totalExtraIncomes > 0) {
+            elSalaryCount.textContent = `Maaş: ${formatTL(totalSalaries)} • Ek: ${formatTL(totalExtraIncomes)}`;
+        } else {
+            elSalaryCount.textContent = `${salaries.length} maaş geliri (Ek gelir yok)`;
+        }
+    }
 
     const elStatFixed = document.getElementById('statTotalFixedExpenses');
     if (elStatFixed) elStatFixed.textContent = formatTL(totalFixed);
@@ -1839,6 +1905,49 @@ function renderBudget() {
                     `;
                 }
             }).join('');
+        }
+    }
+
+    // 4.1 Bu Ayki Ek Gelirler Listesi
+    const monthBadgeEl = document.getElementById('extraIncomeMonthBadge');
+    if (monthBadgeEl) {
+        monthBadgeEl.innerHTML = `🟢 ${currentMonthLabel} • Ayın 1'inde Sıfırlanır`;
+    }
+
+    const extraIncomesContainer = document.getElementById('extraIncomesListContainer');
+    if (extraIncomesContainer) {
+        if (currentMonthExtraIncomes.length === 0) {
+            extraIncomesContainer.innerHTML = `
+                <div class="empty-state" style="padding: 16px; grid-column: 1 / -1;">
+                    <i class="fa-solid fa-hand-holding-dollar" style="color: #10b981; font-size: 24px; margin-bottom: 6px;"></i>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Bu ay (${currentMonthLabel}) henüz ek gelir kaydedilmedi.<br>Prim, ikramiye, kira veya freelance gelirlerinizi ekleyebilirsiniz.</p>
+                </div>
+            `;
+        } else {
+            extraIncomesContainer.innerHTML = currentMonthExtraIncomes.map(inc => `
+                <div class="extra-income-card">
+                    <div class="extra-income-left">
+                        <div class="extra-income-icon">
+                            ${EXTRA_INCOME_ICONS[inc.category] || '🎁'}
+                        </div>
+                        <div class="extra-income-info">
+                            <div class="extra-income-title">${inc.title}</div>
+                            <div class="extra-income-meta">
+                                <span>👤 <b>${inc.receivedBy || 'Birey'}</b></span>
+                                <span>• ${inc.category || 'Ek Gelir'}</span>
+                                <span>• 📅 ${inc.date || ''}</span>
+                            </div>
+                            ${inc.notes ? `<div style="font-size:0.65rem; color:#065f46; opacity:0.8; margin-top:2px;">${inc.notes}</div>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
+                        <span class="extra-income-amount-val">+${parseFloat(inc.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
+                        <button class="btn-delete-item" onclick="handleDeleteExtraIncome('${inc.id}')" title="Ek Geliri Sil">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
     }
 
@@ -2509,6 +2618,102 @@ async function handleSaveSalary(e) {
     closeModal('modalMySalary');
     renderBudget();
     showToast('Aylık maaşınız başarıyla kaydedildi! 💵');
+}
+
+// 1.1 Aylık Ek Gelir Modalını Aç ve Kaydet (Ayın 1'inde Sıfırlanır)
+function openAddExtraIncomeModal() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    // Aile üyelerini seçiciye doldur
+    const selectReceiver = document.getElementById('extraIncomeReceiver');
+    if (selectReceiver) {
+        const members = family.members || [];
+        selectReceiver.innerHTML = members.map(m => `
+            <option value="${m.name}" ${appState.currentUser && appState.currentUser.id === m.id ? 'selected' : ''}>
+                ${m.avatar || '👤'} ${m.name} (${m.role})
+            </option>
+        `).join('');
+    }
+
+    // Tarih alanını bugünün tarihiyle doldur
+    const dateInput = document.getElementById('extraIncomeDate');
+    if (dateInput) {
+        dateInput.value = new Date().toLocaleDateString('tr-TR');
+    }
+
+    // Form alanlarını sıfırla
+    const titleInput = document.getElementById('extraIncomeTitle');
+    if (titleInput) titleInput.value = '';
+    const amountInput = document.getElementById('extraIncomeAmount');
+    if (amountInput) amountInput.value = '';
+    const notesInput = document.getElementById('extraIncomeNotes');
+    if (notesInput) notesInput.value = '';
+
+    openModal('modalNewExtraIncome');
+}
+
+async function handleAddExtraIncome(e) {
+    e.preventDefault();
+    const family = appState.familyData;
+    if (!family) return;
+
+    const title = document.getElementById('extraIncomeTitle').value.trim();
+    const amount = parseFloat(document.getElementById('extraIncomeAmount').value);
+    const category = document.getElementById('extraIncomeCategory').value;
+    const receivedBy = document.getElementById('extraIncomeReceiver').value;
+    const date = document.getElementById('extraIncomeDate').value.trim() || new Date().toLocaleDateString('tr-TR');
+    const notes = document.getElementById('extraIncomeNotes').value.trim();
+
+    if (!title || !amount || amount <= 0) {
+        showToast('Lütfen geçerli bir ek gelir tanımı ve tutarı girin.');
+        return;
+    }
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const newIncome = {
+        id: 'inc_' + Date.now(),
+        title,
+        amount,
+        category,
+        receivedBy,
+        date,
+        month: currentMonthKey,
+        notes,
+        createdAt: new Date().toISOString()
+    };
+
+    const updatedFamily = await AilemAPI.addExtraIncome(family.id, newIncome);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.extraIncomes) appState.familyData.extraIncomes = [];
+        appState.familyData.extraIncomes.unshift(newIncome);
+    }
+
+    saveStateToStorage();
+    closeModal('modalNewExtraIncome');
+    renderBudget();
+    showToast('Ek gelir bu aya başarıyla eklendi! 🎁');
+}
+
+async function handleDeleteExtraIncome(id) {
+    if (!confirm('Bu ek gelir kaydını silmek istediğinize emin misiniz?')) return;
+    const family = appState.familyData;
+    if (!family) return;
+
+    const updatedFamily = await AilemAPI.deleteExtraIncome(family.id, id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        appState.familyData.extraIncomes = (appState.familyData.extraIncomes || []).filter(inc => inc.id !== id);
+    }
+
+    saveStateToStorage();
+    renderBudget();
+    showToast('Ek gelir silindi.');
 }
 
 // 2. Harcama Ekle / Sil

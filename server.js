@@ -397,6 +397,18 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 11.1 Ek Gelir İşlemleri (Prim, İkramiye, Kira vb.)
+            if (pathname === '/api/extra-incomes/add' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.addExtraIncome(body.familyId, body.income);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/extra-incomes/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteExtraIncome(body.familyId, body.incomeId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 12. Sabit Gider İşlemleri
             if (pathname === '/api/fixed-expenses/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
