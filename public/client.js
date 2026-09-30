@@ -620,6 +620,21 @@ const AilemAPI = {
         return null;
     },
 
+    async updateFixedExpense(familyId, id, fixed) {
+        try {
+            const res = await fetch('/api/fixed-expenses/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, id, fixed })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     async deleteFixedExpense(familyId, id) {
         try {
             const res = await fetch('/api/fixed-expenses/delete', {
@@ -1281,6 +1296,33 @@ async function handleQuickDemoLogin() {
 // ==========================================================
 // 3. EKRAN VE GÖRÜNÜM YÖNETİMİ (RENDER)
 // ==========================================================
+function checkMonthStartRollover() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastCheckedMonth = localStorage.getItem('yuvapusula_last_checked_month');
+
+    if (lastCheckedMonth !== currentMonthKey) {
+        // Yeni bir aya girildi! (Örn: Ayın 1'i)
+        // Sabit giderlerin isPaid (ödendi) durumunu yeni ay ödeme takibi için sıfırla (sabit giderler silinmez)
+        if (family.fixedExpenses && family.fixedExpenses.length > 0) {
+            let hasPaid = false;
+            family.fixedExpenses.forEach(f => {
+                if (f.isPaid) {
+                    f.isPaid = false;
+                    hasPaid = true;
+                }
+            });
+            if (hasPaid) {
+                saveStateToStorage();
+            }
+        }
+        localStorage.setItem('yuvapusula_last_checked_month', currentMonthKey);
+    }
+}
+
 function renderApp() {
     const authScreen = document.getElementById('authScreen');
     const mainApp = document.getElementById('mainApp');
@@ -1294,6 +1336,8 @@ function renderApp() {
 
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
+
+    checkMonthStartRollover();
 
     const family = appState.familyData;
     const user = appState.currentUser;
@@ -1849,13 +1893,21 @@ function renderBudget() {
         return true;
     });
 
+    // Yalnızca aktif aya ait değişken harcamaları topla (Her ayın 1'inde sıfırlanır)
+    const currentMonthExpenses = expenses.filter(exp => {
+        if (exp.month) return exp.month === currentMonthKey;
+        if (exp.date && exp.date.startsWith(currentMonthKey)) return true;
+        if (exp.createdAt) return exp.createdAt.startsWith(currentMonthKey);
+        return true;
+    });
+
     const totalSalaries = salaries.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalExtraIncomes = currentMonthExtraIncomes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalIncome = totalSalaries + totalExtraIncomes;
     const totalFixed = fixedExpenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const paidCount = fixedExpenses.filter(x => x.isPaid).length;
     const unpaidCount = fixedExpenses.filter(x => !x.isPaid).length;
-    const totalVariable = expenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const totalVariable = currentMonthExpenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const netRemaining = totalIncome - totalFixed - totalVariable;
     const totalPortfolio = investments.reduce((s, x) => s + (Number(x.currentValueTl) || 0), 0);
 
@@ -1882,7 +1934,7 @@ function renderBudget() {
     if (elTotalExpenseAmount) elTotalExpenseAmount.textContent = formatTL(totalVariable);
 
     const elTotalExpenseCount = document.getElementById('totalExpenseCount');
-    if (elTotalExpenseCount) elTotalExpenseCount.textContent = `${expenses.length} adet harcama`;
+    if (elTotalExpenseCount) elTotalExpenseCount.textContent = `${currentMonthExpenses.length} adet harcama (${currentMonthLabel})`;
 
     const elNetRemaining = document.getElementById('statNetRemaining');
     if (elNetRemaining) elNetRemaining.textContent = formatTL(netRemaining);
@@ -1996,18 +2048,23 @@ function renderBudget() {
         }
     }
 
-    // 5. Değişken Harcamalar Listesi
+    // 5. Değişken Harcamalar Listesi (Ayın 1'inde Sıfırlanır)
+    const expMonthBadgeEl = document.getElementById('expensesMonthBadge');
+    if (expMonthBadgeEl) {
+        expMonthBadgeEl.innerHTML = `🟢 ${currentMonthLabel} • Ayın 1'inde Sıfırlanır`;
+    }
+
     const expensesContainer = document.getElementById('expensesList');
     if (expensesContainer) {
-        if (expenses.length === 0) {
+        if (currentMonthExpenses.length === 0) {
             expensesContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fa-solid fa-receipt"></i>
-                    <p>Bu ay için henüz harcama kaydı girilmedi.</p>
+                    <p>Bu ay (${currentMonthLabel}) için henüz harcama kaydı girilmedi.<br>Günlük ve değişken harcamalarınızı ekleyebilirsiniz.</p>
                 </div>
             `;
         } else {
-            expensesContainer.innerHTML = expenses.map(exp => `
+            expensesContainer.innerHTML = currentMonthExpenses.map(exp => `
                 <div class="expense-card">
                     <div class="expense-left">
                         <div class="expense-cat-icon">
@@ -2079,6 +2136,9 @@ function renderFixedExpenses() {
                 <div class="fixed-amount-val">${formatTL(item.amount)}</div>
                 <button class="btn-toggle-fixed ${item.isPaid ? 'paid' : 'unpaid'}" onclick="handleToggleFixedExpense('${item.id}')">
                     ${item.isPaid ? '<i class="fa-solid fa-check"></i> Ödendi' : '<i class="fa-solid fa-clock"></i> Öde'}
+                </button>
+                <button class="btn-delete-item" onclick="openEditFixedExpenseModal('${item.id}')" title="Sabit Gideri Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
+                    <i class="fa-solid fa-pen-to-square"></i>
                 </button>
                 <button class="btn-delete-item" onclick="handleDeleteFixedExpense('${item.id}')" title="Sabit Gideri Sil">
                     <i class="fa-solid fa-trash-can"></i>
@@ -2774,13 +2834,18 @@ async function handleAddExpense(e) {
         return;
     }
 
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     const newExpense = {
         id: 'exp_' + Date.now(),
         title,
         amount,
         category,
         payer,
-        date: new Date().toLocaleDateString('tr-TR')
+        month: currentMonthKey,
+        date: new Date().toLocaleDateString('tr-TR'),
+        createdAt: new Date().toISOString()
     };
 
     const updatedFamily = await AilemAPI.addExpense(appState.familyData.id, newExpense);
@@ -2813,7 +2878,7 @@ async function deleteExpense(id) {
     showToast('Harcama silindi.');
 }
 
-// 3. Sabit Gider Ekle / Ödendi İşaretle / Sil
+// 3. Sabit Gider Ekle / Düzenle / Ödendi İşaretle / Sil
 async function handleAddFixedExpense(e) {
     e.preventDefault();
     const title = document.getElementById('fixedTitle').value.trim();
@@ -2854,6 +2919,80 @@ async function handleAddFixedExpense(e) {
     document.getElementById('fixedAmount').value = '';
     document.getElementById('fixedNotes').value = '';
     showToast('Sabit gider kaydedildi! 📑');
+}
+
+function openEditFixedExpenseModal(id) {
+    const family = appState.familyData;
+    if (!family) return;
+    const fixed = (family.fixedExpenses || []).find(f => f.id === id);
+    if (!fixed) return;
+
+    document.getElementById('editFixedId').value = fixed.id;
+    document.getElementById('editFixedTitle').value = fixed.title || '';
+    document.getElementById('editFixedAmount').value = fixed.amount || '';
+    document.getElementById('editFixedCategory').value = fixed.category || 'Kira';
+    document.getElementById('editFixedDueDay').value = fixed.dueDay || 1;
+    document.getElementById('editFixedNotes').value = fixed.notes || '';
+
+    // Aile üyelerini dropdown'a doldur
+    const selectPayer = document.getElementById('editFixedPayer');
+    if (selectPayer) {
+        const members = family.members || [];
+        selectPayer.innerHTML = members.map(m => `
+            <option value="${m.name}" ${fixed.payer === m.name ? 'selected' : ''}>
+                ${m.avatar || '👤'} ${m.name} (${m.role})
+            </option>
+        `).join('');
+    }
+
+    openModal('modalEditFixedExpense');
+}
+
+async function handleEditFixedExpense(e) {
+    e.preventDefault();
+    const family = appState.familyData;
+    if (!family) return;
+
+    const id = document.getElementById('editFixedId').value;
+    const title = document.getElementById('editFixedTitle').value.trim();
+    const amount = parseFloat(document.getElementById('editFixedAmount').value);
+    const category = document.getElementById('editFixedCategory').value;
+    const dueDay = parseInt(document.getElementById('editFixedDueDay').value, 10) || 1;
+    const payer = document.getElementById('editFixedPayer').value;
+    const notes = document.getElementById('editFixedNotes').value.trim();
+
+    if (!title || !amount || amount <= 0) {
+        showToast('Lütfen geçerli bir sabit gider tanımı ve tutarı girin.');
+        return;
+    }
+
+    const updatedFixed = {
+        title,
+        amount,
+        category,
+        dueDay,
+        payer,
+        notes
+    };
+
+    const updatedFamily = await AilemAPI.updateFixedExpense(family.id, id, updatedFixed);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.fixedExpenses) appState.familyData.fixedExpenses = [];
+        const idx = appState.familyData.fixedExpenses.findIndex(f => f.id === id);
+        if (idx >= 0) {
+            appState.familyData.fixedExpenses[idx] = {
+                ...appState.familyData.fixedExpenses[idx],
+                ...updatedFixed
+            };
+        }
+    }
+
+    saveStateToStorage();
+    closeModal('modalEditFixedExpense');
+    renderBudget();
+    showToast('Sabit gider başarıyla güncellendi! ✏️');
 }
 
 async function handleToggleFixedExpense(id) {

@@ -629,7 +629,10 @@
 
                     <!-- Değişken Harcamalar Listesi -->
                     <div class="section-title" style="margin-top: 20px;">
-                        <h4><i class="fa-solid fa-receipt"></i> Günlük / Değişken Harcamalar</h4>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4><i class="fa-solid fa-receipt"></i> Günlük / Değişken Harcamalar</h4>
+                            <span class="extra-income-month-badge" id="expensesMonthBadge">📅 Yükleniyor...</span>
+                        </div>
                         <button class="btn-text-sm" onclick="openModal('modalNewExpense')">+ Yeni Harcama</button>
                     </div>
                     <div class="list-container" id="expensesList">
@@ -1355,6 +1358,67 @@
         </div>
     </div>
 
+    <!-- MODAL: SABİT GİDER DÜZENLE -->
+    <div id="modalEditFixedExpense" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Sabit Gideri Düzenle</h3>
+                <button class="btn-close" onclick="closeModal('modalEditFixedExpense')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleEditFixedExpense(event)">
+                <input type="hidden" id="editFixedId">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-heading"></i> Sabit Gider Tanımı</label>
+                    <input type="text" id="editFixedTitle" placeholder="Örn: Ev Kirası, Elektrik Faturası" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-money-bill"></i> Aylık Tutar (₺)</label>
+                        <input type="number" step="10" id="editFixedAmount" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-tags"></i> Kategori</label>
+                        <select id="editFixedCategory">
+                            <option value="Kira">🏠 Kira</option>
+                            <option value="Fatura">⚡ Elektrik / Su / Gaz</option>
+                            <option value="Aidat">🏢 Site & Bina Aidatı</option>
+                            <option value="Kredi">💳 Kredi / Taksit</option>
+                            <option value="İnternet">📶 İnternet & TV</option>
+                            <option value="Sigorta">🛡️ Sigorta & Kasko</option>
+                            <option value="Eğitim">🎒 Okul / Kurs Taksiti</option>
+                            <option value="Abonelik">📺 Dijital Abonelikler</option>
+                            <option value="Diğer">📦 Diğer Düzenli Gider</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-calendar"></i> Son Ödeme Günü</label>
+                        <input type="number" min="1" max="31" id="editFixedDueDay" placeholder="Örn: 15" value="1" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-user-check"></i> Ödeyen / Sorumlu</label>
+                        <select id="editFixedPayer">
+                            <!-- Dinamik Üyeler -->
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-sticky-note"></i> Not / Detay</label>
+                    <input type="text" id="editFixedNotes" placeholder="Örn: Otomatik ödeme talimatında">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeModal('modalEditFixedExpense')">
+                        İptal
+                    </button>
+                    <button type="submit" class="btn-primary" style="flex: 2;">
+                        <i class="fa-solid fa-check"></i> Değişiklikleri Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: YENİ YATIRIM PORTFÖYÜ EKLE (ALTIN, DOLAR, EURO, TL) -->
     <div id="modalNewInvestment" class="modal-overlay hidden">
         <div class="modal-card">
@@ -1526,6 +1590,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="client.js?v=31"></script>
+    <script src="client.js?v=32"></script>
 </body>
 </html>

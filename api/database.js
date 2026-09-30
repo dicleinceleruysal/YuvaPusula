@@ -645,11 +645,15 @@ async function deleteTask(familyId, taskId) {
 async function addExpense(familyId, expense) {
     return await updateFamilyHelper(familyId, (fam) => {
         if (!fam.expenses) fam.expenses = [];
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         fam.expenses.unshift({
             id: 'exp_' + Date.now(),
             ...expense,
             amount: parseFloat(expense.amount) || 0,
-            date: expense.date || new Date().toISOString().split('T')[0]
+            date: expense.date || new Date().toISOString().split('T')[0],
+            month: expense.month || currentMonthKey,
+            createdAt: new Date().toISOString()
         });
         return fam;
     });
@@ -701,6 +705,26 @@ async function addFixedExpense(familyId, fixed) {
             amount: parseFloat(fixed.amount) || 0,
             isPaid: false
         });
+        return fam;
+    });
+}
+
+async function updateFixedExpense(familyId, id, updatedFixed) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.fixedExpenses) fam.fixedExpenses = [];
+        const idx = fam.fixedExpenses.findIndex(f => f.id === id);
+        if (idx >= 0) {
+            fam.fixedExpenses[idx] = {
+                ...fam.fixedExpenses[idx],
+                ...updatedFixed,
+                amount: parseFloat(updatedFixed.amount) !== undefined && !isNaN(parseFloat(updatedFixed.amount)) ? parseFloat(updatedFixed.amount) : fam.fixedExpenses[idx].amount,
+                dueDay: parseInt(updatedFixed.dueDay) || fam.fixedExpenses[idx].dueDay || 1,
+                title: updatedFixed.title || fam.fixedExpenses[idx].title,
+                category: updatedFixed.category || fam.fixedExpenses[idx].category,
+                payer: updatedFixed.payer !== undefined ? updatedFixed.payer : fam.fixedExpenses[idx].payer,
+                notes: updatedFixed.notes !== undefined ? updatedFixed.notes : fam.fixedExpenses[idx].notes
+            };
+        }
         return fam;
     });
 }
@@ -880,6 +904,7 @@ module.exports = {
     addExtraIncome,
     deleteExtraIncome,
     addFixedExpense,
+    updateFixedExpense,
     toggleFixedExpense,
     deleteFixedExpense,
     addInvestment,

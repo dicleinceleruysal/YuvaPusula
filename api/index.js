@@ -408,6 +408,11 @@ module.exports = async function handler(req, res) {
             const updatedFamily = await dbManager.addFixedExpense(body.familyId, body.fixed);
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
+        if (pathname === '/api/fixed-expenses/update' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const updatedFamily = await dbManager.updateFixedExpense(body.familyId, body.id, body.fixed);
+            return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
         if (pathname === '/api/fixed-expenses/toggle' && req.method === 'POST') {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.toggleFixedExpense(body.familyId, body.id);
