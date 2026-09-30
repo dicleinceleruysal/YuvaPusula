@@ -1,5 +1,5 @@
 // YuvaPusula Progressive Web App Service Worker
-const CACHE_NAME = 'yuvapusula-pwa-v6';
+const CACHE_NAME = 'yuvapusula-pwa-v7';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -119,15 +119,18 @@ self.addEventListener('push', (event) => {
 // 5. Notification Click Event
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : './?tab=chat';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let client of windowClients) {
-        if (client.url.includes('index.html') && 'focus' in client) {
+        if ('focus' in client) {
+          client.postMessage({ action: 'openTab', tab: 'tabChat' });
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('./index.html');
+        return clients.openWindow(targetUrl);
       }
     })
   );

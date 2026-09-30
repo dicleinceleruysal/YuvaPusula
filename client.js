@@ -736,6 +736,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     await AilemDB.init();
     loadStateFromStorage();
     initPWA();
+
+    // Ses Kilidini Açma (İlk Dokunuşta Web Audio Context Hazırlığı)
+    window.addEventListener('click', () => {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                if (!window.__audioCtx) window.__audioCtx = new AudioCtx();
+                if (window.__audioCtx.state === 'suspended') window.__audioCtx.resume();
+            }
+        } catch (e) {}
+    }, { once: true });
+
+    // Bildirim İzni Durumunu Otomatik Kontrol Et
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            appState.notificationsEnabled = true;
+        } else if (Notification.permission === 'default' && localStorage.getItem('ailem_notifications_enabled') !== 'false') {
+            // İlk girişte nazik izin talebi
+            setTimeout(() => {
+                if (appState.currentUser) {
+                    Notification.requestPermission().then(perm => {
+                        if (perm === 'granted') {
+                            appState.notificationsEnabled = true;
+                            localStorage.setItem('ailem_notifications_enabled', 'true');
+                            showToast('Sohbet bildirimleri aktif edildi! 🔔');
+                        }
+                    });
+                }
+            }, 2500);
+        }
+    }
+
     if (!appState.currentUser) {
         switchAuthMode('login');
     } else {
@@ -748,17 +780,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Altınkaynak canlı piyasa kurlarını ilk kez yükle
     fetchLiveMarketRates(false);
 
-    // 4 saniyede bir ailedeki ve mesajlaşmadaki güncellemeleri otomatik senkronize et
+    // 2.5 saniyede bir ailedeki ve mesajlaşmadaki güncellemeleri otomatik senkronize et (Hızlı Canlı Akış)
     setInterval(() => {
         if (appState.currentUser && appState.familyData) {
             syncWithServer(true);
         }
-    }, 4000);
+    }, 2500);
 
     // 30 saniyede bir Altınkaynak canlı kurlarını otomatik güncelle
     setInterval(() => {
         fetchLiveMarketRates(false);
     }, 30000);
+
+    // Sekmeye dönüldüğünde veya ekran açıldığında anında senkronize et ve sekme başlığını düzelt
+    window.addEventListener('focus', () => {
+        if (appState.currentUser && appState.familyData) {
+            syncWithServer(true);
+        }
+        if (titleFlashInterval) {
+            clearInterval(titleFlashInterval);
+            titleFlashInterval = null;
+            if (appState.familyData) document.title = `${appState.familyData.name} - YuvaPusula`;
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && appState.currentUser && appState.familyData) {
+            syncWithServer(true);
+            if (titleFlashInterval) {
+                clearInterval(titleFlashInterval);
+                titleFlashInterval = null;
+                document.title = `${appState.familyData.name} - YuvaPusula`;
+            }
+        }
+    });
+
+    // Service Worker Mesaj Dinleyicisi (Bildirime tıklandığında sohbete geçiş)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.action === 'openTab') {
+                switchTab(event.data.tab || 'tabChat');
+            }
+        });
+    }
 });
 
 // Ayın ilk günü veya yeni ay bildirimi kontrolü
@@ -794,33 +858,14 @@ async function syncWithServer(silent = false) {
         const prevMessages = appState.familyData.messages || [];
         const newMessages = normFresh.messages || [];
 
-        // Yeni gelen mesaj kontrolü (Başkası mesaj attığında anlık bildirim ver)
+        // Yeni gelen mesaj kontrolü (Başkası mesaj attığında anlık çok katmanlı bildirim gönder)
         if (newMessages.length > prevMessages.length) {
-            const latestMsg = newMessages[newMessages.length - 1];
-            if (appState.currentUser && latestMsg.senderId !== appState.currentUser.id) {
-                // Sesli uyarı & titreşim
-                triggerHapticAndSound();
-
-                // Web Bildirimi (PWA / Tarayıcı)
-                if (appState.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-                    try {
-                        new Notification(`${latestMsg.senderName} (${latestMsg.senderRole})`, {
-                            body: latestMsg.content,
-                            icon: 'icons/icon.svg',
-                            badge: 'icons/icon.svg'
-                        });
-                    } catch (err) {}
+            const incomingMsgs = newMessages.slice(prevMessages.length);
+            incomingMsgs.forEach(latestMsg => {
+                if (appState.currentUser && latestMsg.senderId !== appState.currentUser.id) {
+                    dispatchChatMessageNotification(latestMsg);
                 }
-
-                // Uygulama İçi Yüzen Bildirim Kartı (Eğer o an o sohbette değilsek)
-                const isViewingActiveChat = (appState.currentTab === 'tabChat' && 
-                    ((latestMsg.receiverId === 'group' && appState.chatChannel === 'group') ||
-                     (latestMsg.senderId === appState.chatTargetMemberId && appState.chatChannel === 'direct')));
-
-                if (!isViewingActiveChat) {
-                    showInAppMessageBanner(latestMsg);
-                }
-            }
+            });
         }
 
         appState.familyData = normFresh;
@@ -3347,17 +3392,18 @@ function shareFamilyWhatsApp() {
 // Web Audio API ile 2 Tonlu Tatlı Bildirim Sesi (Melodi)
 function playNotificationSound() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = window.__audioCtx || new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
         
         // 1. Ton (587.33 Hz - Re/D5)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'sine';
         osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
-        gain1.gain.setValueAtTime(0.18, ctx.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
+        gain1.gain.setValueAtTime(0.24, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
         osc1.connect(gain1);
         gain1.connect(ctx.destination);
         osc1.start(ctx.currentTime);
@@ -3368,8 +3414,8 @@ function playNotificationSound() {
         const gain2 = ctx.createGain();
         osc2.type = 'sine';
         osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
-        gain2.gain.setValueAtTime(0.22, ctx.currentTime + 0.12);
-        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.38);
+        gain2.gain.setValueAtTime(0.28, ctx.currentTime + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
         osc2.start(ctx.currentTime + 0.12);
@@ -3384,8 +3430,84 @@ function triggerHapticAndSound() {
     playNotificationSound();
     if ('vibrate' in navigator) {
         try {
-            navigator.vibrate([80, 40, 100]);
+            navigator.vibrate([100, 50, 100, 50, 150]);
         } catch (e) {}
+    }
+}
+
+// Sekme Başlığını Yanıp Söndürme (Tab Flash)
+let titleFlashInterval = null;
+function flashTabTitleForNewMessage(senderName) {
+    if (document.hasFocus() && appState.currentTab === 'tabChat') return;
+    if (titleFlashInterval) clearInterval(titleFlashInterval);
+    const originalTitle = (appState.familyData ? appState.familyData.name : 'YuvaPusula') + ' - YuvaPusula';
+    let isOriginal = false;
+    let count = 0;
+    titleFlashInterval = setInterval(() => {
+        if (document.hasFocus() && appState.currentTab === 'tabChat') {
+            clearInterval(titleFlashInterval);
+            titleFlashInterval = null;
+            document.title = originalTitle;
+            return;
+        }
+        document.title = isOriginal ? originalTitle : `💬 (${senderName}) Yeni Mesaj!`;
+        isOriginal = !isOriginal;
+        count++;
+        if (count > 25) {
+            clearInterval(titleFlashInterval);
+            titleFlashInterval = null;
+            document.title = `(1) ${originalTitle}`;
+        }
+    }, 1000);
+}
+
+// Çok Katmanlı Anlık Sohbet Bildirimi Dağıtımı
+function dispatchChatMessageNotification(msg) {
+    // 1. Ses ve Titreşim
+    triggerHapticAndSound();
+
+    // 2. Sistem / Web Bildirimi (PWA & Service Worker)
+    const isGroup = msg.receiverId === 'group' || msg.receiver_id === 'group';
+    const notifTitle = isGroup 
+        ? `💬 ${msg.senderName} (${appState.familyData ? appState.familyData.name : 'Aile'})` 
+        : `🔒 ${msg.senderName} (${msg.senderRole || 'Özel Mesaj'})`;
+    const notifBody = msg.content;
+    const notifIcon = 'icons/icon.svg';
+
+    if ('Notification' in window && Notification.permission === 'granted' && appState.notificationsEnabled) {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(notifTitle, {
+                    body: notifBody,
+                    icon: notifIcon,
+                    badge: notifIcon,
+                    tag: `chat-msg-${msg.id || Date.now()}`,
+                    renotify: true,
+                    vibrate: [100, 50, 100, 50, 150],
+                    data: { url: './?tab=chat' }
+                });
+            }).catch(() => {
+                try {
+                    new Notification(notifTitle, { body: notifBody, icon: notifIcon });
+                } catch (e) {}
+            });
+        } else {
+            try {
+                new Notification(notifTitle, { body: notifBody, icon: notifIcon });
+            } catch (e) {}
+        }
+    }
+
+    // 3. Sekme Başlığı Uyarısı
+    flashTabTitleForNewMessage(msg.senderName);
+
+    // 4. Uygulama İçi Yüzen Bildirim Kartı (Eğer o an o sohbette değilsek)
+    const isViewingActiveChat = (appState.currentTab === 'tabChat' && 
+        ((isGroup && appState.chatChannel === 'group') ||
+         (msg.senderId === appState.chatTargetMemberId && appState.chatChannel === 'direct')));
+
+    if (!isViewingActiveChat) {
+        showInAppMessageBanner(msg);
     }
 }
 
@@ -3398,19 +3520,28 @@ async function requestAndToggleNotifications() {
 
     if (Notification.permission === 'granted') {
         appState.notificationsEnabled = !appState.notificationsEnabled;
+        localStorage.setItem('ailem_notifications_enabled', appState.notificationsEnabled ? 'true' : 'false');
         const btn = document.getElementById('btnToggleNotifications');
-        if (btn) btn.classList.toggle('active', appState.notificationsEnabled);
-        showToast(appState.notificationsEnabled ? 'Anlık bildirimler devrede! 🔔' : 'Bildirimler kapatıldı.');
+        if (btn) {
+            btn.classList.toggle('active', appState.notificationsEnabled);
+            btn.title = appState.notificationsEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimler Kapalı 🔕';
+        }
+        showToast(appState.notificationsEnabled ? 'Anlık mesaj bildirimleri devrede! 🔔' : 'Bildirimler kapatıldı 🔕');
         return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
         appState.notificationsEnabled = true;
+        localStorage.setItem('ailem_notifications_enabled', 'true');
         const btn = document.getElementById('btnToggleNotifications');
-        if (btn) btn.classList.add('active');
+        if (btn) {
+            btn.classList.add('active');
+            btn.title = 'Bildirimler Açık 🔔';
+        }
         showToast('Bildirim izni verildi! Anlık mesaj bildirimleri açık. 🔔');
     } else {
+        localStorage.setItem('ailem_notifications_enabled', 'false');
         showToast('Bildirim izni verilmedi.');
     }
 }
@@ -3476,13 +3607,18 @@ function renderChat() {
         appState.chatTargetMemberId = otherMembers[0].id;
     }
 
-    // 1. Kanal Butonları
+    // 1. Kanal Butonları & Bildirim Butonu
     const btnGroup = document.getElementById('btnChannelGroup');
     const btnDirect = document.getElementById('btnChannelDirect');
+    const btnBell = document.getElementById('btnToggleNotifications');
     const directMembersContainer = document.getElementById('directChatMemberList');
 
     if (btnGroup) btnGroup.classList.toggle('active', appState.chatChannel === 'group');
     if (btnDirect) btnDirect.classList.toggle('active', appState.chatChannel === 'direct');
+    if (btnBell) {
+        btnBell.classList.toggle('active', !!appState.notificationsEnabled);
+        btnBell.title = appState.notificationsEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimleri Aç 🔕';
+    }
 
     // 2. Bireysel Üye Seçim Barı
     if (directMembersContainer) {
