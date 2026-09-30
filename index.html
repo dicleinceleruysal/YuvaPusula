@@ -16,7 +16,9 @@
     <meta name="msapplication-TileColor" content="#1e1b4b">
     <meta name="msapplication-navbutton-color" content="#1e1b4b">
     <meta name="format-detection" content="telephone=no">
-    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 
     <!-- Fonts & Icons -->
@@ -26,7 +28,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- App Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -122,6 +124,20 @@
                         <i class="fa-solid fa-compass"></i> YuvaPusula'ya Giriş Yap
                     </button>
                 </form>
+
+                <!-- PWA Giriş Öncesi Yükleme Alanı -->
+                <div class="auth-pwa-banner" onclick="triggerPWAInstall()">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 24px;">📲</span>
+                        <div style="text-align: left;">
+                            <strong style="font-size: 0.85rem; color: #1e1b4b; display: block;">Uygulamayı Cihazına Yükle</strong>
+                            <small style="font-size: 0.72rem; color: #64748b;">Ana ekrana ekleyin, tam ekran mobil deneyim yaşayın</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-primary-sm" style="padding: 6px 12px; font-size: 0.75rem; white-space: nowrap;">
+                        <i class="fa-solid fa-download"></i> Yükle
+                    </button>
+                </div>
             </div>
         </div>
     </section>
@@ -176,10 +192,13 @@
                 </button>
             </nav>
 
-            <!-- Hızlı İşlem Ekle Butonu -->
+            <!-- Hızlı İşlem Ekle Butonları -->
             <div class="sidebar-quick-action">
                 <button class="btn-sidebar-create" onclick="openPlanCategoryPicker()">
                     <i class="fa-solid fa-plus"></i> <span>Yeni Plan / Not</span>
+                </button>
+                <button id="sidebarInstallBtn" class="btn-sidebar-install" onclick="triggerPWAInstall()" title="YuvaPusula'yı Cihazına Yükle">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> <span>Uygulamayı Yükle</span>
                 </button>
             </div>
 
@@ -221,6 +240,9 @@
                 </div>
 
                 <div class="header-actions-right">
+                    <button id="headerInstallBtn" class="header-install-btn" onclick="triggerPWAInstall()" title="YuvaPusula'yı Cihazına Yükle">
+                        <i class="fa-solid fa-mobile-screen-button"></i> <span>Uygulamayı Yükle</span>
+                    </button>
                     <button class="header-chat-btn" onclick="switchTab('tabChat')" title="Aile Sohbeti">
                         <i class="fa-solid fa-comment-dots"></i>
                         <span id="headerChatBadge" class="chat-badge-dot hidden">0</span>
@@ -779,13 +801,28 @@
 
                 <!-- PWA ve Cihaz Ayarları -->
                 <div class="section-title">
-                    <h4><i class="fa-solid fa-mobile-screen"></i> Telefon Yükleme & Kısayol</h4>
+                    <h4><i class="fa-solid fa-mobile-screen"></i> Uygulama & PWA Kurulumu</h4>
                 </div>
-                <div class="settings-card">
-                    <div class="setting-item">
+                <div class="pwa-settings-card">
+                    <div class="pwa-settings-header">
+                        <div class="pwa-settings-icon">📲</div>
                         <div>
-                            <strong>PWA Mobil Yükleme Rehberi</strong>
-                            <p>iPhone için: Safari'de <b>Paylaş</b> ➔ <b>Ana Ekrana Ekle</b><br>Android için: Chrome menüsünden <b>Uygulamayı Yükle</b></p>
+                            <strong>YuvaPusula'yı Cihazınıza Yükleyin</strong>
+                            <p>Tarayıcı adres çubuğu olmadan tam ekran mobil/masaüstü uygulama deneyimi yaşayın</p>
+                        </div>
+                    </div>
+                    <button class="btn-primary" style="margin-top: 14px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="triggerPWAInstall()">
+                        <i class="fa-solid fa-download"></i> Uygulamayı Şimdi Yükle
+                    </button>
+                    <div class="pwa-quick-tips">
+                        <div class="tip-row">
+                            <span>🤖 <b>Android (Chrome):</b></span> Menü (üç nokta) ➔ <b>"Uygulamayı Yükle"</b> veya <b>"Ana Ekrana Ekle"</b>
+                        </div>
+                        <div class="tip-row">
+                            <span>🍎 <b>iPhone / iPad (Safari):</b></span> <b>Paylaş</b> (<i class="fa-solid fa-arrow-up-from-bracket"></i>) ➔ <b>"Ana Ekrana Ekle"</b> (<i class="fa-regular fa-square-plus"></i>)
+                        </div>
+                        <div class="tip-row">
+                            <span>💻 <b>Bilgisayar (Chrome/Edge):</b></span> Adres çubuğundaki <b>Yükle (⬇️)</b> simgesine tıklayın
                         </div>
                     </div>
                 </div>
@@ -1535,39 +1572,101 @@
         </div>
     </div>
 
-    <!-- MODAL: iOS SAFARI PWA KURULUM REHBERİ -->
-    <div id="modalIosInstall" class="modal-overlay hidden">
-        <div class="modal-card" style="max-width: 420px; text-align: center;">
+    <!-- MODAL: DETAYLI UYGULAMA YÜKLEME REHBERİ (PWA GUIDE) -->
+    <div id="modalPwaGuide" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 460px;">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-mobile-screen-button"></i> YuvaPusula'yı iPhone'a Yükle</h3>
-                <button class="btn-close" onclick="closeModal('modalIosInstall')"><i class="fa-solid fa-xmark"></i></button>
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> YuvaPusula'yı Cihazına Yükle</h3>
+                <button class="btn-close" onclick="closeModal('modalPwaGuide')"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-body" style="padding: 16px 20px;">
-                <img src="icons/icon.svg" style="width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 12px auto; display: block; box-shadow: 0 8px 24px rgba(30,27,75,0.3);" alt="YuvaPusula">
-                <h4 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Ana Ekrana Ekleyin</h4>
-                <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">
-                    Safari tarayıcısında 2 basit adımda tam ekran bir mobil uygulama deneyimi kazanın:
-                </p>
+            <div style="text-align: center; margin-bottom: 14px;">
+                <img src="icons/icon-192.png" style="width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 8px auto; display: block; box-shadow: 0 6px 18px rgba(30,27,75,0.25);" alt="YuvaPusula">
+                <h4 style="margin: 0 0 4px 0; color: #0f172a; font-size: 1.05rem;">Ana Ekrana & Masaüstüne Ekle</h4>
+                <p style="margin: 0; color: #64748b; font-size: 0.8rem;">Tarayıcı çubuğu olmadan tam ekran mobil uygulama deneyimi</p>
+            </div>
 
+            <!-- Cihaz Seçim Tabları -->
+            <div class="pwa-guide-tabs">
+                <button class="pwa-tab-btn active" id="pwaTabBtnAndroid" onclick="switchPwaGuideTab('android')">
+                    <i class="fa-brands fa-android"></i> Android
+                </button>
+                <button class="pwa-tab-btn" id="pwaTabBtnIos" onclick="switchPwaGuideTab('ios')">
+                    <i class="fa-brands fa-apple"></i> iPhone / iPad
+                </button>
+                <button class="pwa-tab-btn" id="pwaTabBtnPc" onclick="switchPwaGuideTab('pc')">
+                    <i class="fa-solid fa-laptop"></i> PC / Mac
+                </button>
+            </div>
+
+            <!-- ANDROID REHBERİ -->
+            <div id="pwaGuideAndroid" class="pwa-guide-content">
                 <div class="ios-guide-box">
                     <div class="ios-step">
                         <div class="ios-step-num">1</div>
                         <div class="ios-step-text">
-                            Safari'nin en alt veya üst menüsündeki <strong>Paylaş <i class="fa-solid fa-arrow-up-from-bracket" style="color: #0284c7;"></i> (Share)</strong> simgesine dokunun.
+                            Chrome tarayıcınızın sağ üstündeki <strong>Üç Nokta (<i class="fa-solid fa-ellipsis-vertical"></i>)</strong> menüsüne dokunun.
                         </div>
                     </div>
                     <div class="ios-step">
                         <div class="ios-step-num">2</div>
                         <div class="ios-step-text">
-                            Açılan menüyü aşağı kaydırıp <strong>'Ana Ekrana Ekle' <i class="fa-regular fa-square-plus" style="color: #10b981;"></i> (Add to Home Screen)</strong> seçeneğine tıklayın.
+                            Menüden <strong>"Uygulamayı Yükle"</strong> veya <strong>"Ana Ekrana Ekle"</strong> seçeneğine tıklayın.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">3</div>
+                        <div class="ios-step-text">
+                            <strong>"Yükle"</strong> butonuna basın. YuvaPusula telefonunuzun ana ekranında bağımsız uygulama olarak açılacaktır.
                         </div>
                     </div>
                 </div>
-
-                <button class="btn-primary" style="margin-top: 10px; width: 100%;" onclick="closeModal('modalIosInstall')">
-                    <i class="fa-solid fa-check"></i> Anladım
-                </button>
             </div>
+
+            <!-- IOS REHBERİ -->
+            <div id="pwaGuideIos" class="pwa-guide-content hidden">
+                <div class="ios-guide-box">
+                    <div class="ios-step">
+                        <div class="ios-step-num">1</div>
+                        <div class="ios-step-text">
+                            Safari tarayıcısının en altındaki <strong>Paylaş (<i class="fa-solid fa-arrow-up-from-bracket" style="color:#0284c7;"></i>)</strong> simgesine dokunun.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">2</div>
+                        <div class="ios-step-text">
+                            Açılan menüyü aşağı kaydırıp <strong>"Ana Ekrana Ekle" (<i class="fa-regular fa-square-plus" style="color:#10b981;"></i>)</strong> seçeneğine tıklayın.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">3</div>
+                        <div class="ios-step-text">
+                            Sağ üstteki <strong>"Ekle"</strong> butonuna basın. Uygulama iPhone ana ekranınıza kurulur!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC / MAC REHBERİ -->
+            <div id="pwaGuidePc" class="pwa-guide-content hidden">
+                <div class="ios-guide-box">
+                    <div class="ios-step">
+                        <div class="ios-step-num">1</div>
+                        <div class="ios-step-text">
+                            Chrome / Edge tarayıcısında adres çubuğunun sağındaki <strong>Yükle (<i class="fa-solid fa-circle-down" style="color:#4f46e5;"></i>)</strong> simgesine tıklayın.
+                        </div>
+                    </div>
+                    <div class="ios-step">
+                        <div class="ios-step-num">2</div>
+                        <div class="ios-step-text">
+                            Açılan küçük pencerede <strong>"Yükle"</strong> butonuna basın. Masaüstü kısayolunuz hazır!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" style="margin-top: 14px; width: 100%;" onclick="closeModal('modalPwaGuide')">
+                <i class="fa-solid fa-check"></i> Tamam, Anladım
+            </button>
         </div>
     </div>
 
@@ -1590,6 +1689,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="client.js?v=32"></script>
+    <script src="client.js?v=33"></script>
 </body>
 </html>

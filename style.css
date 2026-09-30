@@ -150,6 +150,155 @@ body {
     cursor: pointer;
 }
 
+/* Header & Sidebar Install Buttons */
+.header-install-btn {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header-install-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-sidebar-install {
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary);
+    border: 1px solid rgba(79, 70, 229, 0.25);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sidebar-install:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
+}
+
+/* Auth Ekranı PWA Banner */
+.auth-pwa-banner {
+    margin-top: 18px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-pwa-banner:hover {
+    background: #eef2ff;
+    border-color: #818cf8;
+    transform: translateY(-1px);
+}
+
+/* Ayarlar / Üyeler Sayfası PWA Kartı */
+.pwa-settings-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.pwa-settings-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pwa-settings-icon {
+    font-size: 32px;
+}
+
+.pwa-settings-header strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+    display: block;
+}
+
+.pwa-settings-header p {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 2px 0 0 0;
+}
+
+.pwa-quick-tips {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pwa-quick-tips .tip-row {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.4;
+}
+
+/* PWA Rehber Modal Tabları */
+.pwa-guide-tabs {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+}
+
+.pwa-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pwa-tab-btn.active {
+    background: #ffffff;
+    color: #1e1b4b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 /* ==========================================================
    AUTH SCREEN (GİRİŞ & AİLE OLUŞTURMA)
    ========================================================== */

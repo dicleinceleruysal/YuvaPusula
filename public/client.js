@@ -906,6 +906,24 @@ function isStandaloneMode() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+function switchPwaGuideTab(platform) {
+    const tabAndroid = document.getElementById('pwaTabBtnAndroid');
+    const tabIos = document.getElementById('pwaTabBtnIos');
+    const tabPc = document.getElementById('pwaTabBtnPc');
+
+    const guideAndroid = document.getElementById('pwaGuideAndroid');
+    const guideIos = document.getElementById('pwaGuideIos');
+    const guidePc = document.getElementById('pwaGuidePc');
+
+    if (tabAndroid) tabAndroid.classList.toggle('active', platform === 'android');
+    if (tabIos) tabIos.classList.toggle('active', platform === 'ios');
+    if (tabPc) tabPc.classList.toggle('active', platform === 'pc');
+
+    if (guideAndroid) guideAndroid.classList.toggle('hidden', platform !== 'android');
+    if (guideIos) guideIos.classList.toggle('hidden', platform !== 'ios');
+    if (guidePc) guidePc.classList.toggle('hidden', platform !== 'pc');
+}
+
 function triggerPWAInstall() {
     if (isStandaloneMode()) {
         showToast('YuvaPusula zaten cihazınızda yüklü ve tam ekran çalışıyor! ✨');
@@ -921,13 +939,17 @@ function triggerPWAInstall() {
             appState.deferredPrompt = null;
             const banner = document.getElementById('pwaInstallBanner');
             if (banner) banner.classList.add('hidden');
-            const headerBtn = document.getElementById('headerInstallBtn');
-            if (headerBtn) headerBtn.classList.add('hidden');
         });
-    } else if (isIosDevice()) {
-        openModal('modalIosInstall');
     } else {
-        showToast('Tarayıcı menünüzden "Ana Ekrana Ekle" veya "Uygulamayı Yükle" seçeneğini seçebilirsiniz 📲');
+        // Otomatik prompt tetiklenemeyen durumlarda (iOS Safari, masaüstü veya prompt henüz ateşlenmemiş Android) rehber modalını aç
+        if (isIosDevice()) {
+            switchPwaGuideTab('ios');
+        } else if (/android/.test(navigator.userAgent.toLowerCase())) {
+            switchPwaGuideTab('android');
+        } else {
+            switchPwaGuideTab('pc');
+        }
+        openModal('modalPwaGuide');
     }
 }
 
@@ -967,20 +989,22 @@ function initPWA() {
 
     // 3. Standalone Mod Kontrolü
     const headerInstallBtn = document.getElementById('headerInstallBtn');
+    const sidebarInstallBtn = document.getElementById('sidebarInstallBtn');
     const pwaBanner = document.getElementById('pwaInstallBanner');
 
     if (isStandaloneMode()) {
         console.log('YuvaPusula Standalone PWA modunda çalışıyor 🚀');
         if (pwaBanner) pwaBanner.classList.add('hidden');
         if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.add('hidden');
     } else {
         if (headerInstallBtn) headerInstallBtn.classList.remove('hidden');
-        if (isIosDevice() && !localStorage.getItem('yuvapusula_pwa_dismissed')) {
-            // iOS için ilk girişte banner'ı göster
-            setTimeout(() => {
-                if (pwaBanner && !isStandaloneMode()) pwaBanner.classList.remove('hidden');
-            }, 3000);
-        }
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.remove('hidden');
+        setTimeout(() => {
+            if (pwaBanner && !isStandaloneMode() && !localStorage.getItem('yuvapusula_pwa_dismissed')) {
+                pwaBanner.classList.remove('hidden');
+            }
+        }, 1500);
     }
 
     // 4. Android / Chrome beforeinstallprompt Yakalama
@@ -991,12 +1015,14 @@ function initPWA() {
             if (pwaBanner) pwaBanner.classList.remove('hidden');
         }
         if (headerInstallBtn) headerInstallBtn.classList.remove('hidden');
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.remove('hidden');
     });
 
     window.addEventListener('appinstalled', () => {
         appState.deferredPrompt = null;
         if (pwaBanner) pwaBanner.classList.add('hidden');
         if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.add('hidden');
         showToast('YuvaPusula başarıyla kuruldu! Hoş geldiniz 🧭');
     });
 

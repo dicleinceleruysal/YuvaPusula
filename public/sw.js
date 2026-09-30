@@ -1,5 +1,5 @@
 // YuvaPusula Progressive Web App Service Worker
-const CACHE_NAME = 'yuvapusula-pwa-v8';
+const CACHE_NAME = 'yuvapusula-pwa-v9';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,10 @@ const STATIC_ASSETS = [
   './client.js',
   './manifest.json',
   './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-180.png',
+  './icons/icon-96.png',
   'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];

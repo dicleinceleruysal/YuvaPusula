@@ -20,8 +20,20 @@
   "prefer_related_applications": false,
   "icons": [
     {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "./icons/icon.svg",
-      "sizes": "72x72 96x96 128x128 144x144 152x152 180x180 192x192 384x384 512x512",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
@@ -32,35 +44,35 @@
       "short_name": "Bütçe",
       "description": "Aylık maaşlar, sabit giderler ve harcama takibi",
       "url": "./index.html?tab=finance",
-      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Yatırımlar & Kurlar",
       "short_name": "Yatırım",
       "description": "Altın, Dolar, Euro portföyü ve canlı kurlar",
       "url": "./index.html?tab=finance&section=invest",
-      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Alışveriş Listesi",
       "short_name": "Alışveriş",
       "description": "Eksik ürünler ve ortak alışveriş listesi",
       "url": "./index.html?tab=shopping",
-      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Aile Sohbeti",
       "short_name": "Sohbet",
       "description": "Anlık aile mesajlaşması ve duyurular",
       "url": "./index.html?tab=messages",
-      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Aile Planları",
       "short_name": "Planlar",
       "description": "Tatil, etkinlik ve seyahat planları",
       "url": "./index.html?tab=plans",
-      "icons": [{ "src": "./icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     }
   ],
   "categories": [
