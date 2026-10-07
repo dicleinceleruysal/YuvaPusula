@@ -2719,20 +2719,36 @@ function renderMembers() {
 }
 
 function updateMemberSelectDropdowns() {
-    const members = appState.familyData ? appState.familyData.members : [];
+    const members = appState.familyData ? (appState.familyData.members || []) : [];
     const taskSelect = document.getElementById('taskAssignee');
     const expenseSelect = document.getElementById('expensePayer');
     const fixedSelect = document.getElementById('fixedPayer');
     const dailyAssigneeSelect = document.getElementById('newDailyPlanAssignedTo');
     const editDailyAssigneeSelect = document.getElementById('editDailyPlanAssignedTo');
 
-    const options = members.map(m => `<option value="${m.name}">${m.avatar} ${m.name} (${m.role})</option>`).join('');
+    const curName = appState.currentUser ? appState.currentUser.name : '';
 
-    if (taskSelect) taskSelect.innerHTML = options;
-    if (expenseSelect) expenseSelect.innerHTML = options;
-    if (fixedSelect) fixedSelect.innerHTML = options;
-    if (dailyAssigneeSelect) dailyAssigneeSelect.innerHTML = `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>` + options;
-    if (editDailyAssigneeSelect) editDailyAssigneeSelect.innerHTML = `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>` + options;
+    const memberOptions = members.map(m => `
+        <option value="${m.name}" ${m.name === curName ? 'selected' : ''}>
+            ${m.avatar || '👤'} ${m.name} (${m.role}) ${m.name === curName ? '(Siz)' : ''}
+        </option>
+    `).join('');
+
+    const dailyOptions = memberOptions + `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile (Ortak)</option>`;
+
+    if (taskSelect) taskSelect.innerHTML = memberOptions;
+    if (expenseSelect) expenseSelect.innerHTML = memberOptions;
+    if (fixedSelect) fixedSelect.innerHTML = memberOptions;
+
+    if (dailyAssigneeSelect) {
+        dailyAssigneeSelect.innerHTML = dailyOptions;
+        if (curName) {
+            dailyAssigneeSelect.value = curName;
+        }
+    }
+    if (editDailyAssigneeSelect) {
+        editDailyAssigneeSelect.innerHTML = dailyOptions;
+    }
 }
 
 // ==========================================================
@@ -2870,7 +2886,35 @@ function openEditDailyPlanModal(planId) {
         catSelect.value = matchedVal || plan.category || '🌅 Sabah';
     }
 
-    document.getElementById('editDailyPlanAssignedTo').value = plan.assignedTo || 'Tüm Aile';
+    // Sorumlu Kişi Eşleştirmesi (Tüm Aile'ye zorlamayı engelle)
+    const editAssigneeSelect = document.getElementById('editDailyPlanAssignedTo');
+    if (editAssigneeSelect) {
+        const rawAssigned = (plan.assignedTo || '').trim();
+        const lowerAssigned = rawAssigned.toLowerCase();
+        
+        let found = false;
+        if (rawAssigned && lowerAssigned !== 'tüm aile' && lowerAssigned !== 'tum aile') {
+            for (const opt of editAssigneeSelect.options) {
+                const optVal = opt.value.trim().toLowerCase();
+                if (optVal === lowerAssigned || optVal.includes(lowerAssigned) || lowerAssigned.includes(optVal)) {
+                    editAssigneeSelect.value = opt.value;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!found) {
+            if (lowerAssigned === 'tüm aile' || lowerAssigned === 'tum aile') {
+                editAssigneeSelect.value = 'Tüm Aile';
+            } else if (appState.currentUser && appState.currentUser.name) {
+                editAssigneeSelect.value = appState.currentUser.name;
+            } else if (editAssigneeSelect.options.length > 0) {
+                editAssigneeSelect.selectedIndex = 0;
+            }
+        }
+    }
+
     document.getElementById('editDailyPlanIsRecurring').checked = plan.isRecurring !== undefined ? !!plan.isRecurring : true;
 
     openModal('modalEditDailyPlan');
@@ -5007,6 +5051,12 @@ function openModal(modalId) {
         modal.classList.remove('hidden');
         if (modalId === 'modalNewInvestment') {
             autoCalculateInvestmentTL();
+        } else if (modalId === 'modalNewDailyPlan') {
+            updateMemberSelectDropdowns();
+            const dailyAssignee = document.getElementById('newDailyPlanAssignedTo');
+            if (dailyAssignee && appState.currentUser && appState.currentUser.name) {
+                dailyAssignee.value = appState.currentUser.name;
+            }
         }
     }
 }
