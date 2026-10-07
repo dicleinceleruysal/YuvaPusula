@@ -1728,11 +1728,47 @@ function renderPano() {
 // ==========================================================
 // AİLE PLANLARI KATEGORİ HUB MANTIĞI
 // ==========================================================
+// 3. AİLE PLANLARI & KEŞİF HUB'I (META & RENDER)
+// ==========================================================
+const DAILY_PLAN_ICONS = {
+    'Banyo': '🛁',
+    'Öğle': '☀️',
+    'Ogle': '☀️',
+    'Akşam': '🌙',
+    'Aksam': '🌙',
+    'Temizlik': '🧹',
+    'Sabah': '🌅',
+    'Okul': '🎒',
+    'İş': '💼',
+    'Is': '💼',
+    'Spor': '🏃',
+    'İlaç': '💊',
+    'Ilac': '💊',
+    'Yemek': '🍽️',
+    'Ders': '📚',
+    'Diğer': '⭐',
+    'Diger': '⭐'
+};
+
+function getDailyPlanIcon(category) {
+    if (!category) return '⭐';
+    const firstPart = category.trim().split(' ')[0];
+    if (firstPart && /\p{Extended_Pictographic}/u.test(firstPart)) {
+        return firstPart;
+    }
+    for (const [key, icon] of Object.entries(DAILY_PLAN_ICONS)) {
+        if (category.toLowerCase().includes(key.toLowerCase())) {
+            return icon;
+        }
+    }
+    return '⭐';
+}
+
 const HUB_META = {
     'Seyahat': {
-        title: '✈️ Seyahat Rotalarımız',
-        subtitle: 'Yurt içi ve yurt dışı tatil, gezi & keşif rotalarımız',
-        btnText: '<i class="fa-solid fa-plus"></i> Seyahat Ekle',
+        title: '✈️ Seyahat Rotalarımız & Tatil Keşifleri',
+        subtitle: 'Yurt içi ve yurt dışı tatil rotalarımız, ulaşım & bütçe planları',
+        btnText: '<i class="fa-solid fa-plus"></i> Rota Ekle',
         subFilters: [
             { label: 'Tüm Rotalar', value: 'ALL' },
             { label: '🇹🇷 Yurt İçi', value: 'Yurtici' },
@@ -1740,9 +1776,9 @@ const HUB_META = {
         ]
     },
     'Restoran': {
-        title: '🍽️ Restoran & Kafe Duraklarımız',
-        subtitle: 'Denenecek özel lezzetler, kahveciler ve gurme mekanlar',
-        btnText: '<i class="fa-solid fa-plus"></i> Restoran Ekle',
+        title: '🍽️ Restoran, Kafe & Lezzet Duraklarımız',
+        subtitle: 'Ailece keşfetmek istediğimiz mekanlar, popüler kafeler ve menü notları',
+        btnText: '<i class="fa-solid fa-plus"></i> Mekan Ekle',
         subFilters: [
             { label: 'Tüm Mekanlar', value: 'ALL' },
             { label: '₺ Uygun', value: '₺ Uygun' },
@@ -1771,13 +1807,15 @@ const HUB_META = {
     },
     'Gunluk': {
         title: '⏰ Günlük Planlama & Rutinlerimiz',
-        subtitle: 'Her gün sabah, öğle ve akşam saatlik akış, alışkanlıklar ve günlük görevler',
+        subtitle: 'Her gün sabah, öğle, akşam, banyo, temizlik saatlik akış ve rutinler',
         btnText: '<i class="fa-solid fa-plus"></i> Günlük Plan Ekle',
         subFilters: [
             { label: 'Tüm Gün', value: 'ALL' },
             { label: '🌅 Sabah', value: 'Sabah' },
-            { label: '☀️ Öğle / Gün İçi', value: 'Ogle' },
-            { label: '🌙 Akşam / Gece', value: 'Aksam' },
+            { label: '☀️ Öğle', value: 'Ogle' },
+            { label: '🌙 Akşam', value: 'Aksam' },
+            { label: '🛁 Banyo', value: 'Banyo' },
+            { label: '🧹 Temizlik', value: 'Temizlik' },
             { label: '🔁 Rutinler', value: 'Rutin' }
         ]
     }
@@ -1913,7 +1951,7 @@ function renderDailyPlans() {
     });
 
     container.innerHTML = dailyPlans.map(plan => {
-        const icon = plan.category ? (plan.category.split(' ')[0] || '⭐') : '⭐';
+        const icon = getDailyPlanIcon(plan.category);
         
         return `
             <div class="daily-item ${plan.completed ? 'completed' : ''}">
@@ -1958,11 +1996,15 @@ function renderPlans() {
 
         // Alt Filtre
         if (appState.plansSubFilter === 'Sabah') {
-            dailyItems = dailyItems.filter(p => (p.category && p.category.includes('Sabah')) || (p.time && p.time >= '05:00' && p.time < '12:00'));
+            dailyItems = dailyItems.filter(p => (p.category && (p.category.includes('Sabah') || p.category.includes('🌅'))) || (p.time && p.time >= '05:00' && p.time < '12:00'));
         } else if (appState.plansSubFilter === 'Ogle') {
-            dailyItems = dailyItems.filter(p => ['Okul', 'İş', 'Yemek', 'Ders', 'Spor'].some(c => (p.category || '').includes(c)) || (p.time && p.time >= '12:00' && p.time < '18:00'));
+            dailyItems = dailyItems.filter(p => (p.category && (p.category.includes('Öğle') || p.category.includes('Ogle') || p.category.includes('☀️') || ['Okul', 'İş', 'Yemek', 'Ders', 'Spor'].some(c => (p.category || '').includes(c)))) || (p.time && p.time >= '12:00' && p.time < '18:00'));
         } else if (appState.plansSubFilter === 'Aksam') {
-            dailyItems = dailyItems.filter(p => (p.category && (p.category.includes('Akşam') || p.category.includes('Dinlenme'))) || (p.time && (p.time >= '18:00' || p.time < '05:00')));
+            dailyItems = dailyItems.filter(p => (p.category && (p.category.includes('Akşam') || p.category.includes('Aksam') || p.category.includes('🌙') || p.category.includes('Dinlenme'))) || (p.time && (p.time >= '18:00' || p.time < '05:00')));
+        } else if (appState.plansSubFilter === 'Banyo') {
+            dailyItems = dailyItems.filter(p => p.category && (p.category.includes('Banyo') || p.category.includes('🛁') || p.category.includes('Duş')));
+        } else if (appState.plansSubFilter === 'Temizlik') {
+            dailyItems = dailyItems.filter(p => p.category && (p.category.includes('Temizlik') || p.category.includes('🧹') || p.category.includes('Düzen')));
         } else if (appState.plansSubFilter === 'Rutin') {
             dailyItems = dailyItems.filter(p => p.isRecurring);
         }
@@ -1992,7 +2034,7 @@ function renderPlans() {
         });
 
         container.innerHTML = dailyItems.map(p => {
-            const icon = p.category ? (p.category.split(' ')[0] || '⭐') : '⭐';
+            const icon = getDailyPlanIcon(p.category);
             return `
                 <div class="daily-item ${p.completed ? 'completed' : ''}" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 8px;">
                     <div class="custom-checkbox ${p.completed ? 'checked' : ''}" onclick="handleToggleDailyPlan('${p.id}')">
@@ -2815,7 +2857,19 @@ function openEditDailyPlanModal(planId) {
     document.getElementById('editDailyPlanId').value = plan.id;
     document.getElementById('editDailyPlanTitle').value = plan.title || '';
     document.getElementById('editDailyPlanTime').value = plan.time || '09:00';
-    document.getElementById('editDailyPlanCategory').value = plan.category || '🌅 Sabah';
+    
+    const catSelect = document.getElementById('editDailyPlanCategory');
+    if (catSelect) {
+        let matchedVal = '';
+        for (const opt of catSelect.options) {
+            if (opt.value === plan.category || opt.value.includes(plan.category) || (plan.category && plan.category.includes(opt.value.replace(/^[^\s]+\s*/, '')))) {
+                matchedVal = opt.value;
+                break;
+            }
+        }
+        catSelect.value = matchedVal || plan.category || '🌅 Sabah';
+    }
+
     document.getElementById('editDailyPlanAssignedTo').value = plan.assignedTo || 'Tüm Aile';
     document.getElementById('editDailyPlanIsRecurring').checked = plan.isRecurring !== undefined ? !!plan.isRecurring : true;
 
