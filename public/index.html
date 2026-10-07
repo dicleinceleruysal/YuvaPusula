@@ -743,24 +743,24 @@
                             </button>
                         </div>
 
-                        <!-- Mesai 2'li Özet Kutuları (Ben & Fırat) -->
+                        <!-- Mesai 2'li Özet Kutuları (Dicle Mesai & Fırat Mesai) -->
                         <div class="overtime-summary-grid">
                             <div class="overtime-summary-box my-overtime">
                                 <div class="ot-box-top">
-                                    <span class="ot-box-badge">👤 Benim Mesaim</span>
+                                    <span class="ot-box-badge">👩 Dicle Mesai</span>
                                     <small class="ot-rate-tag">296,875 ₺ / saat</small>
                                 </div>
-                                <div class="ot-box-val" id="myOvertimeTotalAmount">0,00 ₺</div>
-                                <div class="ot-box-sub" id="myOvertimeTotalHours">0 Saat İşlendi</div>
+                                <div class="ot-box-val" id="dicleOvertimeTotalAmount">0,00 ₺</div>
+                                <div class="ot-box-sub" id="dicleOvertimeTotalHours">0 Saat İşlendi</div>
                             </div>
 
                             <div class="overtime-summary-box firat-overtime">
                                 <div class="ot-box-top">
-                                    <span class="ot-box-badge">👨 Fırat'ın Mesaisi</span>
-                                    <small class="ot-rate-tag" id="firatOvertimeRateTag">Ek Mesai</small>
+                                    <span class="ot-box-badge">👨 Fırat Mesai</span>
+                                    <small class="ot-rate-tag" id="firatOvertimeRateTag">H.İçi: 1.041,67 ₺ • Cts: 3.125,00 ₺</small>
                                 </div>
                                 <div class="ot-box-val" id="firatOvertimeTotalAmount">0,00 ₺</div>
-                                <div class="ot-box-sub" id="firatOvertimeTotalHours">0 Kayıt</div>
+                                <div class="ot-box-sub" id="firatOvertimeTotalDays">0 Gün Mesai</div>
                             </div>
                         </div>
 
@@ -1744,7 +1744,7 @@
         </div>
     </div>
 
-    <!-- MODAL: YENİ MESAI GİRİŞİ (AYIN 1'İNDE SIFIRLANIR - SAATLİK: 296,875 TL VEYA FIRAT) -->
+    <!-- MODAL: YENİ MESAI GİRİŞİ (DİCLE: SAATLİK 296,875 TL - FIRAT: GÜNLÜK H.İÇİ 1.041,67 TL / CTS 3.125,00 TL - AYIN 1'İNDE SIFIRLANIR) -->
     <div id="modalNewOvertime" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
@@ -1752,69 +1752,84 @@
                 <button class="btn-close" onclick="closeModal('modalNewOvertime')"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
-                Saat bazlı veya tutar olarak mesailerinizi işleyin. <b>Ayın 1'inde otomatik olarak sıfırlanır</b> ve aylık toplam bütçenize anında yansır.
+                Dicle (saatlik) ve Fırat (günlük) için mesai işleyin. <b>Ayın 1'inde otomatik sıfırlanır</b> ve aylık toplam bütçenize anında yansır.
             </p>
             <form onsubmit="handleAddOvertime(event)">
-                <div class="form-group">
-                    <label><i class="fa-solid fa-user-check"></i> Mesaiyi Yapan Kişi</label>
-                    <select id="overtimePersonSelect" onchange="onOvertimePersonChange()" required>
-                        <!-- Dinamik Üyeler (Ben - Saatlik 296,875 TL ve Fırat) -->
-                    </select>
-                </div>
-
-                <!-- Mesai Hesaplama Modu (Saatlik veya Tutar) -->
-                <div class="form-group" id="overtimeModeGroup" style="margin-bottom: 12px;">
+                <!-- Mesai Sahibi Seçimi (Dicle veya Fırat) -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label><i class="fa-solid fa-user-check"></i> Mesai Sahibi</label>
                     <div class="overtime-mode-toggle">
-                        <button type="button" class="ot-mode-btn active" id="btnModeHourly" onclick="switchOvertimeInputMode('hourly')">
-                            <i class="fa-solid fa-stopwatch"></i> Saat Hesabı (x 296,875 ₺)
+                        <button type="button" class="ot-mode-btn active" id="btnPersonDicle" onclick="selectOvertimePerson('Dicle')">
+                            👩 <b>Dicle Mesai</b> (Saatlik)
                         </button>
-                        <button type="button" class="ot-mode-btn" id="btnModeFixed" onclick="switchOvertimeInputMode('fixed')">
-                            <i class="fa-solid fa-money-bill-wave"></i> Sabit Tutar (₺)
+                        <button type="button" class="ot-mode-btn" id="btnPersonFirat" onclick="selectOvertimePerson('Fırat')">
+                            👨 <b>Fırat Mesai</b> (Günlük)
                         </button>
                     </div>
+                    <input type="hidden" id="overtimePersonInput" value="Dicle">
                 </div>
 
-                <!-- 1. SAAT BAZLI GİRİŞ ALANLARI -->
-                <div id="overtimeHourlyFields">
+                <!-- 1. DİCLE MESAİ ALANLARI (SAATLİK: 296,875 TL) -->
+                <div id="overtimeDicleFields">
                     <div class="form-row">
                         <div class="form-group flex-1">
                             <label><i class="fa-solid fa-clock"></i> Mesai Süresi (Saat)</label>
-                            <input type="number" step="0.25" min="0.25" max="240" id="overtimeHoursInput" placeholder="Örn: 4.5" oninput="calculateOvertimeTotalLive()" required>
+                            <input type="number" step="0.25" min="0.25" max="240" id="overtimeDicleHoursInput" placeholder="Örn: 4.5" oninput="calculateOvertimeTotalLive()">
                             <span class="field-hint">Örn: 4.5 saat veya 8 saat</span>
                         </div>
                         <div class="form-group flex-1">
                             <label><i class="fa-solid fa-coins"></i> Saatlik Ücret (₺)</label>
-                            <input type="number" step="0.001" min="0" id="overtimeHourlyRateInput" value="296.875" oninput="calculateOvertimeTotalLive()" required>
-                            <span class="field-hint">Varsayılan: 296,875 ₺</span>
+                            <input type="number" step="0.001" min="0" id="overtimeDicleRateInput" value="296.875" oninput="calculateOvertimeTotalLive()">
+                            <span class="field-hint">Sabit: 296,875 ₺ / saat</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. SABİT TUTAR GİRİŞİ (İsteğe Bağlı / Fırat İçin) -->
-                <div id="overtimeFixedAmountFields" class="hidden">
-                    <div class="form-group">
-                        <label><i class="fa-solid fa-money-bill-wave"></i> Mesai Tutarı (₺)</label>
-                        <input type="number" step="1" min="1" id="overtimeFixedAmountInput" placeholder="Örn: 2500" oninput="calculateOvertimeTotalLive()">
+                <!-- 2. FIRAT MESAİ ALANLARI (GÜNLÜK: HAFTA İÇİ 1.041,67 TL / CTS 3.125,00 TL) -->
+                <div id="overtimeFiratFields" class="hidden">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label><i class="fa-solid fa-calendar-check"></i> Mesai Günü / Tipi</label>
+                        <div class="overtime-mode-toggle">
+                            <button type="button" class="ot-mode-btn active" id="btnFiratWeekday" onclick="selectFiratDayType('weekday')">
+                                📅 Hafta İçi (1.041,67 ₺)
+                            </button>
+                            <button type="button" class="ot-mode-btn" id="btnFiratSaturday" onclick="selectFiratDayType('saturday')">
+                                🏖️ Cumartesi (3.125,00 ₺)
+                            </button>
+                        </div>
+                        <input type="hidden" id="overtimeFiratDayType" value="weekday">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-calendar-day"></i> Gün Sayısı</label>
+                            <input type="number" step="0.5" min="0.5" max="31" id="overtimeFiratDaysInput" value="1" oninput="calculateOvertimeTotalLive()">
+                            <span class="field-hint">Örn: 1 gün veya 2 gün</span>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-money-bill-wave"></i> Günlük Ücret (₺)</label>
+                            <input type="number" step="0.01" min="0" id="overtimeFiratRateInput" value="1041.67" readonly style="background: var(--bg-card-subtle);">
+                            <span class="field-hint" id="firatRateHint">Hafta İçi: 1.041,67 ₺ / gün</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- CANLI KAZANÇ HESAPLAMA AFİŞİ -->
                 <div class="overtime-calc-banner" id="overtimeCalcBanner">
-                    <div class="calc-top-text"><i class="fa-solid fa-calculator"></i> Hesaplanacak Toplam Kazanç:</div>
+                    <div class="calc-top-text"><i class="fa-solid fa-calculator"></i> Hesaplanacak Toplam Mesai Kazancı:</div>
                     <div class="calc-big-value" id="overtimeLiveCalcResult">0,00 ₺</div>
                     <small id="overtimeLiveCalcDetail">0 saat × 296,875 ₺</small>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group flex-1">
-                        <label><i class="fa-solid fa-calendar-day"></i> Mesai Tarihi</label>
-                        <input type="date" id="overtimeDateInput" required>
+                        <label><i class="fa-solid fa-calendar-days"></i> Mesai Tarihi</label>
+                        <input type="date" id="overtimeDateInput" onchange="onOvertimeDateChanged()" required>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label><i class="fa-solid fa-note-sticky"></i> Not / Açıklama (İsteğe bağlı)</label>
-                    <input type="text" id="overtimeNotesInput" placeholder="Örn: Hafta sonu fazla mesaisi, akşam nöbeti">
+                    <input type="text" id="overtimeNotesInput" placeholder="Örn: Hafta sonu nöbeti, acil servis, akşam mesaisi">
                 </div>
 
                 <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #D49A48, #C46747);">
