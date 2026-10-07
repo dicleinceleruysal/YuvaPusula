@@ -341,10 +341,18 @@
                 <div class="daily-planner-card">
                     <div class="daily-planner-header">
                         <div class="daily-planner-title-group">
-                            <div class="daily-planner-icon">⏰</div>
-                            <div>
-                                <h4>Günün Akışı & Günlük Planlama</h4>
-                                <span class="daily-planner-date" id="dailyPlannerDateLabel">Bugün</span>
+                            <div class="daily-planner-icon">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <div class="daily-planner-text-box">
+                                <div class="daily-planner-tag">
+                                    <i class="fa-solid fa-sparkles"></i> GÜNÜN AKIŞI
+                                </div>
+                                <h4 class="daily-planner-title">Günlük Aile Planlama</h4>
+                                <div class="daily-planner-date-badge">
+                                    <i class="fa-regular fa-calendar-days"></i>
+                                    <span id="dailyPlannerDateLabel">Bugün</span>
+                                </div>
                             </div>
                         </div>
                         <div class="daily-planner-actions">
@@ -360,7 +368,10 @@
                     <!-- Günlük İlerleme Barı -->
                     <div class="daily-progress-box">
                         <div class="daily-progress-header">
-                            <span id="dailyProgressText">0/0 Plan Tamamlandı</span>
+                            <div class="daily-progress-label">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span id="dailyProgressText">0/0 Plan Tamamlandı</span>
+                            </div>
                             <strong id="dailyProgressPercent">%0</strong>
                         </div>
                         <div class="daily-progress-track">

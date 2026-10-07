@@ -4498,15 +4498,15 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   8. GÜNLÜK PLANLAMA & GÜNÜN AKIŞI (BOHEM DOKU)
+   8. GÜNLÜK PLANLAMA & GÜNÜN AKIŞI (ZARİF BOHEM DOKU)
    -------------------------------------------------------------------------- */
 .daily-planner-card {
-    background: #ffffff;
+    background: #FFFFFF;
     border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px 20px;
+    border-radius: 26px;
+    padding: 22px 20px;
     margin-bottom: 24px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 8px 24px rgba(44, 34, 29, 0.05);
     position: relative;
     overflow: hidden;
 }
@@ -4518,63 +4518,113 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #C46747, #D49A48, #6E8867);
+    background: linear-gradient(90deg, #C46747 0%, #D49A48 50%, #6E8867 100%);
 }
 
 .daily-planner-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
 }
 
 .daily-planner-title-group {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
 }
 
 .daily-planner-icon {
-    font-size: 1.6rem;
-    width: 46px;
-    height: 46px;
-    background: #FEF7EC;
-    border: 1px solid rgba(212, 154, 72, 0.3);
-    border-radius: 14px;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #C46747 0%, #D88365 100%);
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 22px;
+    color: #FFFFFF;
     flex-shrink: 0;
+    box-shadow: 0 6px 18px rgba(196, 103, 71, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    transition: transform 0.2s ease;
 }
 
-.daily-planner-title-group h4 {
+.daily-planner-icon:hover {
+    transform: rotate(-8deg) scale(1.04);
+}
+
+.daily-planner-text-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.daily-planner-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: var(--primary);
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.daily-planner-tag i {
+    font-size: 0.72rem;
+    color: var(--accent-ochre);
+}
+
+.daily-planner-title {
     margin: 0;
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--dark);
+    line-height: 1.2;
+    letter-spacing: -0.2px;
 }
 
-.daily-planner-date {
-    font-size: 0.78rem;
+.daily-planner-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
     color: var(--text-muted);
-    font-weight: 600;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-top: 4px;
+    width: fit-content;
+}
+
+.daily-planner-date-badge i {
+    color: var(--secondary);
+    font-size: 0.75rem;
 }
 
 .daily-planner-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .btn-daily-reset-sm {
     background: var(--bg-card-subtle);
     color: var(--text-main);
     border: 1px solid var(--border-color);
-    padding: 7px 13px;
+    padding: 8px 14px;
     border-radius: var(--radius-full);
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     display: inline-flex;
@@ -4586,13 +4636,18 @@ body {
 .btn-daily-reset-sm:hover {
     background: #EADFD2;
     color: var(--dark);
+    border-color: #D8CCC0;
+}
+
+.btn-daily-reset-sm:active {
+    transform: scale(0.95);
 }
 
 .btn-daily-add-sm {
     background: var(--primary-gradient);
     color: #ffffff;
     border: none;
-    padding: 7px 16px;
+    padding: 8px 16px;
     border-radius: var(--radius-full);
     font-size: 0.78rem;
     font-weight: 700;
@@ -4600,18 +4655,22 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 4px 14px rgba(196, 103, 71, 0.3);
+    box-shadow: 0 4px 14px rgba(196, 103, 71, 0.32);
     transition: all 0.2s ease;
 }
 
 .btn-daily-add-sm:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(196, 103, 71, 0.4);
+    box-shadow: 0 6px 18px rgba(196, 103, 71, 0.42);
+}
+
+.btn-daily-add-sm:active {
+    transform: scale(0.96);
 }
 
 .daily-progress-box {
     background: var(--bg-card-subtle);
-    border-radius: var(--radius-md);
+    border-radius: 18px;
     padding: 12px 16px;
     margin-bottom: 16px;
     border: 1px solid var(--border-color);
@@ -4620,25 +4679,43 @@ body {
 .daily-progress-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 8px;
+}
+
+.daily-progress-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.daily-progress-label i {
+    color: var(--secondary);
+    font-size: 0.82rem;
+}
+
+.daily-progress-header strong {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 0.85rem;
 }
 
 .daily-progress-track {
     width: 100%;
-    height: 9px;
+    height: 8px;
     background: #EADFD2;
     border-radius: 999px;
     overflow: hidden;
+    margin-top: 8px;
 }
 
 .daily-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6E8867, #D49A48, #C46747);
+    background: linear-gradient(90deg, #6E8867 0%, #D49A48 50%, #C46747 100%);
     border-radius: 999px;
-    transition: width 0.3s ease;
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .daily-plans-list {
@@ -4647,133 +4724,121 @@ body {
     gap: 10px;
 }
 
-.daily-plan-item {
+/* Günlük Plan Kart Öğesi (.daily-item & .daily-plan-item) */
+.daily-item, .daily-plan-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     background: #ffffff;
     border: 1.5px solid var(--border-color);
-    border-radius: 16px;
-    padding: 12px 16px;
+    border-radius: 18px;
+    padding: 12px 14px;
     transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(44, 34, 29, 0.02);
 }
 
-.daily-plan-item:hover {
+.daily-item:hover, .daily-plan-item:hover {
     border-color: var(--primary);
     background: #FFFDFB;
     transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(196, 103, 71, 0.08);
 }
 
-.daily-plan-item.completed {
+.daily-item.completed, .daily-plan-item.completed {
     background: var(--bg-card-subtle);
     border-color: var(--border-color);
-    opacity: 0.72;
+    opacity: 0.75;
 }
 
-.daily-plan-item.completed .daily-plan-title {
+.daily-time-badge, .daily-plan-time-badge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: #F9EFEA;
+    color: #C46747;
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(196, 103, 71, 0.2);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.daily-time-badge.no-time {
+    background: var(--bg-card-subtle);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+
+.daily-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.daily-title, .daily-plan-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    line-height: 1.3;
+}
+
+.daily-title.completed-text, .daily-plan-title.completed-text {
     text-decoration: line-through;
     color: var(--text-muted);
 }
 
-.daily-plan-left {
-    display: flex;
+.daily-category-icon {
+    font-size: 1rem;
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    flex: 1;
 }
 
-.daily-plan-checkbox {
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    border: 2px solid #D8CCC0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    background: #ffffff;
-    color: transparent;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.daily-plan-item.completed .daily-plan-checkbox {
-    background: var(--secondary);
-    border-color: var(--secondary);
-    color: #ffffff;
-}
-
-.daily-plan-time-badge {
-    font-size: 0.74rem;
-    font-weight: 800;
-    background: var(--bg-card-subtle);
-    color: var(--dark);
-    padding: 4px 9px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-
-.daily-plan-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-right: 8px;
-}
-
-.daily-plan-chips {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.daily-plan-member-chip {
-    font-size: 0.7rem;
-    font-weight: 700;
-    background: #F9EFEA;
-    color: #C46747;
-    padding: 3px 9px;
-    border-radius: 999px;
-    border: 1px solid rgba(196, 103, 71, 0.2);
-}
-
-.daily-plan-recurring-chip {
+.daily-recurring-badge, .daily-plan-recurring-chip {
     font-size: 0.68rem;
     font-weight: 700;
     background: #FEF7EC;
     color: #D49A48;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: 999px;
     border: 1px solid rgba(212, 154, 72, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
-.btn-daily-delete {
-    background: transparent;
-    border: none;
-    color: #BDB0A4;
-    cursor: pointer;
-    font-size: 0.95rem;
-    padding: 6px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+.daily-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    font-weight: 600;
 }
 
-.btn-daily-delete:hover {
-    color: var(--danger);
-    background: var(--danger-light);
+.daily-meta i {
+    color: var(--primary);
 }
 
-.daily-plans-empty {
+.empty-daily-state, .daily-plans-empty {
     text-align: center;
-    padding: 24px 12px;
-    color: #94a3b8;
+    padding: 24px 16px;
+    color: var(--text-muted);
     font-size: 0.85rem;
+    background: var(--bg-card-subtle);
+    border: 1px dashed var(--border-color);
+    border-radius: 18px;
+    margin-top: 4px;
 }
 
-.daily-plans-empty i {
+.empty-daily-state i, .daily-plans-empty i {
     font-size: 2rem;
-    color: #cbd5e1;
+    color: var(--primary);
+    opacity: 0.7;
     margin-bottom: 8px;
     display: block;
 }
@@ -4782,7 +4847,7 @@ body {
     .daily-planner-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 12px;
     }
     
     .daily-planner-actions {
@@ -4790,17 +4855,14 @@ body {
         justify-content: flex-end;
     }
 
-    .daily-plan-item {
-        padding: 8px 10px;
+    .daily-item, .daily-plan-item {
+        padding: 10px 12px;
+        gap: 10px;
     }
 
-    .daily-plan-left {
-        gap: 8px;
-    }
-
-    .daily-plan-time-badge {
+    .daily-time-badge {
         font-size: 0.7rem;
-        padding: 2px 6px;
+        padding: 4px 8px;
     }
 }
 
