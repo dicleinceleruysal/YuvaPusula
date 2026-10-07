@@ -1236,6 +1236,64 @@
         </div>
     </div>
 
+    <!-- MODAL: GÜNLÜK PLAN DÜZENLE -->
+    <div id="modalEditDailyPlan" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Günlük Planı Düzenle</h3>
+                <button class="btn-close" onclick="closeModal('modalEditDailyPlan')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formEditDailyPlan" onsubmit="handleEditDailyPlan(event)">
+                <input type="hidden" id="editDailyPlanId">
+                <div class="form-group">
+                    <label>Plan / Aktivite Başlığı</label>
+                    <input type="text" id="editDailyPlanTitle" placeholder="Örn: Sabah Yürüyüşü, İlaç Saati..." required>
+                </div>
+                
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Saat</label>
+                        <input type="time" id="editDailyPlanTime" value="09:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori / İkon</label>
+                        <select id="editDailyPlanCategory">
+                            <option value="🌅 Sabah">🌅 Sabah</option>
+                            <option value="🎒 Okul">🎒 Okul</option>
+                            <option value="💼 İş">💼 İş</option>
+                            <option value="🏃 Spor">🏃 Spor / Egzersiz</option>
+                            <option value="💊 İlaç">💊 Sağlık / İlaç</option>
+                            <option value="🍽️ Yemek">🍽️ Yemek / Beslenme</option>
+                            <option value="📚 Ders">📚 Ders / Kurs</option>
+                            <option value="🌙 Akşam">🌙 Akşam / Dinlenme</option>
+                            <option value="⭐ Diğer">⭐ Diğer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Kime Ait / Sorumlu Birey</label>
+                    <select id="editDailyPlanAssignedTo">
+                        <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                        <input type="checkbox" id="editDailyPlanIsRecurring" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                        <span>🔁 Her gün otomatik tekrarlansın (Sabah sıfırlanır)</span>
+                    </label>
+                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse rutin olarak her gün sıfırdan başlar. İşaretsizse sadece bugünlük kaydedilir.</p>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeModal('modalEditDailyPlan')">İptal</button>
+                    <button type="submit" class="btn-primary" style="flex: 2;"><i class="fa-solid fa-check"></i> Değişiklikleri Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: YENİ AİLE PLANI -->
     <div id="modalNewPlan" class="modal-overlay hidden">
         <div class="modal-card">
@@ -1373,6 +1431,151 @@
                 <button type="submit" class="btn-primary">
                     <i class="fa-solid fa-plus-circle"></i> Planı Kaydet
                 </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AİLE PLANI DÜZENLE -->
+    <div id="modalEditPlan" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Aile Planını Düzenle</h3>
+                <button class="btn-close" onclick="closeModal('modalEditPlan')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formEditPlan" onsubmit="handleEditPlan(event)">
+                <input type="hidden" id="editPlanId">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-layer-group"></i> Plan Kategorisi</label>
+                    <select id="editPlanCategorySelect" onchange="onEditPlanCategoryChange(this.value)">
+                        <option value="Seyahat">✈️ Seyahat (Tatil & Gezi)</option>
+                        <option value="Restoran">🍽️ Restoran / Kafe (Lezzet & Mekan)</option>
+                        <option value="Etkinlik">🎭 Etkinlik (Konser / Tiyatro / Sinema / Sergi)</option>
+                        <option value="Alisveris">🛍️ Alışveriş (İstek / Hayal / Büyük İhtiyaç)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label id="editPlanTitleLabel"><i class="fa-solid fa-heading"></i> Plan / Mekan / Etkinlik Adı</label>
+                    <input type="text" id="editPlanTitleInput" placeholder="Örn: Kapadokya Tatili" required>
+                </div>
+
+                <!-- 1. SEYAHAT ALANLARI -->
+                <div id="sectionEditSeyahatFields">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-earth-americas"></i> Seyahat Kapsamı</label>
+                            <select id="editPlanTravelType">
+                                <option value="Yurtici">🇹🇷 Yurt İçi</option>
+                                <option value="Yurtdisi">🌍 Yurt Dışı</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-calendar"></i> Hedef Tarih / Dönem</label>
+                            <input type="text" id="editPlanTravelDate" placeholder="Örn: Sonbahar / Temmuz 2026">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-plane"></i> Ulaşım Şekli</label>
+                            <select id="editPlanTravelTransport">
+                                <option value="🚗 Şahsi Araç">🚗 Şahsi Araç</option>
+                                <option value="✈️ Uçak">✈️ Uçak</option>
+                                <option value="🚆 Tren / YHT">🚆 Tren / YHT</option>
+                                <option value="🚌 Otobüs / Tur">🚌 Otobüs / Tur</option>
+                                <option value="🚢 Gemi / Feribot">🚢 Gemi / Feribot</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-coins"></i> Tahmini Bütçe (₺)</label>
+                            <input type="number" id="editPlanTravelBudget" placeholder="Örn: 25000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-map-location-dot"></i> Gezilecek Yerler & Rota Notları</label>
+                        <textarea id="editPlanTravelNotes" rows="2" placeholder="Örn: Balon turu, Göreme açık hava müzesi, testi kebabı"></textarea>
+                    </div>
+                </div>
+
+                <!-- 2. RESTORAN / KAFE ALANLARI -->
+                <div id="sectionEditRestoranFields" class="hidden">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-location-dot"></i> Konum / Semt / Adres</label>
+                        <input type="text" id="editPlanRestLocation" placeholder="Örn: Çengelköy, İstanbul / Moda Kadıköy">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-utensils"></i> Denenecek Lezzet / Menü Notu</label>
+                        <input type="text" id="editPlanRestDish" placeholder="Örn: San Sebastian Cheesecake & Menemen">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-money-bill-wave"></i> Fiyat Düzeyi</label>
+                            <select id="editPlanRestPrice">
+                                <option value="₺ Uygun">₺ Uygun</option>
+                                <option value="₺₺ Orta">₺₺ Orta</option>
+                                <option value="₺₺₺ Özel Gün / Gurme">₺₺₺ Özel Gün / Gurme</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-link"></i> Harita / Menü Linki</label>
+                            <input type="url" id="editPlanRestLink" placeholder="https://maps.google.com/...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ETKİNLİK ALANLARI -->
+                <div id="sectionEditEtkinlikFields" class="hidden">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-calendar-day"></i> Tarih & Saat</label>
+                            <input type="text" id="editPlanEventDate" placeholder="Örn: 15 Ekim 2026 - 20:30">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-building"></i> Mekan / Salon</label>
+                            <input type="text" id="editPlanEventVenue" placeholder="Örn: Zorlu PSM / Harbiye">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-ticket"></i> Bilet / Etkinlik Linki</label>
+                        <input type="url" id="editPlanEventLink" placeholder="https://biletix.com/... veya passo...">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-users"></i> Kimler Katılacak?</label>
+                        <input type="text" id="editPlanEventAttendees" placeholder="Örn: Tüm Aile / Anne & Baba">
+                    </div>
+                </div>
+
+                <!-- 4. ALIŞVERİŞ ALANLARI -->
+                <div id="sectionEditAlisverisFields" class="hidden">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-link"></i> Ürün / Satın Alma Linki</label>
+                        <input type="url" id="editPlanShopLink" placeholder="https://trendyol.com/... veya hepsiburada...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-tag"></i> Tahmini Fiyat (₺)</label>
+                            <input type="number" id="editPlanShopPrice" placeholder="Örn: 4500">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-star"></i> Öncelik</label>
+                            <select id="editPlanShopPriority">
+                                <option value="⭐ Yüksek / Acil">⭐ Yüksek / Acil</option>
+                                <option value="⏳ Yakında">⏳ Yakında</option>
+                                <option value="💭 Hayal / Gelecek">💭 Hayal / Gelecek</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-note-sticky"></i> Neden İstendi / Detay Notu</label>
+                        <input type="text" id="editPlanShopNote" placeholder="Örn: Salon için yeni kahve köşesi">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeModal('modalEditPlan')">İptal</button>
+                    <button type="submit" class="btn-primary" style="flex: 2;">
+                        <i class="fa-solid fa-check"></i> Değişiklikleri Kaydet
+                    </button>
+                </div>
             </form>
         </div>
     </div>

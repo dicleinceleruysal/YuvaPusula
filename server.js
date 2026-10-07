@@ -330,6 +330,13 @@ async function appHandler(req, res) {
                     avatar: (body.user && body.user.avatar) || '👤'
                 };
                 const updatedFamily = await dbManager.addUserToFamily(body.familyId, user, body.familyData || null);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: '👋 Yeni Aile Bireyi',
+                    body: `${user.name} (${user.role}) aileye katıldı!`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=members'
+                }, user.id).catch(e => {});
                 return sendJson(res, 200, { success: true, user, family: updatedFamily });
             }
 
@@ -337,6 +344,7 @@ async function appHandler(req, res) {
             if (pathname === '/api/family/sync' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const synced = await dbManager.syncFamily(body.family);
+                broadcastToFamilyLive(body.family && body.family.id, 'update', { family: synced });
                 return sendJson(res, 200, { success: true, family: synced });
             }
 
@@ -344,6 +352,7 @@ async function appHandler(req, res) {
             if (pathname === '/api/members/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deleteMember(body.familyId, body.memberId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
@@ -361,11 +370,19 @@ async function appHandler(req, res) {
             if (pathname === '/api/posts' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addPost(body.familyId, body.post);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: '📢 Aile Panosu Notu',
+                    body: `${(body.post && body.post.title) || 'Duyuru'}: ${(body.post && body.post.content) || ''}`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=pano'
+                }).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/posts/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deletePost(body.familyId, body.postId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
@@ -373,16 +390,37 @@ async function appHandler(req, res) {
             if (pathname === '/api/plans/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addPlan(body.familyId, body.plan);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: '🗺️ Yeni Aile Planı',
+                    body: `${(body.plan && body.plan.title) || 'Yeni plan'}: ${body.plan && body.plan.addedBy ? body.plan.addedBy : 'Aile'} tarafından eklendi.`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=plans'
+                }).catch(e => {});
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/plans/update' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.updatePlan(body.familyId, body.planId, body.plan);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: '🗺️ Aile Planı Güncellendi',
+                    body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=plans'
+                }).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.togglePlan(body.familyId, body.planId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deletePlan(body.familyId, body.planId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
@@ -391,6 +429,26 @@ async function appHandler(req, res) {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addDailyPlan(body.familyId, body.plan);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                const assignedStr = body.plan && body.plan.assignedTo && body.plan.assignedTo !== 'Tüm Aile' ? ` (${body.plan.assignedTo})` : '';
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: `⏰ Günlük Plan${assignedStr}`,
+                    body: `${(body.plan && body.plan.title) || 'Yeni günlük plan'} - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=pano'
+                }).catch(e => {});
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/daily-plans/update' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.updateDailyPlan(body.familyId, body.planId, body.plan);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                const assignedStr = body.plan && body.plan.assignedTo && body.plan.assignedTo !== 'Tüm Aile' ? ` (${body.plan.assignedTo})` : '';
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: `⏰ Günlük Plan Güncellendi${assignedStr}`,
+                    body: `${(body.plan && body.plan.title) || 'Günlük plan'} düzenlendi - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=pano'
+                }).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/daily-plans/toggle' && req.method === 'POST') {
@@ -416,16 +474,25 @@ async function appHandler(req, res) {
             if (pathname === '/api/shopping/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addShoppingItem(body.familyId, body.item);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: '🛒 Alışveriş Listesi',
+                    body: `${(body.item && body.item.title) || 'Yeni ürün'} eklendi.`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=shopping'
+                }).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/shopping/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.toggleShoppingItem(body.familyId, body.itemId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/shopping/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deleteShoppingItem(body.familyId, body.itemId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
@@ -433,16 +500,26 @@ async function appHandler(req, res) {
             if (pathname === '/api/tasks/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addTask(body.familyId, body.task);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                const assigneeStr = body.task && body.task.assignee ? ` [${body.task.assignee}]` : '';
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: `✅ Yeni Görev${assigneeStr}`,
+                    body: `${(body.task && body.task.title) || 'Yeni görev atandı.'}`,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=tasks'
+                }).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/tasks/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.toggleTask(body.familyId, body.taskId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/tasks/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deleteTask(body.familyId, body.taskId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 

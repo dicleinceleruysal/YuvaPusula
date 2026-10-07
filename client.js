@@ -377,6 +377,21 @@ const AilemAPI = {
         return null;
     },
 
+    async updatePlan(familyId, planId, plan) {
+        try {
+            const res = await fetch('/api/plans/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId, plan })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     async togglePlan(familyId, planId) {
         try {
             const res = await fetch('/api/plans/toggle', {
@@ -733,6 +748,21 @@ const AilemAPI = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ familyId, plan })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async updateDailyPlan(familyId, planId, plan) {
+        try {
+            const res = await fetch('/api/daily-plans/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId, plan })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -1904,9 +1934,14 @@ function renderDailyPlans() {
                         ${plan.note ? `<span>• <i class="fa-regular fa-comment"></i> ${plan.note}</span>` : ''}
                     </div>
                 </div>
-                <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${plan.id}')" title="Planı Sil">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="btn-delete-item" onclick="openEditDailyPlanModal('${plan.id}')" title="Planı Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${plan.id}')" title="Planı Sil">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
@@ -1977,9 +2012,14 @@ function renderPlans() {
                             ${p.note ? `<span>• <i class="fa-regular fa-comment"></i> ${p.note}</span>` : ''}
                         </div>
                     </div>
-                    <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${p.id}')" title="Planı Sil">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-delete-item" onclick="openEditDailyPlanModal('${p.id}')" title="Planı Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${p.id}')" title="Planı Sil">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -2101,6 +2141,9 @@ function renderPlans() {
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <button class="btn-toggle-plan ${plan.completed ? 'done' : 'pending'}" onclick="togglePlanStatus('${plan.id}')">
                             ${plan.completed ? '<i class="fa-solid fa-check"></i> Tamamlandı' : '<i class="fa-solid fa-circle-check"></i> Gerçekleşti Yap'}
+                        </button>
+                        <button class="btn-delete-item" onclick="openEditPlanModal('${plan.id}')" title="Planı Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
+                            <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                         <button class="btn-delete-item" onclick="deletePlan('${plan.id}')" title="Planı Sil">
                             <i class="fa-solid fa-trash-can"></i>
@@ -2639,6 +2682,7 @@ function updateMemberSelectDropdowns() {
     const expenseSelect = document.getElementById('expensePayer');
     const fixedSelect = document.getElementById('fixedPayer');
     const dailyAssigneeSelect = document.getElementById('newDailyPlanAssignedTo');
+    const editDailyAssigneeSelect = document.getElementById('editDailyPlanAssignedTo');
 
     const options = members.map(m => `<option value="${m.name}">${m.avatar} ${m.name} (${m.role})</option>`).join('');
 
@@ -2646,6 +2690,7 @@ function updateMemberSelectDropdowns() {
     if (expenseSelect) expenseSelect.innerHTML = options;
     if (fixedSelect) fixedSelect.innerHTML = options;
     if (dailyAssigneeSelect) dailyAssigneeSelect.innerHTML = `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>` + options;
+    if (editDailyAssigneeSelect) editDailyAssigneeSelect.innerHTML = `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>` + options;
 }
 
 // ==========================================================
@@ -2755,6 +2800,66 @@ async function handleResetDailyPlans() {
     if (appState.activePlanHub === 'Gunluk') renderPlans();
     updateQuickStats();
     showToast('Günün planları sıfırlandı ve yeni gün başlatıldı! 🌅');
+}
+
+function openEditDailyPlanModal(planId) {
+    const plans = appState.familyData ? (appState.familyData.dailyPlans || []) : [];
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) {
+        showToast('Plan bulunamadı.');
+        return;
+    }
+
+    updateMemberSelectDropdowns();
+
+    document.getElementById('editDailyPlanId').value = plan.id;
+    document.getElementById('editDailyPlanTitle').value = plan.title || '';
+    document.getElementById('editDailyPlanTime').value = plan.time || '09:00';
+    document.getElementById('editDailyPlanCategory').value = plan.category || '🌅 Sabah';
+    document.getElementById('editDailyPlanAssignedTo').value = plan.assignedTo || 'Tüm Aile';
+    document.getElementById('editDailyPlanIsRecurring').checked = plan.isRecurring !== undefined ? !!plan.isRecurring : true;
+
+    openModal('modalEditDailyPlan');
+}
+
+async function handleEditDailyPlan(e) {
+    e.preventDefault();
+    const planId = document.getElementById('editDailyPlanId').value;
+    const title = document.getElementById('editDailyPlanTitle').value.trim();
+    if (!title) {
+        showToast('Lütfen plan başlığını girin.');
+        return;
+    }
+
+    const time = document.getElementById('editDailyPlanTime').value.trim();
+    const category = document.getElementById('editDailyPlanCategory').value;
+    const assignedTo = document.getElementById('editDailyPlanAssignedTo').value;
+    const isRecurring = document.getElementById('editDailyPlanIsRecurring').checked;
+
+    const updatedPlan = {
+        title,
+        time,
+        category,
+        assignedTo,
+        isRecurring
+    };
+
+    const updatedFamily = await AilemAPI.updateDailyPlan(appState.familyData.id, planId, updatedPlan);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        const p = (appState.familyData.dailyPlans || []).find(x => x.id === planId);
+        if (p) {
+            Object.assign(p, updatedPlan);
+        }
+    }
+
+    saveStateToStorage();
+    closeModal('modalEditDailyPlan');
+    renderDailyPlans();
+    if (appState.activePlanHub === 'Gunluk') renderPlans();
+    updateQuickStats();
+    showToast('Günlük plan güncellendi! ⏰');
 }
 
 // Plan Kategorisi Değişimi
@@ -2885,6 +2990,142 @@ async function deletePlan(id) {
     renderPlans();
     updateQuickStats();
     showToast('Plan silindi.');
+}
+
+function onEditPlanCategoryChange(category) {
+    const secSeyahat = document.getElementById('sectionEditSeyahatFields');
+    const secRestoran = document.getElementById('sectionEditRestoranFields');
+    const secEtkinlik = document.getElementById('sectionEditEtkinlikFields');
+    const secAlisveris = document.getElementById('sectionEditAlisverisFields');
+    const titleLabel = document.getElementById('editPlanTitleLabel');
+    const titleInput = document.getElementById('editPlanTitleInput');
+
+    if (!secSeyahat || !secRestoran || !secEtkinlik || !secAlisveris) return;
+
+    secSeyahat.classList.add('hidden');
+    secRestoran.classList.add('hidden');
+    secEtkinlik.classList.add('hidden');
+    secAlisveris.classList.add('hidden');
+
+    if (category === 'Seyahat') {
+        secSeyahat.classList.remove('hidden');
+        if (titleLabel) titleLabel.innerHTML = '<i class="fa-solid fa-heading"></i> Seyahat / Tatil Başlığı';
+        if (titleInput) titleInput.placeholder = 'Örn: Kapadokya Balon Turu veya Roma Gezisi';
+    } else if (category === 'Restoran') {
+        secRestoran.classList.remove('hidden');
+        if (titleLabel) titleLabel.innerHTML = '<i class="fa-solid fa-store"></i> Mekan / Restoran / Kafe Adı';
+        if (titleInput) titleInput.placeholder = 'Örn: Tarihi Çınaraltı Çay Bahçesi';
+    } else if (category === 'Etkinlik') {
+        secEtkinlik.classList.remove('hidden');
+        if (titleLabel) titleLabel.innerHTML = '<i class="fa-solid fa-masks-theater"></i> Etkinlik / Gösteri Adı';
+        if (titleInput) titleInput.placeholder = 'Örn: Fazıl Say & Serenad Bağcan Konseri';
+    } else if (category === 'Alisveris') {
+        secAlisveris.classList.remove('hidden');
+        if (titleLabel) titleLabel.innerHTML = '<i class="fa-solid fa-bag-shopping"></i> Ürün / İstek / Hayal Adı';
+        if (titleInput) titleInput.placeholder = 'Örn: Tam Otomatik Espresso Kahve Makinesi';
+    }
+}
+
+function openEditPlanModal(planId) {
+    const plans = appState.familyData ? (appState.familyData.plans || []) : [];
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) {
+        showToast('Plan bulunamadı.');
+        return;
+    }
+
+    document.getElementById('editPlanId').value = plan.id;
+    const cat = plan.category || 'Seyahat';
+    document.getElementById('editPlanCategorySelect').value = cat;
+    onEditPlanCategoryChange(cat);
+
+    document.getElementById('editPlanTitleInput').value = plan.title || '';
+
+    // Kategori alanlarını doldur
+    if (cat === 'Seyahat') {
+        document.getElementById('editPlanTravelType').value = plan.travelType || 'Yurtici';
+        document.getElementById('editPlanTravelDate').value = plan.travelDate || '';
+        document.getElementById('editPlanTravelTransport').value = plan.travelTransport || '🚗 Şahsi Araç';
+        const numBudget = plan.travelBudget ? plan.travelBudget.replace(/[^0-9]/g, '') : '';
+        document.getElementById('editPlanTravelBudget').value = numBudget;
+        document.getElementById('editPlanTravelNotes').value = plan.travelNotes || '';
+    } else if (cat === 'Restoran') {
+        document.getElementById('editPlanRestLocation').value = plan.location || '';
+        document.getElementById('editPlanRestDish').value = plan.dish || '';
+        document.getElementById('editPlanRestPrice').value = plan.price || '₺ Uygun';
+        document.getElementById('editPlanRestLink').value = plan.link || '';
+    } else if (cat === 'Etkinlik') {
+        document.getElementById('editPlanEventDate').value = plan.eventDate || '';
+        document.getElementById('editPlanEventVenue').value = plan.eventVenue || '';
+        document.getElementById('editPlanEventLink').value = plan.link || '';
+        document.getElementById('editPlanEventAttendees').value = plan.attendees || '';
+    } else if (cat === 'Alisveris') {
+        document.getElementById('editPlanShopLink').value = plan.link || '';
+        const numShopPrice = plan.shopPrice ? plan.shopPrice.replace(/[^0-9]/g, '') : '';
+        document.getElementById('editPlanShopPrice').value = numShopPrice;
+        document.getElementById('editPlanShopPriority').value = plan.priority || '⭐ Yüksek / Acil';
+        document.getElementById('editPlanShopNote').value = plan.shopNote || '';
+    }
+
+    openModal('modalEditPlan');
+}
+
+async function handleEditPlan(e) {
+    e.preventDefault();
+    const planId = document.getElementById('editPlanId').value;
+    const category = document.getElementById('editPlanCategorySelect').value;
+    const title = document.getElementById('editPlanTitleInput').value.trim();
+
+    if (!title) {
+        showToast('Lütfen plan başlığını girin.');
+        return;
+    }
+
+    const updatedPlan = {
+        category,
+        title
+    };
+
+    if (category === 'Seyahat') {
+        updatedPlan.travelType = document.getElementById('editPlanTravelType').value;
+        updatedPlan.travelDate = document.getElementById('editPlanTravelDate').value.trim();
+        updatedPlan.travelTransport = document.getElementById('editPlanTravelTransport').value;
+        const budget = document.getElementById('editPlanTravelBudget').value.trim();
+        updatedPlan.travelBudget = budget ? `${parseFloat(budget).toLocaleString('tr-TR')} ₺` : '';
+        updatedPlan.travelNotes = document.getElementById('editPlanTravelNotes').value.trim();
+    } else if (category === 'Restoran') {
+        updatedPlan.location = document.getElementById('editPlanRestLocation').value.trim();
+        updatedPlan.dish = document.getElementById('editPlanRestDish').value.trim();
+        updatedPlan.price = document.getElementById('editPlanRestPrice').value;
+        updatedPlan.link = document.getElementById('editPlanRestLink').value.trim();
+    } else if (category === 'Etkinlik') {
+        updatedPlan.eventDate = document.getElementById('editPlanEventDate').value.trim();
+        updatedPlan.eventVenue = document.getElementById('editPlanEventVenue').value.trim();
+        updatedPlan.link = document.getElementById('editPlanEventLink').value.trim();
+        updatedPlan.attendees = document.getElementById('editPlanEventAttendees').value.trim();
+    } else if (category === 'Alisveris') {
+        updatedPlan.link = document.getElementById('editPlanShopLink').value.trim();
+        const price = document.getElementById('editPlanShopPrice').value.trim();
+        updatedPlan.shopPrice = price ? `${parseFloat(price).toLocaleString('tr-TR')} ₺` : '';
+        updatedPlan.priority = document.getElementById('editPlanShopPriority').value;
+        updatedPlan.shopNote = document.getElementById('editPlanShopNote').value.trim();
+    }
+
+    const updatedFamily = await AilemAPI.updatePlan(appState.familyData.id, planId, updatedPlan);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        const p = (appState.familyData.plans || []).find(x => x.id === planId);
+        if (p) {
+            Object.assign(p, updatedPlan);
+        }
+    }
+
+    saveStateToStorage();
+    closeModal('modalEditPlan');
+    renderPlans();
+    updateQuickStats();
+    showToast('Plan güncellendi! ⭐');
 }
 
 // Pano Notu Ekle / Sil

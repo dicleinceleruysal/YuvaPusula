@@ -598,6 +598,22 @@ async function togglePlan(familyId, planId) {
     });
 }
 
+async function updatePlan(familyId, planId, updatedPlan) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.plans) fam.plans = [];
+        const idx = fam.plans.findIndex(p => p.id === planId);
+        if (idx >= 0) {
+            fam.plans[idx] = {
+                ...fam.plans[idx],
+                ...updatedPlan,
+                id: planId,
+                updatedAt: new Date().toISOString()
+            };
+        }
+        return fam;
+    });
+}
+
 async function deletePlan(familyId, planId) {
     return await updateFamilyHelper(familyId, (fam) => {
         if (!fam.plans) fam.plans = [];
@@ -622,6 +638,23 @@ async function addDailyPlan(familyId, plan) {
             createdAt: plan.createdAt || new Date().toISOString()
         });
         fam.dailyPlans.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        return fam;
+    });
+}
+
+async function updateDailyPlan(familyId, planId, updatedPlan) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        const idx = fam.dailyPlans.findIndex(p => p.id === planId);
+        if (idx >= 0) {
+            fam.dailyPlans[idx] = {
+                ...fam.dailyPlans[idx],
+                ...updatedPlan,
+                id: planId,
+                updatedAt: new Date().toISOString()
+            };
+            fam.dailyPlans.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        }
         return fam;
     });
 }
@@ -1142,9 +1175,11 @@ module.exports = {
     addPost,
     deletePost,
     addPlan,
+    updatePlan,
     togglePlan,
     deletePlan,
     addDailyPlan,
+    updateDailyPlan,
     toggleDailyPlan,
     deleteDailyPlan,
     resetDailyPlans,
