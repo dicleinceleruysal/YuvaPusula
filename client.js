@@ -2778,6 +2778,8 @@ async function handleAddDailyPlan(e) {
         isRecurring,
         completed: false,
         addedBy: appState.currentUser ? appState.currentUser.name : 'Aile Üyesi',
+        addedById: appState.currentUser ? appState.currentUser.id : null,
+        currentUserId: appState.currentUser ? appState.currentUser.id : null,
         createdAt: new Date().toISOString()
     };
 
@@ -2939,7 +2941,9 @@ async function handleEditDailyPlan(e) {
         time,
         category,
         assignedTo,
-        isRecurring
+        isRecurring,
+        addedById: appState.currentUser ? appState.currentUser.id : null,
+        currentUserId: appState.currentUser ? appState.currentUser.id : null
     };
 
     const updatedFamily = await AilemAPI.updateDailyPlan(appState.familyData.id, planId, updatedPlan);
@@ -3010,7 +3014,9 @@ async function handleAddPlan(e) {
         category: category,
         title: title,
         completed: false,
-        addedBy: appState.currentUser.name,
+        addedBy: appState.currentUser ? appState.currentUser.name : 'Aile Üyesi',
+        addedById: appState.currentUser ? appState.currentUser.id : null,
+        currentUserId: appState.currentUser ? appState.currentUser.id : null,
         createdAt: new Date().toLocaleDateString('tr-TR')
     };
 
@@ -3241,6 +3247,8 @@ async function handleNewPost(e) {
         author: appState.currentUser.name,
         authorRole: appState.currentUser.role,
         authorAvatar: appState.currentUser.avatar,
+        authorId: appState.currentUser.id,
+        currentUserId: appState.currentUser.id,
         createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -3285,7 +3293,9 @@ async function handleAddShoppingItem(e) {
         quantity,
         category,
         completed: false,
-        addedBy: appState.currentUser.name
+        addedBy: appState.currentUser ? appState.currentUser.name : 'Aile Üyesi',
+        addedById: appState.currentUser ? appState.currentUser.id : null,
+        currentUserId: appState.currentUser ? appState.currentUser.id : null
     };
 
     const updatedFamily = await AilemAPI.addShoppingItem(appState.familyData.id, newItem);
@@ -3357,7 +3367,9 @@ async function handleAddTask(e) {
         assignee,
         dueDate,
         completed: false,
-        addedBy: appState.currentUser.name
+        addedBy: appState.currentUser ? appState.currentUser.name : 'Aile Üyesi',
+        addedById: appState.currentUser ? appState.currentUser.id : null,
+        currentUserId: appState.currentUser ? appState.currentUser.id : null
     };
 
     const updatedFamily = await AilemAPI.addTask(appState.familyData.id, newTask);
@@ -4292,6 +4304,9 @@ function switchActiveUser(userId) {
         saveStateToStorage();
         closeModal('modalSwitchUser');
         renderApp();
+        // Bu cihazın bildirim aboneliğini ve canlı akışını yeni seçilen kullanıcıya anında bağla
+        registerPushSubscription(true);
+        initRealtimeStream();
         showToast(`Profil değiştirildi: ${member.name} (${member.role})`);
     }
 }
@@ -4408,13 +4423,25 @@ function flashTabTitleForNewMessage(senderName) {
     }, 1000);
 }
 
-// Çok Katmanlı Anlık Sohbet Bildirimi Dağıtımı
+// Çok Katmanlı Anlık Sohbet Bildirimi Dağıtımı (Yalnızca ilgili kişiye veya aile grubuna)
 function dispatchChatMessageNotification(msg) {
+    if (!msg || !appState.currentUser) return;
+
+    // Kendimiz gönderdiysek kesinlikle bildirim verme!
+    if (msg.senderId === appState.currentUser.id) return;
+
+    const receiverId = msg.receiverId || msg.receiver_id;
+    const isGroup = !receiverId || receiverId === 'group';
+
+    // Eğer özel mesajsa ve alıcı mevcut kullanıcı DEĞİLSE, kesinlikle bildirim verme!
+    if (!isGroup && receiverId !== appState.currentUser.id) {
+        return;
+    }
+
     // 1. Ses ve Titreşim
     triggerHapticAndSound();
 
     // 2. Sistem / Web Bildirimi (PWA & Service Worker)
-    const isGroup = msg.receiverId === 'group' || msg.receiver_id === 'group';
     const notifTitle = isGroup 
         ? `💬 ${msg.senderName} (${appState.familyData ? appState.familyData.name : 'Aile'})` 
         : `🔒 ${msg.senderName} (${msg.senderRole || 'Özel Mesaj'})`;
@@ -4431,7 +4458,7 @@ function dispatchChatMessageNotification(msg) {
                     tag: `chat-msg-${msg.id || Date.now()}`,
                     renotify: true,
                     vibrate: [100, 50, 100, 50, 150],
-                    data: { url: './?tab=chat' }
+                    data: { url: isGroup ? './?tab=chat' : `./?tab=chat&direct=${msg.senderId}` }
                 });
             }).catch(() => {
                 try {
@@ -4451,7 +4478,7 @@ function dispatchChatMessageNotification(msg) {
     // 4. Uygulama İçi Yüzen Bildirim Kartı (Eğer o an o sohbette değilsek)
     const isViewingActiveChat = (appState.currentTab === 'tabChat' && 
         ((isGroup && appState.chatChannel === 'group') ||
-         (msg.senderId === appState.chatTargetMemberId && appState.chatChannel === 'direct')));
+         (!isGroup && msg.senderId === appState.chatTargetMemberId && appState.chatChannel === 'direct')));
 
     if (!isViewingActiveChat) {
         showInAppMessageBanner(msg);

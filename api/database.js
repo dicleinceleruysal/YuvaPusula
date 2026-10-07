@@ -1163,15 +1163,23 @@ async function sendPushToUser(userId, payload) {
     return { success: sentCount > 0, count: sentCount, message: `${sentCount} cihaza test bildirimi iletildi.` };
 }
 
+function normalizeTargetName(str) {
+    if (!str) return '';
+    return str
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+        .replace(/[^a-z0-9ğüşıöç]/g, '');
+}
+
 // Belirli Bir Üyeye veya Tüm Aileye Hedefli Push Bildirimi Gönder
 async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUserId) {
     if (!familyId) return;
 
     const rawTarget = (targetUserOrName || '').trim();
-    const lowerTarget = rawTarget.toLowerCase();
+    const normTarget = normalizeTargetName(rawTarget);
 
-    // Hedef "Tüm Aile", "all", "group" veya boşsa tüm aileye gönder
-    if (!rawTarget || lowerTarget === 'tüm aile' || lowerTarget === 'tum aile' || lowerTarget === 'all' || lowerTarget === 'group') {
+    // Hedef "Tüm Aile", "all", "group", "herkes" veya boşsa tüm aileye gönder (oluşturan kişi excludeUserId hariç)
+    if (!rawTarget || normTarget === 'tumaile' || normTarget === 'tümaile' || normTarget === 'all' || normTarget === 'group' || normTarget === 'herkes') {
         return await sendPushToFamily(familyId, payload, excludeUserId);
     }
 
@@ -1181,13 +1189,19 @@ async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUser
         targetUserId = rawTarget;
     } else {
         const family = await getFullFamilyData(familyId);
-        if (family && family.members) {
-            const member = family.members.find(m => 
+        if (family && Array.isArray(family.members)) {
+            // 1. Tam ID veya Tam İsim Eşleşmesi
+            let member = family.members.find(m => 
                 m.id === rawTarget || 
-                (m.name && m.name.toLowerCase() === lowerTarget) ||
-                (m.name && m.name.toLowerCase().includes(lowerTarget)) ||
-                (lowerTarget && lowerTarget.includes((m.name || '').toLowerCase()))
+                normalizeTargetName(m.name) === normTarget
             );
+            // 2. Kısmi Eşleşme
+            if (!member && normTarget.length >= 2) {
+                member = family.members.find(m => {
+                    const mNorm = normalizeTargetName(m.name);
+                    return mNorm.includes(normTarget) || normTarget.includes(mNorm);
+                });
+            }
             if (member) {
                 targetUserId = member.id;
             }
@@ -1195,11 +1209,16 @@ async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUser
     }
 
     if (targetUserId) {
-        // Yalnızca ilgili kişiye bildirim gönder
+        // Eğer hedef kişi zaten işlemi yapan kişiyse, kendi kendine bildirim gönderme
+        if (excludeUserId && targetUserId === excludeUserId) {
+            return { success: true, message: 'Assignee is creator, notification skipped.' };
+        }
+        // YALNIZCA ilgili kişiye bildirim gönder
         return await sendPushToUser(targetUserId, payload);
     } else {
-        // Kullanıcı eşleşmezse tüm aileye gönder
-        return await sendPushToFamily(familyId, payload, excludeUserId);
+        // Hedef belirli bir kişiye atanmış fakat bulunamadıysa TÜM AİLEYE SIZMASINI ENGELLE!
+        console.warn(`[sendPushToTarget] Hedef kullanıcı bulunamadı ("${rawTarget}"), tüm aileye bildirim yayılması engellendi.`);
+        return { success: false, message: 'Hedef kullanıcı bulunamadı.' };
     }
 }
 

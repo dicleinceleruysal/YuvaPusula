@@ -363,12 +363,13 @@ module.exports = async function handler(req, res) {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.addPost(body.familyId, body.post);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            const authorId = body.currentUserId || (body.post ? (body.post.authorId || body.post.userId) : null);
             dbManager.sendPushToFamily(body.familyId, {
                 title: '📢 Aile Panosu Notu',
                 body: `${(body.post && body.post.title) || 'Duyuru'}: ${(body.post && body.post.content) || ''}`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=pano'
-            }).catch(e => {});
+            }, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/posts/delete' && req.method === 'POST') {
@@ -383,24 +384,26 @@ module.exports = async function handler(req, res) {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.addPlan(body.familyId, body.plan);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
             dbManager.sendPushToFamily(body.familyId, {
                 title: '🗺️ Yeni Aile Planı',
                 body: `${(body.plan && body.plan.title) || 'Yeni plan'}: ${body.plan && body.plan.addedBy ? body.plan.addedBy : 'Aile'} tarafından eklendi.`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=plans'
-            }).catch(e => {});
+            }, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/plans/update' && req.method === 'POST') {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.updatePlan(body.familyId, body.planId, body.plan);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
             dbManager.sendPushToFamily(body.familyId, {
                 title: '🗺️ Aile Planı Güncellendi',
                 body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=plans'
-            }).catch(e => {});
+            }, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/plans/toggle' && req.method === 'POST') {
@@ -422,6 +425,7 @@ module.exports = async function handler(req, res) {
             const updatedFamily = await dbManager.addDailyPlan(body.familyId, body.plan);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
             const assignedTarget = body.plan ? body.plan.assignedTo : null;
+            const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
             const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
             const titleStr = isAll ? '⏰ Yeni Günlük Plan (Tüm Aile)' : `⏰ Sana Yeni Günlük Plan Eklendi (${assignedTarget})`;
             dbManager.sendPushToTarget(body.familyId, {
@@ -429,7 +433,7 @@ module.exports = async function handler(req, res) {
                 body: `${(body.plan && body.plan.title) || 'Yeni günlük plan'} - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=pano'
-            }, assignedTarget, null).catch(e => {});
+            }, assignedTarget, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/daily-plans/update' && req.method === 'POST') {
@@ -437,6 +441,7 @@ module.exports = async function handler(req, res) {
             const updatedFamily = await dbManager.updateDailyPlan(body.familyId, body.planId, body.plan);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
             const assignedTarget = body.plan ? body.plan.assignedTo : null;
+            const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
             const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
             const titleStr = isAll ? '⏰ Günlük Plan Güncellendi (Tüm Aile)' : `⏰ Günlük Planın Güncellendi (${assignedTarget})`;
             dbManager.sendPushToTarget(body.familyId, {
@@ -444,7 +449,7 @@ module.exports = async function handler(req, res) {
                 body: `${(body.plan && body.plan.title) || 'Günlük plan'} düzenlendi - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=pano'
-            }, assignedTarget, null).catch(e => {});
+            }, assignedTarget, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/daily-plans/toggle' && req.method === 'POST') {
@@ -471,12 +476,13 @@ module.exports = async function handler(req, res) {
             const body = await parseJsonBody(req);
             const updatedFamily = await dbManager.addShoppingItem(body.familyId, body.item);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            const authorId = body.currentUserId || (body.item ? (body.item.addedById || body.item.userId) : null);
             dbManager.sendPushToFamily(body.familyId, {
                 title: '🛒 Alışveriş Listesi',
                 body: `${(body.item && body.item.title) || 'Yeni ürün'} eklendi.`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=shopping'
-            }).catch(e => {});
+            }, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/shopping/toggle' && req.method === 'POST') {
@@ -498,6 +504,7 @@ module.exports = async function handler(req, res) {
             const updatedFamily = await dbManager.addTask(body.familyId, body.task);
             broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
             const assignedTarget = body.task ? body.task.assignee : null;
+            const authorId = body.currentUserId || (body.task ? (body.task.addedById || body.task.userId) : null);
             const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
             const titleStr = isAll ? '✅ Aile İçin Yeni Görev' : `✅ Sana Yeni Bir Görev Atandı (${assignedTarget})`;
             dbManager.sendPushToTarget(body.familyId, {
@@ -505,7 +512,7 @@ module.exports = async function handler(req, res) {
                 body: `${(body.task && body.task.title) || 'Yeni görev atandı.'}`,
                 icon: './icons/icon-192.png',
                 url: './index.html?tab=tasks'
-            }, assignedTarget, null).catch(e => {});
+            }, assignedTarget, authorId).catch(e => {});
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
         if (pathname === '/api/tasks/toggle' && req.method === 'POST') {
