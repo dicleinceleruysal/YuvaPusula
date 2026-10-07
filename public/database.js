@@ -999,6 +999,41 @@ async function deleteExtraIncome(familyId, incomeId) {
     });
 }
 
+// Mesai İşlemleri (Saatlik / Tutar Bazlı Ek Kazanç - Ayın 1'inde Sıfırlanır)
+async function addOvertime(familyId, overtime) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.overtimes) fam.overtimes = [];
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const hours = parseFloat(overtime.hours) || 0;
+        const hourlyRate = parseFloat(overtime.hourlyRate) !== undefined && !isNaN(parseFloat(overtime.hourlyRate)) ? parseFloat(overtime.hourlyRate) : 296.875;
+        let amount = parseFloat(overtime.amount) || 0;
+        if (overtime.isHourly && hours > 0) {
+            amount = hours * hourlyRate;
+        }
+
+        fam.overtimes.unshift({
+            id: 'ot_' + Date.now(),
+            ...overtime,
+            hours: hours,
+            hourlyRate: hourlyRate,
+            amount: amount,
+            date: overtime.date || new Date().toISOString().split('T')[0],
+            month: overtime.month || currentMonthKey,
+            createdAt: new Date().toISOString()
+        });
+        return fam;
+    });
+}
+
+async function deleteOvertime(familyId, overtimeId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.overtimes) fam.overtimes = [];
+        fam.overtimes = fam.overtimes.filter(ot => ot.id !== overtimeId);
+        return fam;
+    });
+}
+
 // Push Subscription İşlemleri (Uygulama Kapalıyken Bildirim Gönderme)
 async function savePushSubscription(familyId, userId, subscription) {
     if (!subscription || !subscription.endpoint) return false;
@@ -1254,6 +1289,8 @@ module.exports = {
     deleteSalary,
     addExtraIncome,
     deleteExtraIncome,
+    addOvertime,
+    deleteOvertime,
     addFixedExpense,
     updateFixedExpense,
     toggleFixedExpense,

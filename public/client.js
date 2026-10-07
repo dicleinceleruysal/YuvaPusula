@@ -604,6 +604,37 @@ const AilemAPI = {
         return null;
     },
 
+    // Mesai İşlemleri (Saatlik 296,875 TL veya Fırat - Ayın 1'inde Sıfırlanır)
+    async addOvertime(familyId, overtime) {
+        try {
+            const res = await fetch('/api/overtimes/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, overtime })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async deleteOvertime(familyId, overtimeId) {
+        try {
+            const res = await fetch('/api/overtimes/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, overtimeId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     // Sabit Gider İşlemleri
     async addFixedExpense(familyId, fixed) {
         try {
@@ -1228,6 +1259,7 @@ function normalizeFamilyData(fam) {
     if (!fam.expenses) fam.expenses = [];
     if (!fam.salaries) fam.salaries = [];
     if (!fam.extraIncomes) fam.extraIncomes = [];
+    if (!fam.overtimes) fam.overtimes = [];
     if (!fam.fixedExpenses) fam.fixedExpenses = [];
     if (!fam.investments) fam.investments = [];
     if (!fam.investmentHistory) fam.investmentHistory = [];
@@ -2314,6 +2346,7 @@ function renderBudget() {
 
     if (!family.salaries) family.salaries = [];
     if (!family.extraIncomes) family.extraIncomes = [];
+    if (!family.overtimes) family.overtimes = [];
     if (!family.fixedExpenses) family.fixedExpenses = [];
     if (!family.expenses) family.expenses = [];
     if (!family.investments) family.investments = [];
@@ -2321,6 +2354,7 @@ function renderBudget() {
 
     const salaries = family.salaries;
     const extraIncomes = family.extraIncomes;
+    const overtimes = family.overtimes;
     const fixedExpenses = family.fixedExpenses;
     const expenses = family.expenses;
     const investments = family.investments;
@@ -2340,6 +2374,14 @@ function renderBudget() {
         return true;
     });
 
+    // Yalnızca aktif aya ait mesaileri topla (Her ayın 1'inde sıfırlanır)
+    const currentMonthOvertimes = overtimes.filter(ot => {
+        if (ot.month) return ot.month === currentMonthKey;
+        if (ot.date && ot.date.startsWith(currentMonthKey)) return true;
+        if (ot.createdAt) return ot.createdAt.startsWith(currentMonthKey);
+        return true;
+    });
+
     // Yalnızca aktif aya ait değişken harcamaları topla (Her ayın 1'inde sıfırlanır)
     const currentMonthExpenses = expenses.filter(exp => {
         if (exp.month) return exp.month === currentMonthKey;
@@ -2350,7 +2392,8 @@ function renderBudget() {
 
     const totalSalaries = salaries.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalExtraIncomes = currentMonthExtraIncomes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-    const totalIncome = totalSalaries + totalExtraIncomes;
+    const totalOvertimes = currentMonthOvertimes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const totalIncome = totalSalaries + totalExtraIncomes + totalOvertimes;
     const totalFixed = fixedExpenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const paidCount = fixedExpenses.filter(x => x.isPaid).length;
     const unpaidCount = fixedExpenses.filter(x => !x.isPaid).length;
@@ -2364,11 +2407,11 @@ function renderBudget() {
 
     const elSalaryCount = document.getElementById('statSalaryCount');
     if (elSalaryCount) {
-        if (totalExtraIncomes > 0) {
-            elSalaryCount.textContent = `Maaş: ${formatTL(totalSalaries)} • Ek: ${formatTL(totalExtraIncomes)}`;
-        } else {
-            elSalaryCount.textContent = `${salaries.length} maaş geliri (Ek gelir yok)`;
-        }
+        const parts = [];
+        if (totalSalaries > 0) parts.push(`Maaş: ${formatTL(totalSalaries)}`);
+        if (totalOvertimes > 0) parts.push(`Mesai: ${formatTL(totalOvertimes)}`);
+        if (totalExtraIncomes > 0) parts.push(`Ek: ${formatTL(totalExtraIncomes)}`);
+        elSalaryCount.textContent = parts.length > 0 ? parts.join(' • ') : `${salaries.length} maaş geliri (Ek/Mesai yok)`;
     }
 
     const elStatFixed = document.getElementById('statTotalFixedExpenses');
@@ -2448,6 +2491,89 @@ function renderBudget() {
                         </div>
                     `;
                 }
+            }).join('');
+        }
+    }
+
+    // 4.0 Bu Ayki Mesai Takip Paneli Render (Saatlik 296,875 TL & Fırat - Ayın 1'inde Sıfırlanır)
+    const otMonthBadgeEl = document.getElementById('overtimeMonthBadge');
+    if (otMonthBadgeEl) {
+        otMonthBadgeEl.innerHTML = `🟢 ${currentMonthLabel} • Ayın 1'inde Sıfırlanır`;
+    }
+
+    const curUserName = (appState.currentUser ? appState.currentUser.name : '').toLowerCase();
+
+    // Benim mesaim (Saatlik 296,875 TL)
+    const myOvertimes = currentMonthOvertimes.filter(ot => {
+        const p = (ot.person || '').toLowerCase();
+        return p === curUserName || p.includes('ben') || (appState.currentUser && ot.person === appState.currentUser.name);
+    });
+    const myTotalAmount = myOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+    const myTotalHours = myOvertimes.reduce((s, o) => s + (parseFloat(o.hours) || 0), 0);
+
+    const elMyOtAmount = document.getElementById('myOvertimeTotalAmount');
+    if (elMyOtAmount) elMyOtAmount.textContent = formatTL(myTotalAmount);
+
+    const elMyOtHours = document.getElementById('myOvertimeTotalHours');
+    if (elMyOtHours) elMyOtHours.textContent = `${myTotalHours > 0 ? myTotalHours.toLocaleString('tr-TR') : 0} Saat İşlendi`;
+
+    // Fırat'ın mesaisi
+    const firatOvertimes = currentMonthOvertimes.filter(ot => {
+        const p = (ot.person || '').toLowerCase();
+        return p.includes('fırat') || p.includes('firat');
+    });
+    const firatTotalAmount = firatOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+    const firatTotalHours = firatOvertimes.reduce((s, o) => s + (parseFloat(o.hours) || 0), 0);
+
+    const elFiratOtAmount = document.getElementById('firatOvertimeTotalAmount');
+    if (elFiratOtAmount) elFiratOtAmount.textContent = formatTL(firatTotalAmount);
+
+    const elFiratOtHours = document.getElementById('firatOvertimeTotalHours');
+    if (elFiratOtHours) {
+        elFiratOtHours.textContent = firatTotalHours > 0 
+            ? `${firatTotalHours.toLocaleString('tr-TR')} Saat İşlendi` 
+            : `${firatOvertimes.length} Mesai Kaydı`;
+    }
+
+    const overtimesContainer = document.getElementById('overtimesListContainer');
+    if (overtimesContainer) {
+        if (currentMonthOvertimes.length === 0) {
+            overtimesContainer.innerHTML = `
+                <div class="empty-state" style="padding: 16px; grid-column: 1 / -1;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary); font-size: 24px; margin-bottom: 6px;"></i>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Bu ay (${currentMonthLabel}) henüz mesai girişi yapılmadı.<br>Saat veya tutar bazlı mesailerinizi ekleyebilirsiniz.</p>
+                </div>
+            `;
+        } else {
+            overtimesContainer.innerHTML = currentMonthOvertimes.map(ot => {
+                const isHourly = ot.isHourly || ot.hours > 0;
+                const calcDetail = isHourly 
+                    ? `⏱️ <b>${parseFloat(ot.hours).toLocaleString('tr-TR')} Saat</b> × ${parseFloat(ot.hourlyRate || 296.875).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} ₺` 
+                    : `💼 Sabit Tutar`;
+                
+                return `
+                    <div class="overtime-card">
+                        <div class="overtime-card-left">
+                            <div class="overtime-card-icon">
+                                ⏱️
+                            </div>
+                            <div class="overtime-card-info">
+                                <div class="overtime-card-title">${ot.person || 'Aile Bireyi'}</div>
+                                <div class="overtime-card-meta">
+                                    <span>${calcDetail}</span>
+                                    <span>• 📅 ${ot.date || ''}</span>
+                                </div>
+                                ${ot.note ? `<div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">💬 ${ot.note}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
+                            <span class="overtime-amount-val">+${parseFloat(ot.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
+                            <button class="btn-delete-item" onclick="handleDeleteOvertime('${ot.id}')" title="Mesaiyi Sil">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
             }).join('');
         }
     }
@@ -3639,6 +3765,208 @@ async function handleDeleteExtraIncome(id) {
     saveStateToStorage();
     renderBudget();
     showToast('Ek gelir silindi.');
+}
+
+// ==========================================================
+// 1.2 MESAİ MODALI, HESAPLAMA VE KAYIT İŞLEMLERİ
+// (Kullanıcı için saatlik 296,875 TL / Fırat için özel & Ayın 1'inde sıfırlanır)
+// ==========================================================
+let currentOvertimeMode = 'hourly';
+const USER_HOURLY_OVERTIME_RATE = 296.875;
+
+function openAddOvertimeModal() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    // Aile üyelerini seçiciye doldur (Öncelikli olarak giriş yapan kullanıcı ve Fırat)
+    const selectPerson = document.getElementById('overtimePersonSelect');
+    if (selectPerson) {
+        const members = family.members || [];
+        let optionsHtml = '';
+        if (members.length > 0) {
+            optionsHtml = members.map(m => `
+                <option value="${m.name}" ${appState.currentUser && appState.currentUser.name === m.name ? 'selected' : ''}>
+                    ${m.avatar || '👤'} ${m.name} (${m.role})
+                </option>
+            `).join('');
+        } else {
+            const currentName = appState.currentUser?.name || 'Ben';
+            optionsHtml = `
+                <option value="${currentName}" selected>👤 ${currentName}</option>
+                <option value="Fırat">👨 Fırat</option>
+            `;
+        }
+        selectPerson.innerHTML = optionsHtml;
+    }
+
+    // Bugünün tarihini YYYY-MM-DD olarak ayarla
+    const dateInput = document.getElementById('overtimeDateInput');
+    if (dateInput) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Alanları sıfırla
+    const hoursInput = document.getElementById('overtimeHoursInput');
+    if (hoursInput) hoursInput.value = '';
+
+    const rateInput = document.getElementById('overtimeHourlyRateInput');
+    if (rateInput) rateInput.value = USER_HOURLY_OVERTIME_RATE;
+
+    const fixedInput = document.getElementById('overtimeFixedAmountInput');
+    if (fixedInput) fixedInput.value = '';
+
+    const notesInput = document.getElementById('overtimeNotesInput');
+    if (notesInput) notesInput.value = '';
+
+    // Modu varsayılan olarak saatlik yap
+    switchOvertimeInputMode('hourly');
+    calculateOvertimeTotalLive();
+
+    openModal('modalNewOvertime');
+}
+
+function onOvertimePersonChange() {
+    const selectPerson = document.getElementById('overtimePersonSelect');
+    const selectedName = selectPerson ? selectPerson.value.toLowerCase() : '';
+    const rateInput = document.getElementById('overtimeHourlyRateInput');
+    
+    // Eğer seçilen kişi Fırat değilse (yani kullanıcı / Ben / Dicle ise) saatlik ücreti 296.875 yap
+    if (rateInput) {
+        if (!rateInput.value || parseFloat(rateInput.value) <= 0) {
+            rateInput.value = USER_HOURLY_OVERTIME_RATE;
+        }
+    }
+    calculateOvertimeTotalLive();
+}
+
+function switchOvertimeInputMode(mode) {
+    currentOvertimeMode = mode;
+    const btnHourly = document.getElementById('btnModeHourly');
+    const btnFixed = document.getElementById('btnModeFixed');
+    const hourlyFields = document.getElementById('overtimeHourlyFields');
+    const fixedFields = document.getElementById('overtimeFixedAmountFields');
+    const hoursInput = document.getElementById('overtimeHoursInput');
+    const rateInput = document.getElementById('overtimeHourlyRateInput');
+    const fixedInput = document.getElementById('overtimeFixedAmountInput');
+
+    if (btnHourly) btnHourly.classList.toggle('active', mode === 'hourly');
+    if (btnFixed) btnFixed.classList.toggle('active', mode === 'fixed');
+
+    if (hourlyFields) hourlyFields.classList.toggle('hidden', mode !== 'hourly');
+    if (fixedFields) fixedFields.classList.toggle('hidden', mode !== 'fixed');
+
+    if (mode === 'hourly') {
+        if (hoursInput) hoursInput.required = true;
+        if (rateInput) rateInput.required = true;
+        if (fixedInput) fixedInput.required = false;
+    } else {
+        if (hoursInput) hoursInput.required = false;
+        if (rateInput) rateInput.required = false;
+        if (fixedInput) fixedInput.required = true;
+    }
+
+    calculateOvertimeTotalLive();
+}
+
+function calculateOvertimeTotalLive() {
+    const resEl = document.getElementById('overtimeLiveCalcResult');
+    const detailEl = document.getElementById('overtimeLiveCalcDetail');
+    if (!resEl || !detailEl) return;
+
+    if (currentOvertimeMode === 'hourly') {
+        const hours = parseFloat(document.getElementById('overtimeHoursInput')?.value) || 0;
+        const rate = parseFloat(document.getElementById('overtimeHourlyRateInput')?.value) || USER_HOURLY_OVERTIME_RATE;
+        const total = hours * rate;
+
+        resEl.textContent = Number(total.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+        detailEl.textContent = `${hours} saat × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
+    } else {
+        const amount = parseFloat(document.getElementById('overtimeFixedAmountInput')?.value) || 0;
+        resEl.textContent = Number(amount.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+        detailEl.textContent = 'Sabit Tutar Girişi';
+    }
+}
+
+async function handleAddOvertime(e) {
+    e.preventDefault();
+    const family = appState.familyData;
+    if (!family) return;
+
+    const personSelect = document.getElementById('overtimePersonSelect');
+    const person = personSelect ? personSelect.value : (appState.currentUser?.name || 'Ben');
+    const dateInput = document.getElementById('overtimeDateInput');
+    const date = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
+    const month = date.substring(0, 7); // YYYY-MM
+    const notes = document.getElementById('overtimeNotesInput')?.value.trim() || '';
+
+    let isHourly = currentOvertimeMode === 'hourly';
+    let hours = 0;
+    let hourlyRate = 0;
+    let amount = 0;
+
+    if (isHourly) {
+        hours = parseFloat(document.getElementById('overtimeHoursInput')?.value);
+        hourlyRate = parseFloat(document.getElementById('overtimeHourlyRateInput')?.value) || USER_HOURLY_OVERTIME_RATE;
+        if (!hours || hours <= 0) {
+            showToast('Lütfen geçerli bir mesai saati girin.');
+            return;
+        }
+        amount = Math.round(hours * hourlyRate * 100) / 100;
+    } else {
+        amount = parseFloat(document.getElementById('overtimeFixedAmountInput')?.value);
+        if (!amount || amount <= 0) {
+            showToast('Lütfen geçerli bir mesai tutarı girin.');
+            return;
+        }
+    }
+
+    const newOvertime = {
+        id: 'ot_' + Date.now(),
+        person,
+        isHourly,
+        hours: isHourly ? hours : 0,
+        hourlyRate: isHourly ? hourlyRate : 0,
+        amount,
+        date,
+        month,
+        notes,
+        addedBy: appState.currentUser?.name || person,
+        createdAt: new Date().toISOString()
+    };
+
+    const updatedFamily = await AilemAPI.addOvertime(family.id, newOvertime);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.overtimes) appState.familyData.overtimes = [];
+        appState.familyData.overtimes.unshift(newOvertime);
+    }
+
+    saveStateToStorage();
+    closeModal('modalNewOvertime');
+    renderBudget();
+    showToast('Mesai başarıyla eklendi! ⏰💰');
+}
+
+async function handleDeleteOvertime(id) {
+    if (!confirm('Bu mesai kaydını silmek istediğinize emin misiniz?')) return;
+    const family = appState.familyData;
+    if (!family) return;
+
+    const updatedFamily = await AilemAPI.deleteOvertime(family.id, id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        appState.familyData.overtimes = (appState.familyData.overtimes || []).filter(ot => ot.id !== id);
+    }
+
+    saveStateToStorage();
+    renderBudget();
+    showToast('Mesai kaydı silindi.');
 }
 
 // 2. Harcama Ekle / Sil

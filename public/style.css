@@ -4866,6 +4866,340 @@ body {
     }
 }
 
+/* ==========================================================
+   MESAİ VE FAZLA ÇALIŞMA TAKİP ALANI (BOHEM STİL)
+   ========================================================== */
+.overtime-section-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 18px rgba(78, 59, 45, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.overtime-section-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(to bottom, #D49A48, #C46747);
+    border-top-left-radius: 24px;
+    border-bottom-left-radius: 24px;
+}
+
+.overtime-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.overtime-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.overtime-header-title h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: -0.3px;
+}
+
+.overtime-header-title .ot-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: #FEF7EC;
+    color: #D49A48;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 154, 72, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.overtime-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.overtime-summary-box {
+    background: linear-gradient(145deg, #FBF8F3, #F5EFE6);
+    border: 1px solid rgba(212, 154, 72, 0.25);
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(78, 59, 45, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.overtime-summary-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(78, 59, 45, 0.08);
+}
+
+.overtime-summary-box.firat-box {
+    background: linear-gradient(145deg, #F4F8F6, #E7F0EB);
+    border-color: rgba(94, 139, 117, 0.25);
+}
+
+.ot-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ot-box-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.ot-box-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(212, 154, 72, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.firat-box .ot-box-avatar {
+    background: rgba(94, 139, 117, 0.2);
+}
+
+.ot-box-rate-pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(212, 154, 72, 0.15);
+    color: #9E651E;
+}
+
+.firat-box .ot-box-rate-pill {
+    background: rgba(94, 139, 117, 0.15);
+    color: #38614E;
+}
+
+.ot-box-value {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+}
+
+.ot-box-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Mesai Kayıtları Listesi */
+.overtime-list-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.overtime-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.overtime-card:hover {
+    border-color: rgba(212, 154, 72, 0.4);
+    background: #FEFCF8;
+    transform: translateX(3px);
+}
+
+.ot-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ot-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #FEF7EC;
+    color: #D49A48;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.ot-card-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.ot-card-person {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ot-card-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.ot-card-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ot-card-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.ot-card-amount {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #10B981;
+}
+
+.ot-card-hours {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.ot-card-delete-btn {
+    background: transparent;
+    border: none;
+    color: #D98880;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 6px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.ot-card-delete-btn:hover {
+    background: rgba(217, 136, 128, 0.15);
+    color: var(--danger);
+}
+
+/* Modal Özel Mesai Elemanları */
+.overtime-mode-toggle {
+    display: flex;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+}
+
+.ot-mode-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.ot-mode-btn.active {
+    background: #FFFFFF;
+    color: var(--text-dark);
+    box-shadow: 0 2px 8px rgba(78, 59, 45, 0.08);
+}
+
+.overtime-calc-banner {
+    background: linear-gradient(135deg, #2C221D, #40322A);
+    border-radius: 16px;
+    padding: 14px 16px;
+    color: #FFFFFF;
+    margin-bottom: 14px;
+    text-align: center;
+    box-shadow: 0 4px 14px rgba(44, 34, 29, 0.15);
+}
+
+.calc-top-text {
+    font-size: 0.72rem;
+    color: #D6C7BC;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.calc-big-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #F8B155;
+    letter-spacing: -0.5px;
+}
+
+.calc-big-value small, #overtimeLiveCalcDetail {
+    display: block;
+    font-size: 0.72rem;
+    color: #BDB0A4;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+
 
 
 

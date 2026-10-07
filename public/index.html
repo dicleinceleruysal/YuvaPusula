@@ -649,6 +649,9 @@
                         <button class="btn-primary-sm" onclick="openMySalaryModal()">
                             <i class="fa-solid fa-money-bill-wave"></i> Maaşım
                         </button>
+                        <button class="btn-primary-sm" onclick="openAddOvertimeModal()" style="background: linear-gradient(135deg, #D49A48, #C46747);">
+                            <i class="fa-solid fa-clock-rotate-left"></i> + Mesai Ekle
+                        </button>
                         <button class="btn-primary-sm" onclick="openAddExtraIncomeModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
                             <i class="fa-solid fa-hand-holding-dollar"></i> + Ek Gelir
                         </button>
@@ -666,7 +669,7 @@
                             <span class="stat-title">Toplam Gelir</span>
                         </div>
                         <div class="stat-value" id="statTotalSalaries">0,00 ₺</div>
-                        <span class="stat-desc" id="statSalaryCount">Maaşlar + Ek Gelir</span>
+                        <span class="stat-desc" id="statSalaryCount">Maaşlar + Ek Gelir + Mesai</span>
                     </div>
 
                     <div class="master-stat-card bg-fixed">
@@ -721,6 +724,50 @@
                     </div>
                     <div class="salaries-family-list" id="salariesListContainer">
                         <!-- Dinamik Maaş Kartları -->
+                    </div>
+
+                    <!-- Bu Ayki Mesai Takip Paneli (Saatlik 296,875 TL & Fırat - Ayın 1'inde Sıfırlanır) -->
+                    <div class="overtime-section-card">
+                        <div class="overtime-section-header">
+                            <div class="overtime-header-left">
+                                <div class="overtime-header-icon">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </div>
+                                <div>
+                                    <h4>Aylık Mesai & Ek Kazanç Takibi</h4>
+                                    <span class="extra-income-month-badge" id="overtimeMonthBadge">📅 Yükleniyor...</span>
+                                </div>
+                            </div>
+                            <button class="btn-daily-add-sm" onclick="openAddOvertimeModal()">
+                                <i class="fa-solid fa-plus"></i> <span>Mesai Ekle</span>
+                            </button>
+                        </div>
+
+                        <!-- Mesai 2'li Özet Kutuları (Ben & Fırat) -->
+                        <div class="overtime-summary-grid">
+                            <div class="overtime-summary-box my-overtime">
+                                <div class="ot-box-top">
+                                    <span class="ot-box-badge">👤 Benim Mesaim</span>
+                                    <small class="ot-rate-tag">296,875 ₺ / saat</small>
+                                </div>
+                                <div class="ot-box-val" id="myOvertimeTotalAmount">0,00 ₺</div>
+                                <div class="ot-box-sub" id="myOvertimeTotalHours">0 Saat İşlendi</div>
+                            </div>
+
+                            <div class="overtime-summary-box firat-overtime">
+                                <div class="ot-box-top">
+                                    <span class="ot-box-badge">👨 Fırat'ın Mesaisi</span>
+                                    <small class="ot-rate-tag" id="firatOvertimeRateTag">Ek Mesai</small>
+                                </div>
+                                <div class="ot-box-val" id="firatOvertimeTotalAmount">0,00 ₺</div>
+                                <div class="ot-box-sub" id="firatOvertimeTotalHours">0 Kayıt</div>
+                            </div>
+                        </div>
+
+                        <!-- Mesai Hareket Listesi -->
+                        <div class="overtimes-list" id="overtimesListContainer">
+                            <!-- Dinamik Mesai Kartları -->
+                        </div>
                     </div>
 
                     <!-- Bu Ayki Ek Gelirler (Prim, İkramiye, Kira vb. - Ayın 1'inde Sıfırlanır) -->
@@ -1692,6 +1739,86 @@
                 </div>
                 <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
                     <i class="fa-solid fa-plus-circle"></i> Ek Geliri Kaydet
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ MESAI GİRİŞİ (AYIN 1'İNDE SIFIRLANIR - SAATLİK: 296,875 TL VEYA FIRAT) -->
+    <div id="modalNewOvertime" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> Yeni Mesai Girişi</h3>
+                <button class="btn-close" onclick="closeModal('modalNewOvertime')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                Saat bazlı veya tutar olarak mesailerinizi işleyin. <b>Ayın 1'inde otomatik olarak sıfırlanır</b> ve aylık toplam bütçenize anında yansır.
+            </p>
+            <form onsubmit="handleAddOvertime(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user-check"></i> Mesaiyi Yapan Kişi</label>
+                    <select id="overtimePersonSelect" onchange="onOvertimePersonChange()" required>
+                        <!-- Dinamik Üyeler (Ben - Saatlik 296,875 TL ve Fırat) -->
+                    </select>
+                </div>
+
+                <!-- Mesai Hesaplama Modu (Saatlik veya Tutar) -->
+                <div class="form-group" id="overtimeModeGroup" style="margin-bottom: 12px;">
+                    <div class="overtime-mode-toggle">
+                        <button type="button" class="ot-mode-btn active" id="btnModeHourly" onclick="switchOvertimeInputMode('hourly')">
+                            <i class="fa-solid fa-stopwatch"></i> Saat Hesabı (x 296,875 ₺)
+                        </button>
+                        <button type="button" class="ot-mode-btn" id="btnModeFixed" onclick="switchOvertimeInputMode('fixed')">
+                            <i class="fa-solid fa-money-bill-wave"></i> Sabit Tutar (₺)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. SAAT BAZLI GİRİŞ ALANLARI -->
+                <div id="overtimeHourlyFields">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-clock"></i> Mesai Süresi (Saat)</label>
+                            <input type="number" step="0.25" min="0.25" max="240" id="overtimeHoursInput" placeholder="Örn: 4.5" oninput="calculateOvertimeTotalLive()" required>
+                            <span class="field-hint">Örn: 4.5 saat veya 8 saat</span>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-coins"></i> Saatlik Ücret (₺)</label>
+                            <input type="number" step="0.001" min="0" id="overtimeHourlyRateInput" value="296.875" oninput="calculateOvertimeTotalLive()" required>
+                            <span class="field-hint">Varsayılan: 296,875 ₺</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. SABİT TUTAR GİRİŞİ (İsteğe Bağlı / Fırat İçin) -->
+                <div id="overtimeFixedAmountFields" class="hidden">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-money-bill-wave"></i> Mesai Tutarı (₺)</label>
+                        <input type="number" step="1" min="1" id="overtimeFixedAmountInput" placeholder="Örn: 2500" oninput="calculateOvertimeTotalLive()">
+                    </div>
+                </div>
+
+                <!-- CANLI KAZANÇ HESAPLAMA AFİŞİ -->
+                <div class="overtime-calc-banner" id="overtimeCalcBanner">
+                    <div class="calc-top-text"><i class="fa-solid fa-calculator"></i> Hesaplanacak Toplam Kazanç:</div>
+                    <div class="calc-big-value" id="overtimeLiveCalcResult">0,00 ₺</div>
+                    <small id="overtimeLiveCalcDetail">0 saat × 296,875 ₺</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-calendar-day"></i> Mesai Tarihi</label>
+                        <input type="date" id="overtimeDateInput" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-note-sticky"></i> Not / Açıklama (İsteğe bağlı)</label>
+                    <input type="text" id="overtimeNotesInput" placeholder="Örn: Hafta sonu fazla mesaisi, akşam nöbeti">
+                </div>
+
+                <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #D49A48, #C46747);">
+                    <i class="fa-solid fa-check"></i> Mesaiyi Kaydet
                 </button>
             </form>
         </div>

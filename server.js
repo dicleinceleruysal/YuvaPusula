@@ -572,6 +572,18 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 11.2 Mesai İşlemleri (Fırat ve Kullanıcı İçin Saat/Tutar - Ayın 1'inde Sıfırlanır)
+            if (pathname === '/api/overtimes/add' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.addOvertime(body.familyId, body.overtime);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/overtimes/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteOvertime(body.familyId, body.overtimeId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 12. Sabit Gider İşlemleri
             if (pathname === '/api/fixed-expenses/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
