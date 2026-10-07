@@ -1,31 +1,39 @@
 /* ==========================================================
-   AİLEM PWA - MODERN MOBİL ÖNCELİKLİ STİL DOSYASI (STYLE.CSS)
+   AİLEM PWA - BOHEM (BOHO-CHIC) ESTETİK STİL DOSYASI (STYLE.CSS)
    ========================================================== */
 
 :root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #eef2ff;
-    --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
-    --secondary: #0ea5e9;
-    --success: #10b981;
-    --success-light: #ecfdf5;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --danger-light: #fef2f2;
-    --dark: #0f172a;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-    --bg-page: #f8fafc;
-    --bg-card: #ffffff;
-    --radius-sm: 8px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
+    --primary: #C46747;               /* Sıcak Terracotta / Toprak Kili */
+    --primary-hover: #AB5436;
+    --primary-light: #F9EFEA;
+    --primary-gradient: linear-gradient(135deg, #C46747 0%, #D88365 48%, #6E8867 100%);
+    --secondary: #6E8867;             /* Adaçayı Yeşili / Zeytin */
+    --secondary-hover: #5A7254;
+    --secondary-light: #F0F5EF;
+    --accent-ochre: #D49A48;          /* Bohem Hardal / Sıcak Toprak Sarısı */
+    --accent-ochre-light: #FEF7EC;
+    --accent-rose: #D48E80;           /* Çöl Gülü / Bohem Pembe */
+    --accent-sand: #EFE4D6;           /* Doğal Keten / Kum */
+    --success: #5E8557;               /* Doğal Adaçayı Yeşili */
+    --success-light: #EEF5ED;
+    --warning: #D68B35;               /* Gün Batımı Kehribar */
+    --danger: #C45248;                /* Sıcak Tuğla Kırmızısı */
+    --danger-light: #FDF2F0;
+    --dark: #2C221D;                  /* Koyu Espresso / Köz Kahve */
+    --text-main: #2C221D;             /* Yumuşak Koyu Kahve / Doğal Kömür */
+    --text-muted: #82746B;            /* Sıcak Taş Grisi */
+    --border-color: #EADFD2;          /* İnce Keten / Kum Çizgisi */
+    --bg-page: #FAF6F0;               /* Sıcak Keten Kağıdı Arka Plan */
+    --bg-card: #FFFFFF;               /* Temiz Doğal Beyaz */
+    --bg-card-subtle: #F5EFE6;        /* Hafif Kum Kart Arka Planı */
+    --radius-sm: 10px;
+    --radius-md: 18px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
     --radius-full: 9999px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    --shadow-sm: 0 2px 8px rgba(58, 41, 32, 0.04);
+    --shadow-md: 0 6px 20px rgba(58, 41, 32, 0.07);
+    --shadow-lg: 0 16px 38px rgba(58, 41, 32, 0.10);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-top: env(safe-area-inset-top, 0px);
 }
@@ -43,7 +51,7 @@
 
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #f8fafc;
+    background-color: var(--bg-page);
     color: var(--text-main);
     min-height: 100vh;
     min-height: 100dvh;
@@ -300,7 +308,7 @@ body {
 }
 
 /* ==========================================================
-   AUTH SCREEN (GİRİŞ & AİLE OLUŞTURMA)
+   AUTH SCREEN (GİRİŞ & AİLE OLUŞTURMA) - BOHO WARMTH
    ========================================================== */
 .auth-wrapper {
     width: 100%;
@@ -309,20 +317,49 @@ body {
     justify-content: center;
     align-items: center;
     padding: 24px 16px;
-    background: radial-gradient(circle at 50% 30%, #1e1b4b 0%, #0f172a 100%);
+    background: radial-gradient(circle at 50% 25%, #443228 0%, #201712 100%);
     box-sizing: border-box;
     margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-wrapper::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -100px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(196, 103, 71, 0.35) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.auth-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: -100px;
+    left: -80px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(110, 136, 103, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .auth-card {
-    background: #ffffff;
+    background: #FFFFFF;
     width: 100%;
     max-width: 440px;
-    border-radius: 24px;
-    padding: 32px 26px;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    padding: 34px 28px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(234, 223, 210, 0.3);
     margin: auto;
     animation: authCardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    z-index: 2;
+    border: 1px solid var(--border-color);
 }
 
 @keyframes authCardFadeIn {
@@ -332,49 +369,53 @@ body {
 
 .auth-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
 }
 
 .app-logo {
-    width: 64px;
-    height: 64px;
+    width: 68px;
+    height: 68px;
     background: var(--primary-gradient);
     color: white;
-    font-size: 28px;
+    font-size: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-lg);
-    margin: 0 auto 12px;
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+    margin: 0 auto 14px;
+    box-shadow: 0 8px 24px rgba(196, 103, 71, 0.38);
+    border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
 .auth-header h2 {
-    font-size: 1.4rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.55rem;
     font-weight: 700;
     color: var(--dark);
+    letter-spacing: -0.3px;
 }
 
 .auth-header p {
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     color: var(--text-muted);
     margin-top: 4px;
 }
 
 .auth-tabs {
     display: flex;
-    background: #f1f5f9;
+    background: #F4EFE6;
     border-radius: var(--radius-md);
     padding: 4px;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
     gap: 4px;
+    border: 1px solid rgba(234, 223, 210, 0.6);
 }
 
 .auth-tab-btn {
     flex: 1;
     padding: 10px 8px;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: 700;
     border: none;
     background: transparent;
     border-radius: var(--radius-sm);
@@ -386,38 +427,39 @@ body {
 .auth-tab-btn.active {
     background: white;
     color: var(--primary);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 8px rgba(44, 34, 29, 0.08);
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
 .form-group label {
     display: block;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
     color: var(--text-main);
     margin-bottom: 6px;
 }
 
 .form-group input, .form-group select, .form-group textarea {
     width: 100%;
-    padding: 13px 14px;
-    font-size: 16px;
+    padding: 13px 15px;
+    font-size: 15px;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-md);
-    background-color: #f8fafc;
+    background-color: #FAF7F2;
+    color: var(--text-main);
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     box-sizing: border-box;
 }
 
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(196, 103, 71, 0.15);
 }
 
 .field-hint {
@@ -447,6 +489,30 @@ body {
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 6px 20px rgba(196, 103, 71, 0.32);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    margin-top: 12px;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(196, 103, 71, 0.42);
+    transform: translateY(-1px);
+}
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
     box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
     display: flex;
     align-items: center;
@@ -461,15 +527,15 @@ body {
 }
 
 /* ==========================================================
-   APP HEADER (MOBİL ÖNCELİKLİ MODERN VE SERBEST AKIŞLI APP BAR)
+   APP HEADER (MOBİL ÖNCELİKLİ BOHEM VE SERBEST AKIŞLI APP BAR)
    ========================================================== */
 .app-header {
-    background: #ffffff;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--border-color);
     padding: calc(12px + var(--safe-top)) 16px 14px 16px;
     border-radius: 0;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    position: relative; /* Üst taraf sabit kalmaz, içerikle birlikte serbest kayar */
+    box-shadow: 0 4px 18px rgba(44, 34, 29, 0.04);
+    position: relative;
     top: auto;
     z-index: 20;
     flex-shrink: 0;
@@ -493,21 +559,24 @@ body {
 }
 
 .family-avatar-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: var(--primary-light);
+    border: 1px solid rgba(196, 103, 71, 0.2);
 }
 
 .family-branding h1 {
-    font-size: 1.15rem;
-    font-weight: 800;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 700;
     letter-spacing: -0.3px;
     line-height: 1.2;
-    color: #0f172a;
+    color: var(--dark);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -516,7 +585,7 @@ body {
 
 .family-tagline {
     font-size: 0.72rem;
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -525,7 +594,7 @@ body {
 }
 
 .family-tagline i {
-    color: #10b981;
+    color: var(--secondary);
 }
 
 .header-actions-right {
@@ -536,16 +605,16 @@ body {
 }
 
 .header-chat-btn {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #334155;
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
     position: relative;
     transition: all 0.15s ease;
@@ -553,15 +622,16 @@ body {
 
 .header-chat-btn:active {
     transform: scale(0.92);
-    background: #e2e8f0;
-    color: #4f46e5;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 .chat-badge-dot {
     position: absolute;
     top: -3px;
     right: -3px;
-    background: #ef4444;
+    background: var(--danger);
     color: white;
     font-size: 0.65rem;
     font-weight: 800;
@@ -578,29 +648,31 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    padding: 3px 10px 3px 4px;
+    background: var(--bg-card-subtle);
+    border: 1.5px solid var(--border-color);
+    padding: 3px 12px 3px 4px;
     border-radius: 999px;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow-sm);
     transition: all 0.15s ease;
 }
 
 .user-profile-btn:active {
     transform: scale(0.95);
-    background: #f1f5f9;
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 .user-avatar {
-    width: 28px;
-    height: 28px;
-    background: #e0e7ff;
+    width: 30px;
+    height: 30px;
+    background: #F9EFEA;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 16px;
+    border: 1px solid rgba(196, 103, 71, 0.25);
 }
 
 .user-badge-info {
@@ -610,15 +682,15 @@ body {
 }
 
 .user-badge-info span {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 800;
     line-height: 1.1;
-    color: #0f172a;
+    color: var(--dark);
 }
 
 .user-badge-info small {
-    font-size: 0.64rem;
-    color: #64748b;
+    font-size: 0.65rem;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -636,9 +708,9 @@ body {
 }
 
 .quick-stat-pill {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     padding: 6px 12px;
     border-radius: 999px;
     font-size: 0.72rem;
@@ -653,15 +725,15 @@ body {
 }
 
 .quick-stat-pill i {
-    color: #6366f1;
+    color: var(--primary);
     font-size: 0.75rem;
 }
 
 .quick-stat-pill:active {
     transform: scale(0.94);
-    background: #eef2ff;
-    border-color: #c7d2fe;
-    color: #4f46e5;
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* ==========================================================
@@ -683,56 +755,70 @@ body {
     display: block;
 }
 
-/* Hoşgeldin Kartı */
+/* Hoşgeldin Kartı - Bohem Sıcak Gece & Toprak Tonları */
 .welcome-card {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+    background: linear-gradient(135deg, #2C221D 0%, #4A352A 55%, #C46747 100%);
     color: #ffffff;
-    border-radius: 20px;
-    padding: 18px 18px;
+    border-radius: 24px;
+    padding: 20px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 18px;
-    box-shadow: 0 8px 24px -4px rgba(30, 27, 75, 0.25);
+    margin-bottom: 20px;
+    box-shadow: 0 12px 28px -6px rgba(44, 34, 29, 0.28);
     position: relative;
     overflow: hidden;
+    border: 1px solid rgba(234, 223, 210, 0.15);
 }
 
 .welcome-card::after {
     content: '';
     position: absolute;
-    top: -20px;
-    right: -20px;
-    width: 110px;
-    height: 110px;
-    background: radial-gradient(circle, rgba(236, 72, 153, 0.25) 0%, transparent 70%);
+    top: -25px;
+    right: -25px;
+    width: 130px;
+    height: 130px;
+    background: radial-gradient(circle, rgba(212, 154, 72, 0.35) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.welcome-card::before {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 20%;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(110, 136, 103, 0.25) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
 }
 
 .welcome-text h3 {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #ffffff;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #FFFDF9;
     letter-spacing: -0.2px;
 }
 
 .welcome-text p {
-    font-size: 0.76rem;
-    color: #cbd5e1;
-    margin-top: 3px;
-    line-height: 1.35;
+    font-size: 0.78rem;
+    color: #EADFD2;
+    margin-top: 4px;
+    line-height: 1.4;
     max-width: 220px;
 }
 
 .welcome-card .btn-action-sm {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.16);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    padding: 8px 14px;
-    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 9px 16px;
+    border-radius: var(--radius-full);
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
@@ -740,13 +826,13 @@ body {
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
     transition: all 0.15s ease;
 }
 
 .welcome-card .btn-action-sm:active {
     transform: scale(0.93);
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.28);
 }
 
 /* Hızlı Aksiyonlar Izgarası */
@@ -754,13 +840,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 20px 0 12px;
+    margin: 22px 0 12px;
 }
 
 .section-title h4 {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: #0f172a;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dark);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -772,8 +859,9 @@ body {
     color: var(--primary);
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 2px 9px;
     border-radius: var(--radius-full);
+    border: 1px solid rgba(196, 103, 71, 0.2);
 }
 
 .quick-actions-grid-4 {
@@ -784,63 +872,76 @@ body {
 }
 
 .quick-action-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
     padding: 12px 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    box-shadow: var(--shadow-sm);
     transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s, box-shadow 0.15s;
+}
+
+.quick-action-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .quick-action-card:active {
     transform: scale(0.92);
     border-color: var(--primary);
-    background: #f8fafc;
+    background: var(--bg-card-subtle);
 }
 
 .action-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
 }
 
-.action-icon.chat-icon { background: #eef2ff; color: #4f46e5; }
-.action-icon.shop-icon { background: #f0fdf4; color: #16a34a; }
-.action-icon.task-icon { background: #fef3c7; color: #d97706; }
-.action-icon.money-icon { background: #fdf2f8; color: #db2777; }
-.action-icon.plan-icon { background: #f5f3ff; color: #7c3aed; }
-.action-icon.whatsapp-icon { background: #dcfce7; color: #15803d; }
+.action-icon.chat-icon { background: #F9EFEA; color: #C46747; }
+.action-icon.shop-icon { background: #F0F5EF; color: #5E8557; }
+.action-icon.task-icon { background: #FEF7EC; color: #D49A48; }
+.action-icon.money-icon { background: #FBF0ED; color: #D48E80; }
+.action-icon.plan-icon { background: #F2EDE4; color: #6E8867; }
+.action-icon.whatsapp-icon { background: #EEF5ED; color: #4A6E44; }
 
 .quick-action-card span {
     font-size: 0.72rem;
     font-weight: 700;
-    color: #334155;
+    color: var(--text-main);
     text-align: center;
     white-space: nowrap;
 }
 
 /* Plan Ekle Özel Hero Butonu (Ana Sayfa) */
 .plan-hero-action-card {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #9333ea 100%);
+    background: linear-gradient(135deg, #C46747 0%, #D88365 50%, #6E8867 100%);
     color: white;
-    border-radius: 18px;
-    padding: 14px 16px;
+    border-radius: 20px;
+    padding: 15px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);
+    box-shadow: 0 8px 22px rgba(196, 103, 71, 0.28);
     transition: transform 0.15s, box-shadow 0.15s;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.plan-hero-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(196, 103, 71, 0.35);
 }
 
 .plan-hero-action-card:active {
@@ -854,33 +955,35 @@ body {
 }
 
 .plan-hero-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.24);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
     backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .plan-hero-text strong {
     display: block;
-    font-size: 0.92rem;
-    font-weight: 800;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 0.98rem;
+    font-weight: 700;
     line-height: 1.2;
 }
 
 .plan-hero-text p {
-    font-size: 0.72rem;
-    opacity: 0.9;
+    font-size: 0.74rem;
+    opacity: 0.92;
     margin-top: 2px;
 }
 
 .plan-hero-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.24);
+    padding: 6px 14px;
     border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 700;
@@ -888,10 +991,11 @@ body {
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* ==========================================================
-   AİLE PLANLARI KATEGORİ HUB DÜZENİ
+   AİLE PLANLARI KATEGORİ HUB DÜZENİ - BOHEM DOKU
    ========================================================== */
 .plans-category-hub {
     display: grid;
@@ -916,13 +1020,13 @@ body {
 .hub-card.active {
     border-color: var(--primary);
     background: #ffffff;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.15);
+    box-shadow: 0 4px 16px rgba(196, 103, 71, 0.18);
     transform: translateY(-2px);
 }
 
 .hub-icon {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
@@ -931,14 +1035,14 @@ body {
     flex-shrink: 0;
 }
 
-.hub-travel { background: #e0e7ff; }
-.hub-food { background: #ffedd5; }
-.hub-event { background: #fce7f3; }
-.hub-shop { background: #e0f2fe; }
+.hub-travel { background: #F9EFEA; color: #C46747; }
+.hub-food { background: #FEF7EC; color: #D49A48; }
+.hub-event { background: #FDF2F0; color: #D48E80; }
+.hub-shop { background: #F0F5EF; color: #6E8867; }
 
 .hub-info strong {
     display: block;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 800;
     color: var(--dark);
     line-height: 1.1;
@@ -956,15 +1060,17 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f1f5f9;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
     padding: 12px 14px;
     border-radius: var(--radius-md);
     margin-bottom: 12px;
 }
 
 .active-hub-title-box h4 {
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--dark);
 }
 
@@ -2446,22 +2552,22 @@ body {
    ========================================================== */
 .bottom-nav {
     position: fixed;
-    bottom: calc(10px + var(--safe-bottom));
-    left: 10px;
-    right: 10px;
+    bottom: calc(12px + var(--safe-bottom));
+    left: 12px;
+    right: 12px;
     margin: 0 auto;
-    max-width: 520px;
+    max-width: 500px;
     height: 64px;
-    background: rgba(15, 23, 42, 0.94);
+    background: rgba(44, 34, 29, 0.96);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 24px;
-    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(234, 223, 210, 0.22);
+    border-radius: 26px;
+    box-shadow: 0 16px 40px rgba(44, 34, 29, 0.35), 0 2px 8px rgba(0, 0, 0, 0.12);
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 0 6px;
+    padding: 0 8px;
     z-index: 999;
 }
 
@@ -2473,14 +2579,14 @@ body {
     align-items: center;
     justify-content: center;
     gap: 3px;
-    color: #94a3b8;
+    color: #BDB0A4;
     cursor: pointer;
     position: relative;
     padding: 6px 2px;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     flex: 1;
     min-width: 0;
-    border-radius: 16px;
+    border-radius: 18px;
 }
 
 .nav-item i {
@@ -2489,7 +2595,7 @@ body {
 }
 
 .nav-item span {
-    font-size: 0.64rem;
+    font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: -0.2px;
     white-space: nowrap;
@@ -2501,17 +2607,17 @@ body {
 }
 
 .nav-item.active {
-    color: #ffffff;
+    color: #FFFFFF;
     background: rgba(255, 255, 255, 0.12);
 }
 
 .nav-item.active i {
     transform: translateY(-2px) scale(1.12);
-    color: #38bdf8;
+    color: #D88365;
 }
 
 .nav-item.active span {
-    color: #ffffff;
+    color: #FFFFFF;
     font-weight: 800;
 }
 
@@ -2519,7 +2625,7 @@ body {
     position: absolute;
     top: 3px;
     right: calc(50% - 16px);
-    background: #ef4444;
+    background: var(--danger);
     color: #ffffff;
     font-size: 0.6rem;
     font-weight: 800;
@@ -2530,17 +2636,17 @@ body {
     align-items: center;
     justify-content: center;
     padding: 0 3px;
-    border: 1.5px solid #0f172a;
-    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+    border: 1.5px solid #2C221D;
+    box-shadow: 0 2px 6px rgba(196, 82, 72, 0.5);
 }
 
 /* ==========================================================
-   MODALLAR (NATIVE BOTTOM SHEET & DIALOGS)
+   MODALLAR (NATIVE BOTTOM SHEET & DIALOGS) - BOHEM DOKU
    ========================================================== */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.65);
+    background: rgba(44, 34, 29, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
@@ -2551,32 +2657,33 @@ body {
 }
 
 .modal-card {
-    background: #ffffff;
+    background: #FFFFFF;
     width: 100vw;
     max-width: 100%;
-    border-top-left-radius: 28px;
-    border-top-right-radius: 28px;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-    padding: 16px 20px calc(24px + var(--safe-bottom)) 20px;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+    padding: 18px 22px calc(26px + var(--safe-bottom)) 22px;
+    box-shadow: 0 -10px 45px rgba(44, 34, 29, 0.35);
     animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 88vh;
     max-height: 88dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     position: relative;
+    border-top: 1px solid rgba(234, 223, 210, 0.8);
 }
 
 /* iOS Bottom Sheet Drag Handle */
 .modal-card::before {
     content: '';
     display: block;
-    width: 38px;
+    width: 42px;
     height: 4px;
-    background: #cbd5e1;
+    background: #D8CCC0;
     border-radius: 10px;
-    margin: 0 auto 14px auto;
+    margin: 0 auto 16px auto;
 }
 
 @keyframes slideUpModal {
@@ -4391,15 +4498,15 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   8. GÜNLÜK PLANLAMA & GÜNÜN AKIŞI (HER GÜN SIFIRLANIR)
+   8. GÜNLÜK PLANLAMA & GÜNÜN AKIŞI (BOHEM DOKU)
    -------------------------------------------------------------------------- */
 .daily-planner-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--radius-md);
-    padding: 18px 20px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px 20px;
     margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--shadow-sm);
     position: relative;
     overflow: hidden;
 }
@@ -4411,7 +4518,7 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #f59e0b, #ec4899, #6366f1);
+    background: linear-gradient(90deg, #C46747, #D49A48, #6E8867);
 }
 
 .daily-planner-header {
@@ -4419,7 +4526,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 .daily-planner-title-group {
@@ -4430,10 +4537,11 @@ body {
 
 .daily-planner-icon {
     font-size: 1.6rem;
-    width: 44px;
-    height: 44px;
-    background: #fef3c7;
-    border-radius: 12px;
+    width: 46px;
+    height: 46px;
+    background: #FEF7EC;
+    border: 1px solid rgba(212, 154, 72, 0.3);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4442,14 +4550,15 @@ body {
 
 .daily-planner-title-group h4 {
     margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #0f172a;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--dark);
 }
 
 .daily-planner-date {
     font-size: 0.78rem;
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -4460,10 +4569,10 @@ body {
 }
 
 .btn-daily-reset-sm {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    padding: 6px 12px;
+    background: var(--bg-card-subtle);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 7px 13px;
     border-radius: var(--radius-full);
     font-size: 0.76rem;
     font-weight: 700;
@@ -4475,15 +4584,15 @@ body {
 }
 
 .btn-daily-reset-sm:hover {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: #EADFD2;
+    color: var(--dark);
 }
 
 .btn-daily-add-sm {
     background: var(--primary-gradient);
     color: #ffffff;
     border: none;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: var(--radius-full);
     font-size: 0.78rem;
     font-weight: 700;
@@ -4491,21 +4600,21 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 14px rgba(196, 103, 71, 0.3);
     transition: all 0.2s ease;
 }
 
 .btn-daily-add-sm:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 6px 18px rgba(196, 103, 71, 0.4);
 }
 
 .daily-progress-box {
-    background: #f8fafc;
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    margin-bottom: 14px;
-    border: 1px solid #f1f5f9;
+    background: var(--bg-card-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
 }
 
 .daily-progress-header {
@@ -4513,21 +4622,21 @@ body {
     justify-content: space-between;
     font-size: 0.8rem;
     font-weight: 700;
-    color: #334155;
-    margin-bottom: 6px;
+    color: var(--text-main);
+    margin-bottom: 8px;
 }
 
 .daily-progress-track {
     width: 100%;
-    height: 8px;
-    background: #e2e8f0;
+    height: 9px;
+    background: #EADFD2;
     border-radius: 999px;
     overflow: hidden;
 }
 
 .daily-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10b981, #06b6d4);
+    background: linear-gradient(90deg, #6E8867, #D49A48, #C46747);
     border-radius: 999px;
     transition: width 0.3s ease;
 }
@@ -4535,7 +4644,7 @@ body {
 .daily-plans-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .daily-plan-item {
@@ -4543,26 +4652,27 @@ body {
     align-items: center;
     justify-content: space-between;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 16px;
+    padding: 12px 16px;
     transition: all 0.2s ease;
 }
 
 .daily-plan-item:hover {
-    border-color: #cbd5e1;
-    background: #fcfdfe;
+    border-color: var(--primary);
+    background: #FFFDFB;
+    transform: translateX(2px);
 }
 
 .daily-plan-item.completed {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    opacity: 0.7;
+    background: var(--bg-card-subtle);
+    border-color: var(--border-color);
+    opacity: 0.72;
 }
 
 .daily-plan-item.completed .daily-plan-title {
     text-decoration: line-through;
-    color: #94a3b8;
+    color: var(--text-muted);
 }
 
 .daily-plan-left {
@@ -4573,10 +4683,10 @@ body {
 }
 
 .daily-plan-checkbox {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: 2px solid #cbd5e1;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    border: 2px solid #D8CCC0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4588,25 +4698,26 @@ body {
 }
 
 .daily-plan-item.completed .daily-plan-checkbox {
-    background: #10b981;
-    border-color: #10b981;
+    background: var(--secondary);
+    border-color: var(--secondary);
     color: #ffffff;
 }
 
 .daily-plan-time-badge {
     font-size: 0.74rem;
     font-weight: 800;
-    background: #f1f5f9;
-    color: #334155;
-    padding: 3px 8px;
-    border-radius: 6px;
+    background: var(--bg-card-subtle);
+    color: var(--dark);
+    padding: 4px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
     white-space: nowrap;
 }
 
 .daily-plan-title {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--dark);
     margin-right: 8px;
 }
 
@@ -4619,36 +4730,38 @@ body {
 
 .daily-plan-member-chip {
     font-size: 0.7rem;
-    font-weight: 600;
-    background: #eff6ff;
-    color: #2563eb;
-    padding: 2px 8px;
+    font-weight: 700;
+    background: #F9EFEA;
+    color: #C46747;
+    padding: 3px 9px;
     border-radius: 999px;
+    border: 1px solid rgba(196, 103, 71, 0.2);
 }
 
 .daily-plan-recurring-chip {
     font-size: 0.68rem;
     font-weight: 700;
-    background: #fef3c7;
-    color: #b45309;
-    padding: 2px 6px;
+    background: #FEF7EC;
+    color: #D49A48;
+    padding: 3px 8px;
     border-radius: 999px;
+    border: 1px solid rgba(212, 154, 72, 0.25);
 }
 
 .btn-daily-delete {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: #BDB0A4;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     padding: 6px;
-    border-radius: 6px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .btn-daily-delete:hover {
-    color: #ef4444;
-    background: #fef2f2;
+    color: var(--danger);
+    background: var(--danger-light);
 }
 
 .daily-plans-empty {
