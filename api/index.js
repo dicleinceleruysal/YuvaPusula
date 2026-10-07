@@ -378,6 +378,32 @@ module.exports = async function handler(req, res) {
             return sendJson(res, 200, { success: true, family: updatedFamily });
         }
 
+        // 7.1 Günlük Planlama İşlemleri (Her Gün Sıfırlanır)
+        if (pathname === '/api/daily-plans/add' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const updatedFamily = await dbManager.addDailyPlan(body.familyId, body.plan);
+            broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
+        if (pathname === '/api/daily-plans/toggle' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const updatedFamily = await dbManager.toggleDailyPlan(body.familyId, body.planId);
+            broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
+        if (pathname === '/api/daily-plans/delete' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const updatedFamily = await dbManager.deleteDailyPlan(body.familyId, body.planId);
+            broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
+        if (pathname === '/api/daily-plans/reset' && req.method === 'POST') {
+            const body = await parseJsonBody(req);
+            const updatedFamily = await dbManager.resetDailyPlans(body.familyId);
+            broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+            return sendJson(res, 200, { success: true, family: updatedFamily });
+        }
+
         // 8. Alışveriş Listesi İşlemleri
         if (pathname === '/api/shopping/add' && req.method === 'POST') {
             const body = await parseJsonBody(req);

@@ -4390,21 +4390,304 @@ body {
     transform: scale(0.96);
 }
 
+/* --------------------------------------------------------------------------
+   8. GÜNLÜK PLANLAMA & GÜNÜN AKIŞI (HER GÜN SIFIRLANIR)
+   -------------------------------------------------------------------------- */
+.daily-planner-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.daily-planner-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #f59e0b, #ec4899, #6366f1);
+}
+
+.daily-planner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.daily-planner-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.daily-planner-icon {
+    font-size: 1.6rem;
+    width: 44px;
+    height: 44px;
+    background: #fef3c7;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.daily-planner-title-group h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.daily-planner-date {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.daily-planner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-daily-reset-sm {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-daily-reset-sm:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-daily-add-sm {
+    background: var(--primary-gradient);
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-daily-add-sm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+.daily-progress-box {
+    background: #f8fafc;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #f1f5f9;
+}
+
+.daily-progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.daily-progress-track {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.daily-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #06b6d4);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.daily-plans-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.daily-plan-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.daily-plan-item:hover {
+    border-color: #cbd5e1;
+    background: #fcfdfe;
+}
+
+.daily-plan-item.completed {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    opacity: 0.7;
+}
+
+.daily-plan-item.completed .daily-plan-title {
+    text-decoration: line-through;
+    color: #94a3b8;
+}
+
+.daily-plan-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.daily-plan-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #ffffff;
+    color: transparent;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.daily-plan-item.completed .daily-plan-checkbox {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.daily-plan-time-badge {
+    font-size: 0.74rem;
+    font-weight: 800;
+    background: #f1f5f9;
+    color: #334155;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.daily-plan-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-right: 8px;
+}
+
+.daily-plan-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.daily-plan-member-chip {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.daily-plan-recurring-chip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: #fef3c7;
+    color: #b45309;
+    padding: 2px 6px;
+    border-radius: 999px;
+}
+
+.btn-daily-delete {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-daily-delete:hover {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+.daily-plans-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.daily-plans-empty i {
+    font-size: 2rem;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    display: block;
+}
+
 @media (max-width: 600px) {
-    .chat-push-banner {
+    .daily-planner-header {
         flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        text-align: left;
+        align-items: flex-start;
+        gap: 10px;
     }
-
-    .btn-enable-push {
+    
+    .daily-planner-actions {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-end;
     }
 
-    .btn-chat-test-push span {
-        display: none;
+    .daily-plan-item {
+        padding: 8px 10px;
+    }
+
+    .daily-plan-left {
+        gap: 8px;
+    }
+
+    .daily-plan-time-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
     }
 }
 

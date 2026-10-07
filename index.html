@@ -337,6 +337,43 @@
                     </div>
                 </div>
 
+                <!-- GÜNLÜK PLANLAMA VE GÜNÜN AKIŞI KARTI (HER GÜN SIFIRLANIR) -->
+                <div class="daily-planner-card">
+                    <div class="daily-planner-header">
+                        <div class="daily-planner-title-group">
+                            <div class="daily-planner-icon">⏰</div>
+                            <div>
+                                <h4>Günün Akışı & Günlük Planlama</h4>
+                                <span class="daily-planner-date" id="dailyPlannerDateLabel">Bugün</span>
+                            </div>
+                        </div>
+                        <div class="daily-planner-actions">
+                            <button class="btn-daily-reset-sm" onclick="handleResetDailyPlans()" title="Tüm günlük planları sıfırla">
+                                <i class="fa-solid fa-arrows-rotate"></i> <span>Günü Sıfırla</span>
+                            </button>
+                            <button class="btn-daily-add-sm" onclick="openModal('modalNewDailyPlan')">
+                                <i class="fa-solid fa-plus"></i> <span>Plan Ekle</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Günlük İlerleme Barı -->
+                    <div class="daily-progress-box">
+                        <div class="daily-progress-header">
+                            <span id="dailyProgressText">0/0 Plan Tamamlandı</span>
+                            <strong id="dailyProgressPercent">%0</strong>
+                        </div>
+                        <div class="daily-progress-track">
+                            <div class="daily-progress-fill" id="dailyProgressFill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Günlük Plan Listesi -->
+                    <div class="daily-plans-list" id="panoDailyPlansList">
+                        <!-- Dinamik Günlük Plan Öğeleri Gelecek -->
+                    </div>
+                </div>
+
                 <!-- Aile Pano Notları & Mesaj Akışı -->
                 <div class="section-title">
                     <h4><i class="fa-solid fa-comments"></i> Aile Panosu & Duyurular</h4>
@@ -468,8 +505,15 @@
                     </button>
                 </div>
 
-                <!-- 4 AYRI KATEGORİ SEÇİM HUB'I -->
+                <!-- 5 AYRI KATEGORİ SEÇİM HUB'I -->
                 <div class="plans-category-hub">
+                    <div class="hub-card" id="hubBtnGunluk" onclick="switchPlansHub('Gunluk')">
+                        <div class="hub-icon hub-daily" style="background: #fef3c7; color: #d97706;">⏰</div>
+                        <div class="hub-info">
+                            <strong>Günlük Plan</strong>
+                            <small id="countHubGunluk">0 Plan</small>
+                        </div>
+                    </div>
                     <div class="hub-card active" id="hubBtnSeyahat" onclick="switchPlansHub('Seyahat')">
                         <div class="hub-icon hub-travel">✈️</div>
                         <div class="hub-info">
@@ -1126,7 +1170,69 @@
                     </div>
                     <i class="fa-solid fa-chevron-right picker-arrow"></i>
                 </div>
+                <div class="plan-picker-card" onclick="closeModal('modalPlanCategoryPicker'); openModal('modalNewDailyPlan');">
+                    <div class="picker-icon hub-daily" style="background: #fef3c7; color: #d97706;">⏰</div>
+                    <div class="picker-text">
+                        <strong>Günlük Plan & Rutin</strong>
+                        <small>Saatli günlük akış, görev, okul, spor, ilaç (Her gün sıfırlanır)</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right picker-arrow"></i>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ GÜNLÜK PLAN EKLE -->
+    <div id="modalNewDailyPlan" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clock"></i> Yeni Günlük Plan Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewDailyPlan')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formNewDailyPlan" onsubmit="handleAddDailyPlan(event)">
+                <div class="form-group">
+                    <label>Plan / Aktivite Başlığı</label>
+                    <input type="text" id="newDailyPlanTitle" placeholder="Örn: Sabah Yürüyüşü, İlaç Saati, Ders..." required>
+                </div>
+                
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Saat</label>
+                        <input type="time" id="newDailyPlanTime" value="09:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori / İkon</label>
+                        <select id="newDailyPlanCategory">
+                            <option value="🌅 Sabah">🌅 Sabah</option>
+                            <option value="🎒 Okul">🎒 Okul</option>
+                            <option value="💼 İş">💼 İş</option>
+                            <option value="🏃 Spor">🏃 Spor / Egzersiz</option>
+                            <option value="💊 İlaç">💊 Sağlık / İlaç</option>
+                            <option value="🍽️ Yemek">🍽️ Yemek / Beslenme</option>
+                            <option value="📚 Ders">📚 Ders / Kurs</option>
+                            <option value="🌙 Akşam">🌙 Akşam / Dinlenme</option>
+                            <option value="⭐ Diğer">⭐ Diğer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Kime Ait / Sorumlu Birey</label>
+                    <select id="newDailyPlanAssignedTo">
+                        <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                        <input type="checkbox" id="newDailyPlanIsRecurring" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+                        <span>🔁 Her gün otomatik tekrarlansın (Sabah sıfırlanır)</span>
+                    </label>
+                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse rutin olarak her gün sıfırdan başlar. İşaretsizse sadece bugünlük kaydedilir.</p>
+                </div>
+
+                <button type="submit" class="btn-primary">Günlük Planı Kaydet</button>
+            </form>
         </div>
     </div>
 

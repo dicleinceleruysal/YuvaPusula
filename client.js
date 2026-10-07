@@ -726,6 +726,67 @@ const AilemAPI = {
         return null;
     },
 
+    // Günlük Plan & Rutin İşlemleri (Her Gün Sıfırlanır)
+    async addDailyPlan(familyId, plan) {
+        try {
+            const res = await fetch('/api/daily-plans/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, plan })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async toggleDailyPlan(familyId, planId) {
+        try {
+            const res = await fetch('/api/daily-plans/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async deleteDailyPlan(familyId, planId) {
+        try {
+            const res = await fetch('/api/daily-plans/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async resetDailyPlans(familyId) {
+        try {
+            const res = await fetch('/api/daily-plans/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     // Altınkaynak Canlı Döviz ve Altın Kurları
     async getMarketRates(forceRefresh = false) {
         try {
@@ -1125,6 +1186,12 @@ function normalizeFamilyData(fam) {
         completed: p.completed !== undefined ? !!p.completed : (p.status === 'COMPLETED'),
         status: p.status || (p.completed ? 'COMPLETED' : 'PENDING')
     }));
+    if (!fam.dailyPlans) fam.dailyPlans = [];
+    fam.dailyPlans = fam.dailyPlans.map(p => ({
+        ...p,
+        completed: !!p.completed,
+        isRecurring: p.isRecurring !== undefined ? !!p.isRecurring : true
+    }));
     if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
     fam.shopping = fam.shoppingList;
     if (!fam.tasks) fam.tasks = [];
@@ -1415,6 +1482,35 @@ function checkMonthStartRollover() {
     }
 }
 
+async function checkDayStartRollover() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const lastCheckedDay = localStorage.getItem('yuvapusula_last_checked_day');
+
+    if (lastCheckedDay && lastCheckedDay !== todayKey) {
+        // Yeni bir güne girildi (Örn: Gece yarısı / sabah sıfırlanması)
+        if (family.id) {
+            const updatedFamily = await AilemAPI.resetDailyPlans(family.id);
+            if (updatedFamily) {
+                appState.familyData = normalizeFamilyData(updatedFamily);
+                saveStateToStorage();
+                renderDailyPlans();
+            }
+        } else if (family.dailyPlans && family.dailyPlans.length > 0) {
+            // Çevrimdışı fallback: Tekrarlayan rutinler kalır (completed: false), tek günlük planlar temizlenir
+            family.dailyPlans = family.dailyPlans
+                .filter(p => p.isRecurring)
+                .map(p => ({ ...p, completed: false }));
+            saveStateToStorage();
+            renderDailyPlans();
+        }
+    }
+    localStorage.setItem('yuvapusula_last_checked_day', todayKey);
+}
+
 function renderApp() {
     const authScreen = document.getElementById('authScreen');
     const mainApp = document.getElementById('mainApp');
@@ -1430,6 +1526,7 @@ function renderApp() {
     mainApp.classList.remove('hidden');
 
     checkMonthStartRollover();
+    checkDayStartRollover();
 
     const family = appState.familyData;
     const user = appState.currentUser;
@@ -1468,6 +1565,7 @@ function renderApp() {
 
     // Modülleri Render Et
     renderPano();
+    renderDailyPlans();
     renderChat();
     switchPlansHub(appState.activePlanHub || 'Seyahat');
     renderShopping();
@@ -1508,6 +1606,7 @@ function updateQuickStats() {
     const countRestoran = allPlans.filter(p => p.category === 'Restoran').length;
     const countEtkinlik = allPlans.filter(p => p.category === 'Etkinlik').length;
     const countAlisveris = allPlans.filter(p => p.category === 'Alisveris').length;
+    const countGunluk = (family.dailyPlans || []).length;
 
     const elCountSeyahat = document.getElementById('countHubSeyahat');
     if (elCountSeyahat) elCountSeyahat.textContent = `${countSeyahat} Rota`;
@@ -1517,6 +1616,8 @@ function updateQuickStats() {
     if (elCountEtkinlik) elCountEtkinlik.textContent = `${countEtkinlik} Bilet`;
     const elCountAlisveris = document.getElementById('countHubAlisveris');
     if (elCountAlisveris) elCountAlisveris.textContent = `${countAlisveris} İstek`;
+    const elCountGunluk = document.getElementById('countHubGunluk');
+    if (elCountGunluk) elCountGunluk.textContent = `${countGunluk} Plan`;
 
     // Navigasyon Rozetleri (Mobil & Masaüstü Sidebar)
     const plansBadge = document.getElementById('navPlansBadge');
@@ -1637,6 +1738,18 @@ const HUB_META = {
             { label: '⏳ Yakında', value: '⏳ Yakında' },
             { label: '💭 Hayal', value: '💭 Hayal / Gelecek' }
         ]
+    },
+    'Gunluk': {
+        title: '⏰ Günlük Planlama & Rutinlerimiz',
+        subtitle: 'Her gün sabah, öğle ve akşam saatlik akış, alışkanlıklar ve günlük görevler',
+        btnText: '<i class="fa-solid fa-plus"></i> Günlük Plan Ekle',
+        subFilters: [
+            { label: 'Tüm Gün', value: 'ALL' },
+            { label: '🌅 Sabah', value: 'Sabah' },
+            { label: '☀️ Öğle / Gün İçi', value: 'Ogle' },
+            { label: '🌙 Akşam / Gece', value: 'Aksam' },
+            { label: '🔁 Rutinler', value: 'Rutin' }
+        ]
     }
 };
 
@@ -1701,6 +1814,10 @@ function openPlanCategoryPicker() {
 
 function openPlanFormWithCategory(category) {
     closeModal('modalPlanCategoryPicker');
+    if (category === 'Gunluk') {
+        openModal('modalNewDailyPlan');
+        return;
+    }
     const catSelect = document.getElementById('planCategorySelect');
     if (catSelect) {
         catSelect.value = category;
@@ -1713,10 +1830,161 @@ function openAddPlanModalForCurrentCategory() {
     openPlanFormWithCategory(appState.activePlanHub);
 }
 
+// Günlük Planları Render Et (Pano Widget & Gün Akışı)
+function renderDailyPlans() {
+    const family = appState.familyData;
+    const container = document.getElementById('panoDailyPlansList');
+    if (!container || !family) return;
+
+    // Günün tarihi etiketi (Türkçe)
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
+    const dateLabel = document.getElementById('dailyPlannerDateLabel');
+    if (dateLabel) dateLabel.textContent = dateStr;
+
+    if (!family.dailyPlans) family.dailyPlans = [];
+    const dailyPlans = [...family.dailyPlans];
+
+    // İlerleme Çubuğu ve Yüzdesi
+    const totalCount = dailyPlans.length;
+    const completedCount = dailyPlans.filter(p => p.completed).length;
+    const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    const progressFill = document.getElementById('dailyProgressFill');
+    const progressText = document.getElementById('dailyProgressText');
+    const progressPercentEl = document.getElementById('dailyProgressPercent');
+
+    if (progressFill) progressFill.style.width = `${progressPercent}%`;
+    if (progressText) {
+        progressText.textContent = totalCount > 0 
+            ? `${completedCount}/${totalCount} Plan Tamamlandı` 
+            : '0/0 Plan Tamamlandı';
+    }
+    if (progressPercentEl) {
+        progressPercentEl.textContent = `%${progressPercent}`;
+    }
+
+    if (dailyPlans.length === 0) {
+        container.innerHTML = `
+            <div class="empty-daily-state">
+                <i class="fa-solid fa-calendar-day"></i>
+                <p>Bugün için henüz bir rutin veya plan eklenmedi.<br>Gününüzü düzenlemek için <b>+ Plan Ekle</b> butonuna dokunun.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Sıralama: Saatli olanlar önce ve saate göre, saatsizler en sonda
+    dailyPlans.sort((a, b) => {
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return 0;
+    });
+
+    container.innerHTML = dailyPlans.map(plan => {
+        const icon = plan.category ? (plan.category.split(' ')[0] || '⭐') : '⭐';
+        
+        return `
+            <div class="daily-item ${plan.completed ? 'completed' : ''}">
+                <div class="custom-checkbox ${plan.completed ? 'checked' : ''}" onclick="handleToggleDailyPlan('${plan.id}')">
+                    ${plan.completed ? '<i class="fa-solid fa-check"></i>' : ''}
+                </div>
+                <div class="daily-time-badge ${!plan.time ? 'no-time' : ''}">
+                    <i class="fa-regular fa-clock"></i> ${plan.time || '--:--'}
+                </div>
+                <div class="daily-info">
+                    <div class="daily-title ${plan.completed ? 'completed-text' : ''}">
+                        <span class="daily-category-icon">${icon}</span>
+                        ${plan.title}
+                        ${plan.isRecurring ? '<span class="daily-recurring-badge" title="Her gün tekrarlanan rutin"><i class="fa-solid fa-arrows-rotate"></i> Her Gün</span>' : ''}
+                    </div>
+                    <div class="daily-meta">
+                        <span><i class="fa-solid fa-user"></i> ${plan.assignedTo || 'Tüm Aile'}</span>
+                        ${plan.note ? `<span>• <i class="fa-regular fa-comment"></i> ${plan.note}</span>` : ''}
+                    </div>
+                </div>
+                <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${plan.id}')" title="Planı Sil">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
 // Aile Planları & Keşifler Render
 function renderPlans() {
     const container = document.getElementById('plansList');
     if (!container) return;
+
+    // Günlük Plan Hub Seçiliyse Günlük Rutinleri Göster
+    if (appState.activePlanHub === 'Gunluk') {
+        let dailyItems = [...(appState.familyData.dailyPlans || [])];
+
+        // Alt Filtre
+        if (appState.plansSubFilter === 'Sabah') {
+            dailyItems = dailyItems.filter(p => (p.category && p.category.includes('Sabah')) || (p.time && p.time >= '05:00' && p.time < '12:00'));
+        } else if (appState.plansSubFilter === 'Ogle') {
+            dailyItems = dailyItems.filter(p => ['Okul', 'İş', 'Yemek', 'Ders', 'Spor'].some(c => (p.category || '').includes(c)) || (p.time && p.time >= '12:00' && p.time < '18:00'));
+        } else if (appState.plansSubFilter === 'Aksam') {
+            dailyItems = dailyItems.filter(p => (p.category && (p.category.includes('Akşam') || p.category.includes('Dinlenme'))) || (p.time && (p.time >= '18:00' || p.time < '05:00')));
+        } else if (appState.plansSubFilter === 'Rutin') {
+            dailyItems = dailyItems.filter(p => p.isRecurring);
+        }
+
+        // Durum Filtresi
+        if (appState.plansStatusFilter === 'PENDING') {
+            dailyItems = dailyItems.filter(p => !p.completed);
+        } else if (appState.plansStatusFilter === 'COMPLETED') {
+            dailyItems = dailyItems.filter(p => p.completed);
+        }
+
+        if (dailyItems.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <p>Bu filtrede günlük plan veya rutin bulunmuyor. Yeni bir rutin ekleyin! ⏰</p>
+                </div>
+            `;
+            return;
+        }
+
+        dailyItems.sort((a, b) => {
+            if (a.time && b.time) return a.time.localeCompare(b.time);
+            if (a.time) return -1;
+            if (b.time) return 1;
+            return 0;
+        });
+
+        container.innerHTML = dailyItems.map(p => {
+            const icon = p.category ? (p.category.split(' ')[0] || '⭐') : '⭐';
+            return `
+                <div class="daily-item ${p.completed ? 'completed' : ''}" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 8px;">
+                    <div class="custom-checkbox ${p.completed ? 'checked' : ''}" onclick="handleToggleDailyPlan('${p.id}')">
+                        ${p.completed ? '<i class="fa-solid fa-check"></i>' : ''}
+                    </div>
+                    <div class="daily-time-badge ${!p.time ? 'no-time' : ''}">
+                        <i class="fa-regular fa-clock"></i> ${p.time || '--:--'}
+                    </div>
+                    <div class="daily-info">
+                        <div class="daily-title ${p.completed ? 'completed-text' : ''}">
+                            <span class="daily-category-icon">${icon}</span>
+                            ${p.title}
+                            ${p.isRecurring ? '<span class="daily-recurring-badge" title="Her gün tekrarlanan rutin"><i class="fa-solid fa-arrows-rotate"></i> Her Gün</span>' : ''}
+                        </div>
+                        <div class="daily-meta">
+                            <span><i class="fa-solid fa-user"></i> ${p.assignedTo || 'Tüm Aile'}</span>
+                            ${p.note ? `<span>• <i class="fa-regular fa-comment"></i> ${p.note}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${p.id}')" title="Planı Sil">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+        return;
+    }
 
     let plans = appState.familyData.plans || [];
 
@@ -1747,7 +2015,8 @@ function renderPlans() {
             'Seyahat': 'Kayıtlı seyahat rotası bulunmuyor. Bir sonraki tatili planlayın! ✈️',
             'Restoran': 'Henüz denenecek bir restoran/kafe eklenmedi. Lezzetli bir mekan ekleyin! 🍽️',
             'Etkinlik': 'Yaklaşan etkinlik veya konser kaydı yok. Eğlenceli bir plan ekleyin! 🎭',
-            'Alisveris': 'Alışveriş veya hayal listeniz henüz boş. İstediğiniz bir ürünü kaydedin! 🛍️'
+            'Alisveris': 'Alışveriş veya hayal listeniz henüz boş. İstediğiniz bir ürünü kaydedin! 🛍️',
+            'Gunluk': 'Kayıtlı günlük plan bulunmuyor. Günlük akışınızı ekleyin! ⏰'
         };
 
         container.innerHTML = `
@@ -2369,17 +2638,124 @@ function updateMemberSelectDropdowns() {
     const taskSelect = document.getElementById('taskAssignee');
     const expenseSelect = document.getElementById('expensePayer');
     const fixedSelect = document.getElementById('fixedPayer');
+    const dailyAssigneeSelect = document.getElementById('newDailyPlanAssignedTo');
 
     const options = members.map(m => `<option value="${m.name}">${m.avatar} ${m.name} (${m.role})</option>`).join('');
 
     if (taskSelect) taskSelect.innerHTML = options;
     if (expenseSelect) expenseSelect.innerHTML = options;
     if (fixedSelect) fixedSelect.innerHTML = options;
+    if (dailyAssigneeSelect) dailyAssigneeSelect.innerHTML = `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>` + options;
 }
 
 // ==========================================================
 // 5. ETKİLEŞİM & EKLEME/SİLME FONKSİYONLARI
 // ==========================================================
+
+// Günlük Plan Ekleme & Rutin İşlemleri
+async function handleAddDailyPlan(e) {
+    e.preventDefault();
+    const title = document.getElementById('newDailyPlanTitle').value.trim();
+    if (!title) {
+        showToast('Lütfen plan veya aktivite başlığını girin.');
+        return;
+    }
+
+    const time = document.getElementById('newDailyPlanTime').value.trim();
+    const category = document.getElementById('newDailyPlanCategory').value;
+    const assignedTo = document.getElementById('newDailyPlanAssignedTo').value;
+    const isRecurring = document.getElementById('newDailyPlanIsRecurring').checked;
+
+    const newPlan = {
+        id: 'daily_' + Date.now(),
+        title,
+        time,
+        category,
+        assignedTo,
+        isRecurring,
+        completed: false,
+        addedBy: appState.currentUser ? appState.currentUser.name : 'Aile Üyesi',
+        createdAt: new Date().toISOString()
+    };
+
+    // 1. SQLite API Çağrısı
+    const updatedFamily = await AilemAPI.addDailyPlan(appState.familyData.id, newPlan);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.dailyPlans) appState.familyData.dailyPlans = [];
+        appState.familyData.dailyPlans.push(newPlan);
+    }
+
+    saveStateToStorage();
+    closeModal('modalNewDailyPlan');
+    renderDailyPlans();
+    if (appState.activePlanHub === 'Gunluk') renderPlans();
+    updateQuickStats();
+
+    // Formu temizle
+    const formEl = document.getElementById('formNewDailyPlan');
+    if (formEl) formEl.reset();
+    showToast('Günlük plan eklendi! ⏰');
+}
+
+async function handleToggleDailyPlan(id) {
+    const updatedFamily = await AilemAPI.toggleDailyPlan(appState.familyData.id, id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        const plan = (appState.familyData.dailyPlans || []).find(p => p.id === id);
+        if (plan) {
+            plan.completed = !plan.completed;
+        }
+    }
+
+    saveStateToStorage();
+    renderDailyPlans();
+    if (appState.activePlanHub === 'Gunluk') renderPlans();
+    updateQuickStats();
+    showToast('Günlük plan durumu güncellendi! ✅');
+}
+
+async function handleDeleteDailyPlan(id) {
+    const updatedFamily = await AilemAPI.deleteDailyPlan(appState.familyData.id, id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (appState.familyData.dailyPlans) {
+            appState.familyData.dailyPlans = appState.familyData.dailyPlans.filter(p => p.id !== id);
+        }
+    }
+
+    saveStateToStorage();
+    renderDailyPlans();
+    if (appState.activePlanHub === 'Gunluk') renderPlans();
+    updateQuickStats();
+    showToast('Günlük plan silindi. 🗑️');
+}
+
+async function handleResetDailyPlans() {
+    if (!confirm('Günün planlarını sıfırlamak istiyor musunuz? Tekrarlayan rutinler temizlenecek ve yeni gün için taze bir başlangıç yapılacaktır.')) {
+        return;
+    }
+
+    const updatedFamily = await AilemAPI.resetDailyPlans(appState.familyData.id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (appState.familyData.dailyPlans) {
+            appState.familyData.dailyPlans = appState.familyData.dailyPlans
+                .filter(p => p.isRecurring)
+                .map(p => ({ ...p, completed: false }));
+        }
+    }
+
+    saveStateToStorage();
+    renderDailyPlans();
+    if (appState.activePlanHub === 'Gunluk') renderPlans();
+    updateQuickStats();
+    showToast('Günün planları sıfırlandı ve yeni gün başlatıldı! 🌅');
+}
 
 // Plan Kategorisi Değişimi
 function onPlanCategoryChange(category) {

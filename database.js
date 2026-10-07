@@ -267,6 +267,7 @@ async function createFamily(familyName, inviteCode, user) {
         members: [user],
         posts: [],
         plans: [],
+        dailyPlans: [],
         shopping: [],
         tasks: [],
         expenses: [],
@@ -474,7 +475,12 @@ function normalizeFamily(fam) {
     if (!fam.fixedExpenses) fam.fixedExpenses = [];
     if (!fam.investments) fam.investments = [];
     if (!fam.investmentHistory) fam.investmentHistory = [];
-    if (!fam.messages) fam.messages = [];
+    if (!fam.dailyPlans) fam.dailyPlans = [];
+    fam.dailyPlans = fam.dailyPlans.map(p => ({
+        ...p,
+        completed: !!p.completed,
+        isRecurring: p.isRecurring !== undefined ? !!p.isRecurring : true
+    }));
     return fam;
 }
 
@@ -596,6 +602,60 @@ async function deletePlan(familyId, planId) {
     return await updateFamilyHelper(familyId, (fam) => {
         if (!fam.plans) fam.plans = [];
         fam.plans = fam.plans.filter(p => p.id !== planId);
+        return fam;
+    });
+}
+
+// Günlük Planlama İşlemleri (Her Gün Sıfırlanır)
+async function addDailyPlan(familyId, plan) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        fam.dailyPlans.push({
+            id: plan.id || ('dplan_' + Date.now()),
+            title: plan.title || 'Yeni Günlük Plan',
+            time: plan.time || '09:00',
+            icon: plan.icon || '⏰',
+            category: plan.category || 'Genel',
+            assignedTo: plan.assignedTo || 'Tüm Aile',
+            isRecurring: plan.isRecurring !== undefined ? !!plan.isRecurring : true,
+            completed: !!plan.completed,
+            createdAt: plan.createdAt || new Date().toISOString()
+        });
+        fam.dailyPlans.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        return fam;
+    });
+}
+
+async function toggleDailyPlan(familyId, planId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        const item = fam.dailyPlans.find(p => p.id === planId);
+        if (item) {
+            item.completed = !item.completed;
+            item.completedAt = item.completed ? new Date().toISOString() : null;
+        }
+        return fam;
+    });
+}
+
+async function deleteDailyPlan(familyId, planId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        fam.dailyPlans = fam.dailyPlans.filter(p => p.id !== planId);
+        return fam;
+    });
+}
+
+async function resetDailyPlans(familyId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        fam.dailyPlans = fam.dailyPlans
+            .filter(p => p.isRecurring !== false)
+            .map(p => ({
+                ...p,
+                completed: false,
+                completedAt: null
+            }));
         return fam;
     });
 }
@@ -1084,6 +1144,10 @@ module.exports = {
     addPlan,
     togglePlan,
     deletePlan,
+    addDailyPlan,
+    toggleDailyPlan,
+    deleteDailyPlan,
+    resetDailyPlans,
     addShoppingItem,
     toggleShoppingItem,
     deleteShoppingItem,
