@@ -793,6 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Canlı sunucudan en güncel veriyi çek
         await syncWithServer(false);
         registerPushSubscription();
+        initRealtimeStream();
     }
     renderApp();
     checkMonthStartNotification();
@@ -800,12 +801,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Altınkaynak canlı piyasa kurlarını ilk kez yükle
     fetchLiveMarketRates(false);
 
-    // 2.5 saniyede bir ailedeki ve mesajlaşmadaki güncellemeleri otomatik senkronize et (Hızlı Canlı Akış)
+    // 1.2 saniyede bir ailedeki ve mesajlaşmadaki güncellemeleri otomatik senkronize et (Ultra Hızlı Canlı Akış)
     setInterval(() => {
         if (appState.currentUser && appState.familyData) {
             syncWithServer(true);
         }
-    }, 2500);
+    }, 1200);
 
     // 30 saniyede bir Altınkaynak canlı kurlarını otomatik güncelle
     setInterval(() => {
@@ -816,6 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('focus', () => {
         if (appState.currentUser && appState.familyData) {
             syncWithServer(true);
+            initRealtimeStream();
         }
         if (titleFlashInterval) {
             clearInterval(titleFlashInterval);
@@ -827,6 +829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && appState.currentUser && appState.familyData) {
             syncWithServer(true);
+            initRealtimeStream();
             if (titleFlashInterval) {
                 clearInterval(titleFlashInterval);
                 titleFlashInterval = null;
@@ -844,6 +847,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
+// ==========================================================
+// CANLI SSE (SERVER-SENT EVENTS) ANLIK AKIŞ VE BİLDİRİM MOTORU
+// ==========================================================
+let familyEventSource = null;
+function initRealtimeStream() {
+    if (!appState.currentUser || !appState.familyData) return;
+    if (familyEventSource) {
+        try { familyEventSource.close(); } catch (e) {}
+        familyEventSource = null;
+    }
+
+    try {
+        const streamUrl = `/api/stream?familyId=${encodeURIComponent(appState.familyData.id)}&userId=${encodeURIComponent(appState.currentUser.id)}`;
+        familyEventSource = new EventSource(streamUrl);
+
+        familyEventSource.addEventListener('message', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.message && appState.currentUser && data.message.senderId !== appState.currentUser.id) {
+                    dispatchChatMessageNotification(data.message);
+                }
+                if (data && data.family) {
+                    appState.familyData = normalizeFamilyData(data.family);
+                    saveStateToStorage();
+                    renderApp();
+                }
+            } catch (err) {
+                console.warn('SSE mesaj ayrıştırma:', err);
+            }
+        });
+
+        familyEventSource.addEventListener('update', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.family) {
+                    appState.familyData = normalizeFamilyData(data.family);
+                    saveStateToStorage();
+                    renderApp();
+                }
+            } catch (err) {}
+        });
+
+        familyEventSource.onerror = () => {
+            // Otomatik yeniden bağlanma EventSource tarafından yönetilir
+        };
+    } catch (e) {
+        console.warn('SSE başlatma hatası:', e);
+    }
+}
 
 // Ayın ilk günü veya yeni ay bildirimi kontrolü
 function checkMonthStartNotification() {

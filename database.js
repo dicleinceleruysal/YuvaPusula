@@ -981,9 +981,18 @@ async function sendPushToFamily(familyId, payload, excludeUserId) {
         url: payload.url || './index.html?tab=chat'
     });
     
+    const pushOptions = {
+        TTL: 86400,
+        urgency: 'high',
+        headers: {
+            'Urgency': 'high',
+            'Topic': 'chat'
+        }
+    };
+    
     const sendPromises = subs.map(async (sub) => {
         try {
-            await webpush.sendNotification(sub, notificationPayload);
+            await webpush.sendNotification(sub, notificationPayload, pushOptions);
         } catch (err) {
             if (err.statusCode === 404 || err.statusCode === 410) {
                 // Abonelik geçersizleşmiş
@@ -1040,10 +1049,19 @@ async function sendPushToUser(userId, payload) {
         url: payload.url || './index.html?tab=chat'
     });
     
+    const pushOptions = {
+        TTL: 86400,
+        urgency: 'high',
+        headers: {
+            'Urgency': 'high',
+            'Topic': 'test'
+        }
+    };
+    
     let sentCount = 0;
     for (const sub of subs) {
         try {
-            await webpush.sendNotification(sub, notificationPayload);
+            await webpush.sendNotification(sub, notificationPayload, pushOptions);
             sentCount++;
         } catch (err) {
             console.error('sendPushToUser error:', err.statusCode, err.message);

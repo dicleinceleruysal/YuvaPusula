@@ -202,6 +202,23 @@ function sendJson(res, statusCode, data) {
     res.end(JSON.stringify(data));
 }
 
+// SSE Canlı Bildirim ve Mesaj Dağıtım Yöneticisi
+const sseFamilyClients = new Map(); // familyId -> Set of res
+
+function broadcastToFamilyLive(familyId, eventType, data) {
+    if (!familyId) return;
+    const clientSet = sseFamilyClients.get(familyId);
+    if (!clientSet || clientSet.size === 0) return;
+    const payloadStr = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+    for (const res of clientSet) {
+        try {
+            res.write(payloadStr);
+        } catch (e) {
+            clientSet.delete(res);
+        }
+    }
+}
+
 async function appHandler(req, res) {
     // CORS Preflight
     if (req.method === 'OPTIONS') {
@@ -222,6 +239,36 @@ async function appHandler(req, res) {
     // ==========================================================
     if (pathname.startsWith('/api/')) {
         try {
+            // 0. Canlı SSE Akışı (Anlık Mesaj & Bildirim)
+            if (pathname === '/api/stream' && req.method === 'GET') {
+                const params = new URLSearchParams(urlParts[1] || '');
+                const familyId = params.get('familyId');
+                if (!familyId) {
+                    return sendJson(res, 400, { error: 'familyId zorunludur.' });
+                }
+
+                res.writeHead(200, {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache, no-transform',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*'
+                });
+                res.write('retry: 2000\n\n');
+                res.write(`event: connected\ndata: ${JSON.stringify({ status: 'connected', time: Date.now() })}\n\n`);
+
+                if (!sseFamilyClients.has(familyId)) {
+                    sseFamilyClients.set(familyId, new Set());
+                }
+                const set = sseFamilyClients.get(familyId);
+                set.add(res);
+
+                req.on('close', () => {
+                    set.delete(res);
+                    if (set.size === 0) sseFamilyClients.delete(familyId);
+                });
+                return;
+            }
+
             // 1. Giriş Yap (Telefon No ile)
             if (pathname === '/api/auth/login' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
@@ -453,7 +500,10 @@ async function appHandler(req, res) {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addMessage(body.familyId, body.message);
                 
-                // Arka plan Web Push Bildirimi Gönder (Uygulama kapalıyken de gelsin)
+                // 1. Anında Canlı SSE Yayını (Açık cihazlara 0 ms gecikmeyle ulaştır)
+                broadcastToFamilyLive(body.familyId, 'message', { family: updatedFamily, message: body.message });
+
+                // 2. Arka plan Web Push Bildirimi Gönder (Uygulama kapalıyken de gelsin)
                 const senderName = (body.message && body.message.senderName) || 'Aile Üyesi';
                 const isGroup = !body.message.receiverId || body.message.receiverId === 'group';
                 const notifTitle = isGroup ? `💬 ${senderName}` : `🔒 ${senderName} (Özel Mesaj)`;
