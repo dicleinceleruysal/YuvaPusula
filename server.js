@@ -429,26 +429,30 @@ async function appHandler(req, res) {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addDailyPlan(body.familyId, body.plan);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
-                const assignedStr = body.plan && body.plan.assignedTo && body.plan.assignedTo !== 'Tüm Aile' ? ` (${body.plan.assignedTo})` : '';
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: `⏰ Günlük Plan${assignedStr}`,
+                const assignedTarget = body.plan ? body.plan.assignedTo : null;
+                const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
+                const titleStr = isAll ? '⏰ Yeni Günlük Plan (Tüm Aile)' : `⏰ Sana Yeni Günlük Plan Eklendi (${assignedTarget})`;
+                dbManager.sendPushToTarget(body.familyId, {
+                    title: titleStr,
                     body: `${(body.plan && body.plan.title) || 'Yeni günlük plan'} - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=pano'
-                }).catch(e => {});
+                }, assignedTarget, null).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/daily-plans/update' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.updateDailyPlan(body.familyId, body.planId, body.plan);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
-                const assignedStr = body.plan && body.plan.assignedTo && body.plan.assignedTo !== 'Tüm Aile' ? ` (${body.plan.assignedTo})` : '';
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: `⏰ Günlük Plan Güncellendi${assignedStr}`,
+                const assignedTarget = body.plan ? body.plan.assignedTo : null;
+                const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
+                const titleStr = isAll ? '⏰ Günlük Plan Güncellendi (Tüm Aile)' : `⏰ Günlük Planın Güncellendi (${assignedTarget})`;
+                dbManager.sendPushToTarget(body.familyId, {
+                    title: titleStr,
                     body: `${(body.plan && body.plan.title) || 'Günlük plan'} düzenlendi - Saat: ${(body.plan && body.plan.time) || 'Günün Akışı'}`,
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=pano'
-                }).catch(e => {});
+                }, assignedTarget, null).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/daily-plans/toggle' && req.method === 'POST') {
@@ -501,13 +505,15 @@ async function appHandler(req, res) {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.addTask(body.familyId, body.task);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
-                const assigneeStr = body.task && body.task.assignee ? ` [${body.task.assignee}]` : '';
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: `✅ Yeni Görev${assigneeStr}`,
+                const assignedTarget = body.task ? body.task.assignee : null;
+                const isAll = !assignedTarget || assignedTarget === 'Tüm Aile' || assignedTarget === 'Tum Aile';
+                const titleStr = isAll ? '✅ Aile İçin Yeni Görev' : `✅ Sana Yeni Bir Görev Atandı (${assignedTarget})`;
+                dbManager.sendPushToTarget(body.familyId, {
+                    title: titleStr,
                     body: `${(body.task && body.task.title) || 'Yeni görev atandı.'}`,
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=tasks'
-                }).catch(e => {});
+                }, assignedTarget, null).catch(e => {});
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/tasks/toggle' && req.method === 'POST') {
@@ -606,18 +612,28 @@ async function appHandler(req, res) {
                 // 1. Anında Canlı SSE Yayını (Açık cihazlara 0 ms gecikmeyle ulaştır)
                 broadcastToFamilyLive(body.familyId, 'message', { family: updatedFamily, message: body.message });
 
-                // 2. Arka plan Web Push Bildirimi Gönder (Uygulama kapalıyken de gelsin)
+                // 2. Arka plan Web Push Bildirimi Gönder (Yalnızca ilgili kişiye veya gruba)
                 const senderName = (body.message && body.message.senderName) || 'Aile Üyesi';
-                const isGroup = !body.message.receiverId || body.message.receiverId === 'group';
+                const receiverId = body.message ? (body.message.receiverId || body.message.receiver_id) : null;
+                const isGroup = !receiverId || receiverId === 'group';
                 const notifTitle = isGroup ? `💬 ${senderName}` : `🔒 ${senderName} (Özel Mesaj)`;
                 const notifBody = (body.message && body.message.content) ? body.message.content : 'Yeni bir mesajınız var.';
                 
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: notifTitle,
-                    body: notifBody,
-                    icon: './icons/icon-192.png',
-                    url: './index.html?tab=chat'
-                }, body.message ? body.message.senderId : null).catch(err => console.error('Push bildirim hatası:', err));
+                if (isGroup) {
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: notifTitle,
+                        body: notifBody,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=chat'
+                    }, body.message ? body.message.senderId : null).catch(err => console.error('Grup mesaj push hatası:', err));
+                } else {
+                    dbManager.sendPushToUser(receiverId, {
+                        title: notifTitle,
+                        body: notifBody,
+                        icon: './icons/icon-192.png',
+                        url: `./index.html?tab=chat&direct=${body.message ? body.message.senderId : ''}`
+                    }).catch(err => console.error('Özel mesaj push hatası:', err));
+                }
 
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }

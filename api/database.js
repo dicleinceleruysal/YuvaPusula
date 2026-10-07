@@ -1163,6 +1163,46 @@ async function sendPushToUser(userId, payload) {
     return { success: sentCount > 0, count: sentCount, message: `${sentCount} cihaza test bildirimi iletildi.` };
 }
 
+// Belirli Bir Üyeye veya Tüm Aileye Hedefli Push Bildirimi Gönder
+async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUserId) {
+    if (!familyId) return;
+
+    const rawTarget = (targetUserOrName || '').trim();
+    const lowerTarget = rawTarget.toLowerCase();
+
+    // Hedef "Tüm Aile", "all", "group" veya boşsa tüm aileye gönder
+    if (!rawTarget || lowerTarget === 'tüm aile' || lowerTarget === 'tum aile' || lowerTarget === 'all' || lowerTarget === 'group') {
+        return await sendPushToFamily(familyId, payload, excludeUserId);
+    }
+
+    // Belirli bir kullanıcıya atandıysa, önce bu üyenin userId'sini bulalım
+    let targetUserId = null;
+    if (rawTarget.startsWith('usr_')) {
+        targetUserId = rawTarget;
+    } else {
+        const family = await getFullFamilyData(familyId);
+        if (family && family.members) {
+            const member = family.members.find(m => 
+                m.id === rawTarget || 
+                (m.name && m.name.toLowerCase() === lowerTarget) ||
+                (m.name && m.name.toLowerCase().includes(lowerTarget)) ||
+                (lowerTarget && lowerTarget.includes((m.name || '').toLowerCase()))
+            );
+            if (member) {
+                targetUserId = member.id;
+            }
+        }
+    }
+
+    if (targetUserId) {
+        // Yalnızca ilgili kişiye bildirim gönder
+        return await sendPushToUser(targetUserId, payload);
+    } else {
+        // Kullanıcı eşleşmezse tüm aileye gönder
+        return await sendPushToFamily(familyId, payload, excludeUserId);
+    }
+}
+
 module.exports = {
     initDatabase,
     findUserAndFamilyByPhone,
@@ -1207,5 +1247,6 @@ module.exports = {
     savePushSubscription,
     sendPushToFamily,
     sendPushToUser,
+    sendPushToTarget,
     VAPID_PUBLIC_KEY
 };
