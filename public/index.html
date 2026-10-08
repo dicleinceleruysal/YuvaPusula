@@ -54,28 +54,25 @@
         </div>
     </div>
 
-    <!-- 1. GİRİŞ / KAYIT VE AİLE KURULUM EKRANI (AUTH SCREEN) -->
+    <!-- 1. GİRİŞ / KAYIT EKRANI (AUTH SCREEN - UYSAL AİLESİ ÖZEL) -->
     <section id="authScreen" class="auth-wrapper">
         <div class="auth-card">
             <div class="auth-header">
                 <div class="app-logo" style="background: transparent; box-shadow: none; padding: 0;">
                     <img src="icons/icon.svg" style="width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 8px 24px rgba(30, 27, 75, 0.4);" alt="YuvaPusula">
                 </div>
-                <h2 style="margin-top: 10px;">YuvaPusula</h2>
-                <p>Aile bireylerinin zamanı, bütçeyi ve görevleri doğru yönetmesi için güvenilir aile rehberiniz</p>
+                <h2 style="margin-top: 10px;">Uysal Ailesi</h2>
+                <p>Aile yaşamı, bütçe, mesai ve zaman yönetimi rehberiniz</p>
             </div>
 
             <div class="auth-steps">
-                <!-- Adım Seçici (3 Mod) -->
+                <!-- Adım Seçici (Giriş Yap & Yeni Birey Kaydı) -->
                 <div class="auth-tabs">
                     <button class="auth-tab-btn active" id="tabLogin" onclick="switchAuthMode('login')">
                         <i class="fa-solid fa-right-to-bracket"></i> Giriş Yap
                     </button>
-                    <button class="auth-tab-btn" id="tabNewFamily" onclick="switchAuthMode('create')">
-                        <i class="fa-solid fa-plus-circle"></i> Yeni Aile Kur
-                    </button>
-                    <button class="auth-tab-btn" id="tabJoinFamily" onclick="switchAuthMode('join')">
-                        <i class="fa-solid fa-key"></i> Aileye Katıl
+                    <button class="auth-tab-btn" id="tabRegister" onclick="switchAuthMode('register')">
+                        <i class="fa-solid fa-user-plus"></i> Yeni Aile Bireyi Ekle
                     </button>
                 </div>
 
@@ -86,42 +83,28 @@
                         <input type="tel" id="userPhone" placeholder="05XX XXX XX XX" required>
                     </div>
 
-                    <!-- İsim Alanı (Yeni Aile ve Katıl Modunda) -->
+                    <!-- İsim Alanı (Yeni Birey Modunda) -->
                     <div id="authNameField" class="form-group hidden">
                         <label><i class="fa-solid fa-user"></i> Adınız Soyadınız</label>
-                        <input type="text" id="userName" placeholder="Örn: Ahmet Uysal">
+                        <input type="text" id="userName" placeholder="Örn: Dicle Uysal / Fırat Uysal">
                     </div>
 
-                    <!-- Rol Alanı (Yeni Aile ve Katıl Modunda) -->
+                    <!-- Rol Alanı (Yeni Birey Modunda) -->
                     <div id="authRoleField" class="form-group hidden">
                         <label><i class="fa-solid fa-id-badge"></i> Ailedeki Rolünüz</label>
                         <select id="userRole">
-                            <option value="Baba">👨 Baba</option>
                             <option value="Anne">👩 Anne</option>
-                            <option value="Oğul">👦 Oğul</option>
+                            <option value="Baba">👨 Baba</option>
                             <option value="Kız">👧 Kız</option>
+                            <option value="Oğul">👦 Oğul</option>
                             <option value="Dede">👴 Dede</option>
                             <option value="Büyükanne">👵 Büyükanne</option>
                             <option value="Diğer">🌟 Diğer Aile Bireyi</option>
                         </select>
                     </div>
 
-                    <!-- Yeni Aile Oluşturma Alanı -->
-                    <div id="createFamilyFields" class="form-group hidden">
-                        <label><i class="fa-solid fa-house-chimney-user"></i> Aile Adı (Soyadı veya Tanım)</label>
-                        <input type="text" id="familyNameInput" placeholder="Örn: Uysal">
-                        <small class="field-hint">Uygulama adı <b>"[Aile Adı] Ailesi - YuvaPusula"</b> olarak ayarlanacaktır.</small>
-                    </div>
-
-                    <!-- Mevcut Aileye Katılma Alanı -->
-                    <div id="joinFamilyFields" class="form-group hidden">
-                        <label><i class="fa-solid fa-hashtag"></i> 6 Haneli Aile Davet Kodu</label>
-                        <input type="text" id="familyCodeInput" placeholder="Örn: UYS123" maxlength="8" style="text-transform: uppercase;">
-                        <small class="field-hint">Ailenizdeki bir bireyden davet kodunu isteyebilirsiniz.</small>
-                    </div>
-
                     <button type="submit" class="btn-primary" id="btnAuthSubmit">
-                        <i class="fa-solid fa-compass"></i> YuvaPusula'ya Giriş Yap
+                        <i class="fa-solid fa-right-to-bracket"></i> Uysal Ailesi'ne Giriş Yap
                     </button>
                 </form>
 

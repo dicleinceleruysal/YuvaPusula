@@ -299,12 +299,22 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, user, family });
             }
 
-            // 3. Aileye Katıl (Davet Kodu ile)
+            // 3. Aileye Katıl / Yeni Birey Kaydı (Uysal Ailesi)
             if (pathname === '/api/auth/join' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
-                const family = await dbManager.findFamilyByCode(body.inviteCode || '');
+                let family = null;
+                if (body.inviteCode) {
+                    family = await dbManager.findFamilyByCode(body.inviteCode);
+                }
                 if (!family) {
-                    return sendJson(res, 404, { success: false, message: 'Geçersiz davet kodu.' });
+                    family = await dbManager.findFamilyByCode('UYSAL') || await dbManager.findFamilyByCode('UYS123');
+                }
+                if (!family) {
+                    const fallbackUser = await dbManager.findUserAndFamilyByPhone('05550000000') || await dbManager.findUserAndFamilyByPhone('');
+                    if (fallbackUser) family = fallbackUser.family;
+                }
+                if (!family) {
+                    return sendJson(res, 404, { success: false, message: 'Uysal Ailesi veritabanı kaydı bulunamadı.' });
                 }
 
                 const user = {

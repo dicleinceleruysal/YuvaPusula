@@ -1299,64 +1299,33 @@ function saveStateToStorage() {
 }
 
 // ==========================================================
-// 2. KAYIT / GİRİŞ & AİLE OLUŞTURMA İŞLEMLERİ
+// 2. KAYIT / GİRİŞ İŞLEMLERİ (UYSAL AİLESİ ÖZEL)
 // ==========================================================
-let currentAuthMode = 'login'; // 'login', 'create' veya 'join'
+let currentAuthMode = 'login'; // 'login' veya 'register'
 
 function switchAuthMode(mode) {
     currentAuthMode = mode;
     const tabLogin = document.getElementById('tabLogin');
-    const tabCreate = document.getElementById('tabNewFamily');
-    const tabJoin = document.getElementById('tabJoinFamily');
+    const tabRegister = document.getElementById('tabRegister');
 
     const authNameField = document.getElementById('authNameField');
     const authRoleField = document.getElementById('authRoleField');
-    const createFields = document.getElementById('createFamilyFields');
-    const joinFields = document.getElementById('joinFamilyFields');
     const btnSubmit = document.getElementById('btnAuthSubmit');
-
     const userName = document.getElementById('userName');
-    const familyNameInput = document.getElementById('familyNameInput');
-    const familyCodeInput = document.getElementById('familyCodeInput');
 
-    // Tab butonlarını güncelle
     if (tabLogin) tabLogin.classList.toggle('active', mode === 'login');
-    if (tabCreate) tabCreate.classList.toggle('active', mode === 'create');
-    if (tabJoin) tabJoin.classList.toggle('active', mode === 'join');
+    if (tabRegister) tabRegister.classList.toggle('active', mode === 'register');
 
     if (mode === 'login') {
         if (authNameField) authNameField.classList.add('hidden');
         if (authRoleField) authRoleField.classList.add('hidden');
-        if (createFields) createFields.classList.add('hidden');
-        if (joinFields) joinFields.classList.add('hidden');
-
         if (userName) userName.required = false;
-        if (familyNameInput) familyNameInput.required = false;
-        if (familyCodeInput) familyCodeInput.required = false;
-
-        if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Giriş Yap';
-    } else if (mode === 'create') {
+        if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Uysal Ailesi\'ne Giriş Yap';
+    } else {
         if (authNameField) authNameField.classList.remove('hidden');
         if (authRoleField) authRoleField.classList.remove('hidden');
-        if (createFields) createFields.classList.remove('hidden');
-        if (joinFields) joinFields.classList.add('hidden');
-
         if (userName) userName.required = true;
-        if (familyNameInput) familyNameInput.required = true;
-        if (familyCodeInput) familyCodeInput.required = false;
-
-        if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-house-chimney-medical"></i> Yeni Ailemi Oluştur';
-    } else if (mode === 'join') {
-        if (authNameField) authNameField.classList.remove('hidden');
-        if (authRoleField) authRoleField.classList.remove('hidden');
-        if (createFields) createFields.classList.add('hidden');
-        if (joinFields) joinFields.classList.remove('hidden');
-
-        if (userName) userName.required = true;
-        if (familyNameInput) familyNameInput.required = false;
-        if (familyCodeInput) familyCodeInput.required = true;
-
-        if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-key"></i> Aileye Katıl';
+        if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-user-plus"></i> Uysal Ailesi\'ne Katıl';
     }
 }
 
@@ -1370,11 +1339,11 @@ async function handleAuthSubmit(event) {
     }
 
     if (currentAuthMode === 'login') {
-        // 1. SQLite API üzerinden giriş yap
+        // 1. SQLite / Neon API üzerinden giriş yap
         const apiRes = await AilemAPI.login(phone);
         if (apiRes && apiRes.success && apiRes.user && apiRes.family) {
             appState.currentUser = apiRes.user;
-            appState.familyData = apiRes.family;
+            appState.familyData = normalizeFamilyData(apiRes.family);
             saveStateToStorage();
             renderApp();
             showToast(`Hoş geldiniz, ${apiRes.user.name}! 🏠`);
@@ -1385,19 +1354,20 @@ async function handleAuthSubmit(event) {
         const result = await AilemDB.findByPhone(phone);
         if (result) {
             appState.currentUser = result.user;
-            appState.familyData = result.family;
+            appState.familyData = normalizeFamilyData(result.family);
             saveStateToStorage();
             renderApp();
             showToast(`Hoş geldiniz, ${result.user.name}! 🏠`);
             return;
         }
 
-        // Bulunamazsa yönlendir
-        showToast('Bu telefon ile kayıtlı aile bulunamadı. Lütfen "Yeni Aile Kur" seçeneğini doldurun.');
-        switchAuthMode('create');
+        // Bulunamazsa nazikçe yeni birey kaydına yönlendir
+        showToast('Bu telefon numarası Uysal Ailesi\'nde bulunamadı. Lütfen adınızı kaydedin.');
+        switchAuthMode('register');
         return;
     }
 
+    // Yeni Birey Kaydı (Doğrudan Uysal Ailesi'ne Katılır)
     const name = document.getElementById('userName').value.trim();
     const role = document.getElementById('userRole').value;
 
@@ -1408,86 +1378,55 @@ async function handleAuthSubmit(event) {
 
     const avatar = ROLE_AVATARS[role] || '👤';
 
-    if (currentAuthMode === 'create') {
-        let rawFamilyName = document.getElementById('familyNameInput').value.trim();
-        if (!rawFamilyName) rawFamilyName = name.split(' ').pop() || 'Bizim';
+    // API üzerinden doğrudan Uysal ailesine dahil et
+    const apiRes = await AilemAPI.joinFamily('UYS123', phone, name, role, avatar);
+    if (apiRes && apiRes.success) {
+        appState.currentUser = apiRes.user;
+        appState.familyData = normalizeFamilyData(apiRes.family);
+        saveStateToStorage();
+        renderApp();
+        registerPushSubscription();
+        showToast(`Uysal Ailesi'ne hoş geldiniz, ${name}! 👋🏠`);
+        return;
+    }
 
-        // 1. SQLite Sunucusu üzerinden oluştur
-        const apiRes = await AilemAPI.createFamily(rawFamilyName, phone, name, role, avatar);
-        if (apiRes && apiRes.success) {
-            appState.currentUser = apiRes.user;
-            appState.familyData = apiRes.family;
-            saveStateToStorage();
-            renderApp();
-            registerPushSubscription();
-            showToast(`${apiRes.family.name} veritabanına kaydedildi ve kuruldu! 🏠`);
-            return;
-        }
-
-        // Çevrimdışı fallback
-        const formattedFamilyName = rawFamilyName.toLowerCase().includes('aile') ? rawFamilyName : `${rawFamilyName} Ailesi`;
-        const inviteCode = (rawFamilyName.substring(0, 3).toUpperCase() + Math.floor(100 + Math.random() * 900)).replace(/[^A-Z0-9]/g, 'AIL');
-        const newUser = { id: 'usr_' + Date.now(), name, phone, role, avatar };
-        const newFamily = {
-            id: 'fam_' + Date.now(),
-            name: formattedFamilyName,
-            inviteCode,
+    // Çevrimdışı fallback
+    let family = await AilemDB.findByCode('UYS123') || await AilemDB.findByPhone('');
+    const newUser = { id: 'usr_' + Date.now(), name, phone, role, avatar };
+    if (!family) {
+        family = {
+            id: 'fam_1790764019415',
+            name: 'Uysal Ailesi',
+            inviteCode: 'UYS123',
             members: [newUser],
             posts: [],
             plans: [],
+            dailyPlans: [],
             shoppingList: [],
             tasks: [],
-            expenses: []
+            expenses: [],
+            salaries: [],
+            extraIncomes: [],
+            overtimes: [],
+            fixedExpenses: [],
+            investments: [],
+            investmentHistory: [],
+            messages: []
         };
-        appState.currentUser = newUser;
-        appState.familyData = newFamily;
-        saveStateToStorage();
-        renderApp();
-        AilemAPI.syncFamily(newFamily);
-        registerPushSubscription();
-        showToast(`${formattedFamilyName} kuruldu! 🏠`);
     } else {
-        // Aileye Katılma Modu
-        const inputCode = document.getElementById('familyCodeInput').value.trim().toUpperCase();
-
-        const apiRes = await AilemAPI.joinFamily(inputCode, phone, name, role, avatar);
-        if (apiRes && apiRes.success) {
-            appState.currentUser = apiRes.user;
-            appState.familyData = apiRes.family;
-            saveStateToStorage();
-            renderApp();
-            registerPushSubscription();
-            showToast(`${apiRes.family.name} ailesine başarıyla katıldınız! 👋`);
-            return;
-        }
-
-        // Çevrimdışı fallback
-        let family = await AilemDB.findByCode(inputCode);
-        const newUser = { id: 'usr_' + Date.now(), name, phone, role, avatar };
-        if (!family) {
-            family = {
-                id: 'fam_' + Date.now(),
-                name: `${name.split(' ').pop()} Ailesi`,
-                inviteCode: inputCode,
-                members: [newUser],
-                posts: [],
-                plans: [],
-                shoppingList: [],
-                tasks: [],
-                expenses: []
-            };
-        } else {
-            if (!family.members.find(m => m.phone === phone)) family.members.push(newUser);
-        }
-
-        appState.currentUser = newUser;
-        appState.familyData = family;
-        saveStateToStorage();
-        renderApp();
-        AilemAPI.syncFamily(family);
-        registerPushSubscription();
-        showToast(`${family.name} ailesine katıldınız! 👋`);
+        if (!family.members) family.members = [];
+        const idx = family.members.findIndex(m => m.phone === phone);
+        if (idx >= 0) family.members[idx] = newUser;
+        else family.members.push(newUser);
     }
+
+    appState.currentUser = newUser;
+    appState.familyData = normalizeFamilyData(family);
+    saveStateToStorage();
+    renderApp();
+    AilemAPI.syncFamily(family);
+    registerPushSubscription();
+    showToast(`Uysal Ailesi'ne hoş geldiniz, ${name}! 👋🏠`);
 }
 
 async function handleQuickDemoLogin() {
