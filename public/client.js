@@ -1308,20 +1308,11 @@ function selectAuthProfile(profileName, defaultPhone) {
     const pwdInput = document.getElementById('userPassword');
     const chipDicle = document.getElementById('chipDicle');
     const chipFirat = document.getElementById('chipFirat');
-    const hintEl = document.getElementById('authPwdHint');
 
     if (userPhoneInput) userPhoneInput.value = profileName;
 
     if (chipDicle) chipDicle.classList.toggle('active', profileName === 'Dicle');
     if (chipFirat) chipFirat.classList.toggle('active', profileName === 'Fırat');
-
-    if (hintEl) {
-        if (profileName === 'Dicle') {
-            hintEl.innerHTML = '🔑 Dicle için şifre: <b>dicle</b>';
-        } else if (profileName === 'Fırat') {
-            hintEl.innerHTML = '🔑 Fırat için şifre: <b>fırat</b>';
-        }
-    }
 
     if (pwdInput) {
         pwdInput.value = '';
@@ -1398,11 +1389,11 @@ async function handleAuthSubmit(event) {
     const pwdLower = password.toLowerCase();
 
     if (idLower.includes('dicle') && pwdLower !== 'dicle') {
-        showToast('❌ Hatalı şifre! Dicle için şifre "dicle" olmalıdır.');
+        showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
         return;
     }
     if ((idLower.includes('fırat') || idLower.includes('firat')) && pwdLower !== 'fırat' && pwdLower !== 'firat') {
-        showToast('❌ Hatalı şifre! Fırat için şifre "fırat" olmalıdır.');
+        showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
         return;
     }
 

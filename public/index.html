@@ -66,16 +66,6 @@
             </div>
 
             <div class="auth-steps">
-                <!-- Adım Seçici (Giriş Yap & Yeni Birey Kaydı) -->
-                <div class="auth-tabs">
-                    <button class="auth-tab-btn active" id="tabLogin" onclick="switchAuthMode('login')">
-                        <i class="fa-solid fa-right-to-bracket"></i> Giriş Yap
-                    </button>
-                    <button class="auth-tab-btn" id="tabRegister" onclick="switchAuthMode('register')">
-                        <i class="fa-solid fa-user-plus"></i> Yeni Aile Bireyi Ekle
-                    </button>
-                </div>
-
                 <form id="authForm" onsubmit="handleAuthSubmit(event)">
                     <!-- Hızlı Profil Seçimi (Dicle & Fırat) -->
                     <div id="quickProfileSelector" class="form-group">
@@ -93,10 +83,10 @@
                     <!-- Telefon veya Kullanıcı Adı Alanı -->
                     <div class="form-group" id="authPhoneGroup">
                         <label><i class="fa-solid fa-user"></i> Telefon veya Kişi Adı</label>
-                        <input type="text" id="userPhone" placeholder="Örn: Dicle, Fırat veya 05XX XXX XX XX" required>
+                        <input type="text" id="userPhone" placeholder="Örn: Dicle veya Fırat" required>
                     </div>
 
-                    <!-- Şifre Alanı (Dicle: dicle, Fırat: fırat) -->
+                    <!-- Şifre Alanı -->
                     <div class="form-group" id="authPasswordGroup">
                         <label><i class="fa-solid fa-lock"></i> Şifreniz</label>
                         <div class="password-input-wrapper">
@@ -105,29 +95,6 @@
                                 <i class="fa-solid fa-eye" id="pwdEyeIcon"></i>
                             </button>
                         </div>
-                        <small class="field-hint" id="authPwdHint" style="color: var(--text-muted); margin-top: 4px; display: block;">
-                            🔑 Şifre: Dicle için <b>dicle</b> • Fırat için <b>fırat</b>
-                        </small>
-                    </div>
-
-                    <!-- İsim Alanı (Yeni Birey Modunda) -->
-                    <div id="authNameField" class="form-group hidden">
-                        <label><i class="fa-solid fa-user-tag"></i> Adınız Soyadınız</label>
-                        <input type="text" id="userName" placeholder="Örn: Ayşe Uysal">
-                    </div>
-
-                    <!-- Rol Alanı (Yeni Birey Modunda) -->
-                    <div id="authRoleField" class="form-group hidden">
-                        <label><i class="fa-solid fa-id-badge"></i> Ailedeki Rolünüz</label>
-                        <select id="userRole">
-                            <option value="Anne">👩 Anne</option>
-                            <option value="Baba">👨 Baba</option>
-                            <option value="Kız">👧 Kız</option>
-                            <option value="Oğul">👦 Oğul</option>
-                            <option value="Dede">👴 Dede</option>
-                            <option value="Büyükanne">👵 Büyükanne</option>
-                            <option value="Diğer">🌟 Diğer Aile Bireyi</option>
-                        </select>
                     </div>
 
                     <button type="submit" class="btn-primary" id="btnAuthSubmit" style="margin-top: 14px;">
