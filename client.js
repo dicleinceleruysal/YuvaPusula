@@ -1426,17 +1426,19 @@ async function handleAuthSubmit(event) {
         // 2. Çevrimdışı / LocalStorage kontrolü
         let result = await AilemDB.findByPhone(identifier);
         if (!result && (idLower.includes('dicle') || idLower.includes('fırat') || idLower.includes('firat'))) {
-            let uysalFamily = await AilemDB.findByCode('UYS123') || AilemDB.getDemoSeed();
+            const allFams = await AilemDB.getAllFamilies();
+            let uysalFamily = await AilemDB.findByCode('UYSAL') || await AilemDB.findByCode('UYS307') || await AilemDB.findByCode('UYS123') || allFams[0];
             let matchedUser = null;
             if (idLower.includes('dicle')) {
-                matchedUser = { id: 'usr_dicle', name: 'Dicle', role: 'Anne', phone: '05551112233', avatar: '👩' };
+                matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => (m.name||'').toLowerCase().includes('dicle') || (m.phone && m.phone.includes('5546448989'))) : null;
+                if (!matchedUser) matchedUser = { id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' };
             } else {
-                matchedUser = { id: 'usr_firat', name: 'Fırat', role: 'Baba', phone: '05552223344', avatar: '👨' };
+                matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => (m.name||'').toLowerCase().includes('fırat') || (m.name||'').toLowerCase().includes('firat') || (m.phone && m.phone.includes('5458030118'))) : null;
+                if (!matchedUser) matchedUser = { id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' };
             }
-            if (!uysalFamily.members.some(m => m.id === matchedUser.id)) {
-                uysalFamily.members.push(matchedUser);
+            if (uysalFamily) {
+                result = { user: matchedUser, family: uysalFamily };
             }
-            result = { user: matchedUser, family: uysalFamily };
         }
 
         if (result) {
