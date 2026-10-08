@@ -623,6 +623,12 @@ async function appHandler(req, res) {
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
+            if (pathname === '/api/tasks/reset-week' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.resetWeeklyTasks(body.familyId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
 
             // 10. Harcama İşlemleri
             if (pathname === '/api/expenses/add' && req.method === 'POST') {

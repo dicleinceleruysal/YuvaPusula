@@ -5272,6 +5272,58 @@ body {
     color: var(--text-dark);
 }
 
+/* ==========================================================
+   GÜNLÜK GÖREV ENTEGRASYONU & KİŞİ ETİKETLERİ
+   ========================================================== */
+.daily-task-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: #EBF5FB;
+    color: #2980B9;
+    border: 1px solid rgba(41, 128, 185, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.daily-member-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.daily-member-tag.tag-dicle {
+    background: #FDF2E9;
+    color: #D35400;
+    border: 1px solid rgba(211, 84, 0, 0.2);
+}
+
+.daily-member-tag.tag-firat {
+    background: #E8F8F5;
+    color: #16A085;
+    border: 1px solid rgba(22, 160, 133, 0.2);
+}
+
+.daily-member-tag.tag-all {
+    background: #F4ECF7;
+    color: #8E44AD;
+    border: 1px solid rgba(142, 68, 173, 0.2);
+}
+
+.daily-time-badge.task-time-badge {
+    background: #EBF5FB;
+    color: #2980B9;
+    border-color: rgba(41, 128, 185, 0.25);
+}
+
 
 
 

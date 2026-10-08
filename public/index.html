@@ -356,6 +356,16 @@
                         </div>
                     </div>
 
+                    <!-- Günlük Filtre Çipleri (Bana Özel vs Tüm Aile) -->
+                    <div class="category-chips daily-filter-row" style="margin: 10px 0 6px 0; padding: 0 4px;">
+                        <button class="chip active" id="chipDailyMine" onclick="filterDailyPlanner('MINE', this)">
+                            <i class="fa-solid fa-user-check"></i> Bana Özel & Ortak
+                        </button>
+                        <button class="chip" id="chipDailyAll" onclick="filterDailyPlanner('ALL', this)">
+                            <i class="fa-solid fa-people-group"></i> Tüm Aile Akışı
+                        </button>
+                    </div>
+
                     <!-- Günlük Plan Listesi -->
                     <div class="daily-plans-list" id="panoDailyPlansList">
                         <!-- Dinamik Günlük Plan Öğeleri Gelecek -->
@@ -596,16 +606,40 @@
                 <div class="panel-header-action">
                     <div>
                         <h3>✅ Aile Görevleri</h3>
-                        <p class="subtitle">Ev işleri, ödevler ve sorumluluk dağılımı</p>
+                        <p class="subtitle">Ev işleri, haftalık sorumluluklar ve kişisel görevler</p>
                     </div>
-                    <button class="btn-primary-sm" onclick="openModal('modalNewTask')">
-                        <i class="fa-solid fa-plus"></i> Görev Ver
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-secondary-sm" onclick="handleResetWeeklyTasks()" title="Haftalık Görevleri Sıfırla">
+                            <i class="fa-solid fa-arrows-rotate"></i> Haftalık Sıfırla
+                        </button>
+                        <button class="btn-primary-sm" onclick="openModal('modalNewTask')">
+                            <i class="fa-solid fa-plus"></i> Görev Ata
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kişi Bazlı Filtreler (Dicle / Fırat / Tüm Aile) -->
+                <div class="category-chips" id="taskAssigneeFilterRow">
+                    <button class="chip active" id="chipTaskMine" onclick="filterTaskAssignee('MINE', this)">
+                        <i class="fa-solid fa-user-check"></i> Bana Atananlar & Ortak
+                    </button>
+                    <button class="chip" id="chipTaskAll" onclick="filterTaskAssignee('ALL', this)">
+                        <i class="fa-solid fa-list"></i> Tüm Görevler
+                    </button>
+                    <button class="chip" id="chipTaskDicle" onclick="filterTaskAssignee('DICLE', this)">
+                        👩 Dicle'nin Görevleri
+                    </button>
+                    <button class="chip" id="chipTaskFirat" onclick="filterTaskAssignee('FIRAT', this)">
+                        👨 Fırat'ın Görevleri
+                    </button>
+                    <button class="chip" id="chipTaskFamily" onclick="filterTaskAssignee('FAMILY', this)">
+                        👨‍👩‍👧‍👦 Tüm Aile (Ortak)
                     </button>
                 </div>
 
                 <!-- Görev Durum Tabları -->
-                <div class="category-chips">
-                    <button class="chip active" onclick="filterTasks('ALL', this)">Tümü</button>
+                <div class="category-chips" style="margin-top: -6px;">
+                    <button class="chip active" onclick="filterTasks('ALL', this)">Tüm Durumlar</button>
                     <button class="chip" onclick="filterTasks('PENDING', this)">⏳ Devam Edenler</button>
                     <button class="chip" onclick="filterTasks('DONE', this)">🎉 Tamamlananlar</button>
                 </div>

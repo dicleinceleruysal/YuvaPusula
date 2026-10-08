@@ -65,6 +65,8 @@ let appState = {
     plansStatusFilter: 'ALL',
     shoppingFilter: 'ALL',
     taskFilter: 'ALL',
+    taskAssigneeFilter: 'MINE',     // 'MINE', 'ALL', 'DICLE', 'FIRAT', 'FAMILY'
+    dailyPlannerFilter: 'MINE',     // 'MINE' (Bana Özel + Tüm Aile), 'ALL' (Tüm Aile Akışı)
     deferredPrompt: null
 };
 
@@ -503,6 +505,21 @@ const AilemAPI = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ familyId, taskId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async resetWeeklyTasks(familyId) {
+        try {
+            const res = await fetch('/api/tasks/reset-week', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -1593,6 +1610,42 @@ async function checkDayStartRollover() {
     localStorage.setItem('yuvapusula_last_checked_day', todayKey);
 }
 
+function getISOWeekKey(d = new Date()) {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    const weekNr = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return `${date.getFullYear()}-W${String(weekNr).padStart(2, '0')}`;
+}
+
+async function checkWeekStartRollover() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    const currentWeekKey = getISOWeekKey();
+    const lastCheckedWeek = localStorage.getItem('yuvapusula_last_checked_week');
+
+    if (lastCheckedWeek && lastCheckedWeek !== currentWeekKey) {
+        // Yeni bir haftaya girildi (Pazartesi haftalık görev sıfırlanması)
+        if (family.id) {
+            const updatedFamily = await AilemAPI.resetWeeklyTasks(family.id);
+            if (updatedFamily) {
+                appState.familyData = normalizeFamilyData(updatedFamily);
+                saveStateToStorage();
+                renderTasks();
+                renderDailyPlans();
+            }
+        } else if (family.tasks && family.tasks.length > 0) {
+            family.tasks = family.tasks.map(t => ({ ...t, completed: false }));
+            saveStateToStorage();
+            renderTasks();
+            renderDailyPlans();
+        }
+    }
+    localStorage.setItem('yuvapusula_last_checked_week', currentWeekKey);
+}
+
 function renderApp() {
     const authScreen = document.getElementById('authScreen');
     const mainApp = document.getElementById('mainApp');
@@ -1608,6 +1661,7 @@ function renderApp() {
     mainApp.classList.remove('hidden');
 
     checkMonthStartRollover();
+    checkWeekStartRollover();
     checkDayStartRollover();
 
     const family = appState.familyData;
@@ -1950,6 +2004,28 @@ function openAddPlanModalForCurrentCategory() {
     openPlanFormWithCategory(appState.activePlanHub);
 }
 
+function filterDailyPlanner(mode, btn) {
+    appState.dailyPlannerFilter = mode;
+    const chips = document.querySelectorAll('.daily-filter-row .chip');
+    chips.forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderDailyPlans();
+}
+
+async function toggleTaskFromDaily(taskId) {
+    await toggleTask(taskId);
+    renderDailyPlans();
+    updateQuickStats();
+}
+
+function getTodayFormattedStrings() {
+    const now = new Date();
+    const iso = now.toISOString().split('T')[0];
+    const tr = now.toLocaleDateString('tr-TR');
+    const trPadded = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+    return [iso, tr, trPadded, 'Bugün', 'bugün', 'Düzenli', 'düzenli'];
+}
+
 // Günlük Planları Render Et (Pano Widget & Gün Akışı)
 function renderDailyPlans() {
     const family = appState.familyData;
@@ -1963,11 +2039,59 @@ function renderDailyPlans() {
     if (dateLabel) dateLabel.textContent = dateStr;
 
     if (!family.dailyPlans) family.dailyPlans = [];
-    const dailyPlans = [...family.dailyPlans];
+    if (!family.tasks) family.tasks = [];
+
+    const curUser = appState.currentUser;
+    const curNameLower = (curUser && curUser.name ? curUser.name : '').toLowerCase();
+    const isDicle = curNameLower.includes('dicle');
+    const isFirat = curNameLower.includes('fırat') || curNameLower.includes('firat');
+
+    const todayMatchStrings = getTodayFormattedStrings();
+
+    // 1. Günlük Rutinleri Al
+    const dailyItems = family.dailyPlans.map(p => ({
+        ...p,
+        itemType: 'dailyPlan'
+    }));
+
+    // 2. Bugünün Görevlerini Al (Görevler tabından bugüne eklenenler)
+    const todayTasks = family.tasks
+        .filter(t => {
+            if (!t.dueDate) return false;
+            const due = t.dueDate.trim();
+            return todayMatchStrings.some(s => due.includes(s) || due === s);
+        })
+        .map(t => ({
+            id: t.id,
+            title: t.title,
+            time: 'Günün Görevi',
+            icon: '✅',
+            category: 'Görev',
+            assignedTo: t.assignee || 'Tüm Aile',
+            completed: !!t.completed,
+            isTask: true,
+            itemType: 'task',
+            dueDate: t.dueDate
+        }));
+
+    // 3. Birleştir
+    let combined = [...dailyItems, ...todayTasks];
+
+    // 4. Kişi Filtreleme (Bana Özel vs Tüm Aile)
+    if (appState.dailyPlannerFilter === 'MINE') {
+        combined = combined.filter(item => {
+            const assigned = (item.assignedTo || '').toLowerCase();
+            const isAll = assigned.includes('tüm aile') || assigned.includes('tum aile') || assigned.includes('ortak') || !item.assignedTo;
+            if (isAll) return true;
+            if (isDicle && assigned.includes('dicle')) return true;
+            if (isFirat && (assigned.includes('fırat') || assigned.includes('firat'))) return true;
+            return false;
+        });
+    }
 
     // İlerleme Çubuğu ve Yüzdesi
-    const totalCount = dailyPlans.length;
-    const completedCount = dailyPlans.filter(p => p.completed).length;
+    const totalCount = combined.length;
+    const completedCount = combined.filter(p => p.completed).length;
     const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     const progressFill = document.getElementById('dailyProgressFill');
@@ -1977,58 +2101,94 @@ function renderDailyPlans() {
     if (progressFill) progressFill.style.width = `${progressPercent}%`;
     if (progressText) {
         progressText.textContent = totalCount > 0 
-            ? `${completedCount}/${totalCount} Plan Tamamlandı` 
-            : '0/0 Plan Tamamlandı';
+            ? `${completedCount}/${totalCount} Tamamlandı` 
+            : '0/0 Plan';
     }
     if (progressPercentEl) {
         progressPercentEl.textContent = `%${progressPercent}`;
     }
 
-    if (dailyPlans.length === 0) {
+    if (combined.length === 0) {
         container.innerHTML = `
             <div class="empty-daily-state">
                 <i class="fa-solid fa-calendar-day"></i>
-                <p>Bugün için henüz bir rutin veya plan eklenmedi.<br>Gününüzü düzenlemek için <b>+ Plan Ekle</b> butonuna dokunun.</p>
+                <p>Bugün için size atanan aktif bir plan veya görev bulunmuyor.<br>Yeni bir rutin veya görev eklemek için yukarıdaki butonları kullanabilirsiniz.</p>
             </div>
         `;
         return;
     }
 
-    // Sıralama: Saatli olanlar önce ve saate göre, saatsizler en sonda
-    dailyPlans.sort((a, b) => {
-        if (a.time && b.time) return a.time.localeCompare(b.time);
-        if (a.time) return -1;
-        if (b.time) return 1;
+    // Sıralama
+    combined.sort((a, b) => {
+        if (a.isTask && !b.isTask) return 1;
+        if (!a.isTask && b.isTask) return -1;
+        if (a.time && b.time && a.time !== 'Günün Görevi' && b.time !== 'Günün Görevi') return a.time.localeCompare(b.time);
         return 0;
     });
 
-    container.innerHTML = dailyPlans.map(plan => {
-        const icon = getDailyPlanIcon(plan.category);
-        
-        return `
-            <div class="daily-item ${plan.completed ? 'completed' : ''}">
-                <div class="custom-checkbox ${plan.completed ? 'checked' : ''}" onclick="handleToggleDailyPlan('${plan.id}')">
-                    ${plan.completed ? '<i class="fa-solid fa-check"></i>' : ''}
+    container.innerHTML = combined.map(item => {
+        const assigned = item.assignedTo || 'Tüm Aile';
+        const assignedLower = assigned.toLowerCase();
+        let memberTag = `<span class="daily-member-tag tag-all"><i class="fa-solid fa-people-group"></i> Tüm Aile</span>`;
+        if (assignedLower.includes('dicle')) {
+            memberTag = `<span class="daily-member-tag tag-dicle">👩 Dicle</span>`;
+        } else if (assignedLower.includes('fırat') || assignedLower.includes('firat')) {
+            memberTag = `<span class="daily-member-tag tag-firat">👨 Fırat</span>`;
+        }
+
+        if (item.itemType === 'task') {
+            return `
+                <div class="daily-item ${item.completed ? 'completed' : ''}" style="border-left: 4px solid #2980B9;">
+                    <div class="custom-checkbox ${item.completed ? 'checked' : ''}" onclick="toggleTaskFromDaily('${item.id}')">
+                        ${item.completed ? '<i class="fa-solid fa-check"></i>' : ''}
+                    </div>
+                    <div class="daily-time-badge task-time-badge">
+                        <i class="fa-solid fa-list-check"></i> Görev
+                    </div>
+                    <div class="daily-info">
+                        <div class="daily-title ${item.completed ? 'completed-text' : ''}">
+                            ${item.title}
+                            <span class="daily-task-badge"><i class="fa-solid fa-calendar-day"></i> Bugünün Görevi</span>
+                        </div>
+                        <div class="daily-meta">
+                            ${memberTag}
+                            <span>• <i class="fa-regular fa-clock"></i> Bitiş: ${item.dueDate}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-delete-item" onclick="deleteTask('${item.id}')" title="Görevi Sil">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="daily-time-badge ${!plan.time ? 'no-time' : ''}">
-                    <i class="fa-regular fa-clock"></i> ${plan.time || '--:--'}
+            `;
+        }
+
+        const icon = getDailyPlanIcon(item.category);
+        return `
+            <div class="daily-item ${item.completed ? 'completed' : ''}">
+                <div class="custom-checkbox ${item.completed ? 'checked' : ''}" onclick="handleToggleDailyPlan('${item.id}')">
+                    ${item.completed ? '<i class="fa-solid fa-check"></i>' : ''}
+                </div>
+                <div class="daily-time-badge ${!item.time ? 'no-time' : ''}">
+                    <i class="fa-regular fa-clock"></i> ${item.time || '--:--'}
                 </div>
                 <div class="daily-info">
-                    <div class="daily-title ${plan.completed ? 'completed-text' : ''}">
+                    <div class="daily-title ${item.completed ? 'completed-text' : ''}">
                         <span class="daily-category-icon">${icon}</span>
-                        ${plan.title}
-                        ${plan.isRecurring ? '<span class="daily-recurring-badge" title="Her gün tekrarlanan rutin"><i class="fa-solid fa-arrows-rotate"></i> Her Gün</span>' : ''}
+                        ${item.title}
+                        ${item.isRecurring ? '<span class="daily-recurring-badge" title="Her gün tekrarlanan rutin"><i class="fa-solid fa-arrows-rotate"></i> Her Gün</span>' : ''}
                     </div>
                     <div class="daily-meta">
-                        <span><i class="fa-solid fa-user"></i> ${plan.assignedTo || 'Tüm Aile'}</span>
-                        ${plan.note ? `<span>• <i class="fa-regular fa-comment"></i> ${plan.note}</span>` : ''}
+                        ${memberTag}
+                        ${item.note ? `<span>• <i class="fa-regular fa-comment"></i> ${item.note}</span>` : ''}
                     </div>
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                    <button class="btn-delete-item" onclick="openEditDailyPlanModal('${plan.id}')" title="Planı Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
+                    <button class="btn-delete-item" onclick="openEditDailyPlanModal('${item.id}')" title="Planı Düzenle" style="color: #0284c7; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2);">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${plan.id}')" title="Planı Sil">
+                    <button class="btn-delete-item" onclick="handleDeleteDailyPlan('${item.id}')" title="Planı Sil">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
@@ -2289,44 +2449,107 @@ function renderShopping() {
     `).join('');
 }
 
+function filterTaskAssignee(mode, btn) {
+    appState.taskAssigneeFilter = mode;
+    const chips = document.querySelectorAll('#taskAssigneeFilterRow .chip');
+    chips.forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderTasks();
+}
+
+async function handleResetWeeklyTasks() {
+    if (confirm('Haftalık görevleri yeni hafta için sıfırlamak istediğinize emin misiniz?')) {
+        if (appState.familyData && appState.familyData.id) {
+            const updated = await AilemAPI.resetWeeklyTasks(appState.familyData.id);
+            if (updated) {
+                appState.familyData = normalizeFamilyData(updated);
+            }
+        } else if (appState.familyData && appState.familyData.tasks) {
+            appState.familyData.tasks = appState.familyData.tasks.map(t => ({ ...t, completed: false }));
+        }
+        saveStateToStorage();
+        renderTasks();
+        renderDailyPlans();
+        updateQuickStats();
+        showToast('🗓️ Tüm haftalık görevler sıfırlandı! ✨');
+    }
+}
+
 // Görevler
 function renderTasks() {
     const container = document.getElementById('tasksList');
+    if (!container || !appState.familyData) return;
     let tasks = appState.familyData.tasks || [];
 
+    // Durum Filtresi (ALL / PENDING / DONE)
     if (appState.taskFilter === 'PENDING') {
         tasks = tasks.filter(t => !t.completed);
     } else if (appState.taskFilter === 'DONE') {
         tasks = tasks.filter(t => t.completed);
     }
 
+    const curUser = appState.currentUser;
+    const curNameLower = (curUser && curUser.name ? curUser.name : '').toLowerCase();
+    const isDicle = curNameLower.includes('dicle');
+    const isFirat = curNameLower.includes('fırat') || curNameLower.includes('firat');
+
+    // Kişi Filtresi (Bana Atananlar & Ortak / Tüm Görevler / Dicle / Fırat / Tüm Aile)
+    if (appState.taskAssigneeFilter === 'MINE') {
+        tasks = tasks.filter(t => {
+            const assigned = (t.assignee || '').toLowerCase();
+            const isAll = assigned.includes('tüm aile') || assigned.includes('tum aile') || assigned.includes('ortak') || !t.assignee;
+            if (isAll) return true;
+            if (isDicle && assigned.includes('dicle')) return true;
+            if (isFirat && (assigned.includes('fırat') || assigned.includes('firat'))) return true;
+            return false;
+        });
+    } else if (appState.taskAssigneeFilter === 'DICLE') {
+        tasks = tasks.filter(t => (t.assignee || '').toLowerCase().includes('dicle'));
+    } else if (appState.taskAssigneeFilter === 'FIRAT') {
+        tasks = tasks.filter(t => (t.assignee || '').toLowerCase().includes('fırat') || (t.assignee || '').toLowerCase().includes('firat'));
+    } else if (appState.taskAssigneeFilter === 'FAMILY') {
+        tasks = tasks.filter(t => (t.assignee || '').toLowerCase().includes('aile') || (t.assignee || '').toLowerCase().includes('ortak') || !t.assignee);
+    }
+
     if (tasks.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fa-solid fa-circle-check"></i>
-                <p>Bekleyen görev bulunmuyor. Dinlenme vakti! 🛋️</p>
+                <p>Bu filtreye uygun bekleyen görev bulunmuyor. Dinlenme vakti! 🛋️✨</p>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = tasks.map(task => `
-        <div class="task-card ${task.completed ? 'completed' : ''}">
-            <div class="custom-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask('${task.id}')">
-                ${task.completed ? '<i class="fa-solid fa-check"></i>' : ''}
-            </div>
-            <div class="task-details">
-                <div class="task-title ${task.completed ? 'completed-text' : ''}">${task.title}</div>
-                <div class="task-meta">
-                    <span class="assignee-badge"><i class="fa-solid fa-user"></i> ${task.assignee}</span>
-                    <span><i class="fa-regular fa-calendar"></i> ${task.dueDate}</span>
+    container.innerHTML = tasks.map(task => {
+        const assigned = task.assignee || 'Tüm Aile';
+        const assignedLower = assigned.toLowerCase();
+        let memberTag = `<span class="daily-member-tag tag-all"><i class="fa-solid fa-people-group"></i> Tüm Aile</span>`;
+        if (assignedLower.includes('dicle')) {
+            memberTag = `<span class="daily-member-tag tag-dicle">👩 Dicle</span>`;
+        } else if (assignedLower.includes('fırat') || assignedLower.includes('firat')) {
+            memberTag = `<span class="daily-member-tag tag-firat">👨 Fırat</span>`;
+        }
+
+        return `
+            <div class="task-card ${task.completed ? 'completed' : ''}">
+                <div class="custom-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask('${task.id}')">
+                    ${task.completed ? '<i class="fa-solid fa-check"></i>' : ''}
                 </div>
+                <div class="task-details">
+                    <div class="task-title ${task.completed ? 'completed-text' : ''}">${task.title}</div>
+                    <div class="task-meta">
+                        ${memberTag}
+                        <span>• <i class="fa-regular fa-calendar"></i> ${task.dueDate || 'Belirtilmedi'}</span>
+                        ${task.addedBy ? `<span>• Ekleyen: ${task.addedBy}</span>` : ''}
+                    </div>
+                </div>
+                <button class="btn-delete-item" onclick="deleteTask('${task.id}')" title="Görevi Sil">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
             </div>
-            <button class="btn-delete-item" onclick="deleteTask('${task.id}')">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 const FIXED_EXPENSE_ICONS = {

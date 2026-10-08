@@ -763,6 +763,17 @@ async function deleteTask(familyId, taskId) {
     });
 }
 
+async function resetWeeklyTasks(familyId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.tasks) fam.tasks = [];
+        fam.tasks = fam.tasks.map(t => ({
+            ...t,
+            completed: false
+        }));
+        return fam;
+    });
+}
+
 // Harcama İşlemleri
 async function addExpense(familyId, expense) {
     return await updateFamilyHelper(familyId, (fam) => {
@@ -1214,7 +1225,7 @@ async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUser
     const normTarget = normalizeTargetName(rawTarget);
 
     // Hedef "Tüm Aile", "all", "group", "herkes" veya boşsa tüm aileye gönder (oluşturan kişi excludeUserId hariç)
-    if (!rawTarget || normTarget === 'tumaile' || normTarget === 'tümaile' || normTarget === 'all' || normTarget === 'group' || normTarget === 'herkes') {
+    if (!rawTarget || normTarget === 'tumaile' || normTarget === 'tümaile' || normTarget.includes('tumaile') || normTarget.includes('tümaile') || normTarget === 'all' || normTarget === 'group' || normTarget === 'herkes') {
         return await sendPushToFamily(familyId, payload, excludeUserId);
     }
 
@@ -1283,6 +1294,7 @@ module.exports = {
     addTask,
     toggleTask,
     deleteTask,
+    resetWeeklyTasks,
     addExpense,
     deleteExpense,
     setSalary,
