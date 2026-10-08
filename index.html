@@ -380,29 +380,10 @@
                 </div>
             </section>
 
-            <!-- TAB 2: AİLE MESAJLAŞMA & SOHBET ALANI (GRUP & BİREYSEL) -->
+            <!-- TAB 2: AİLE MESAJLAŞMA & SOHBET ALANI -->
             <section id="tabChat" class="tab-panel">
                 <div class="chat-app-wrapper">
-                    <!-- Sohbet Kanal Seçici (Grup vs Özel) -->
-                    <div class="chat-channels-bar">
-                        <div class="chat-nav-tabs">
-                            <button class="chat-tab-btn active" id="btnChannelGroup" onclick="switchChatChannel('group')">
-                                <i class="fa-solid fa-people-group"></i> Aile Grubu
-                                <span id="groupUnreadBadge" class="chat-unread-pill hidden">0</span>
-                            </button>
-                            <button class="chat-tab-btn" id="btnChannelDirect" onclick="switchChatChannel('direct')">
-                                <i class="fa-solid fa-user-lock"></i> Özel Mesajlar
-                                <span id="directUnreadBadge" class="chat-unread-pill hidden">0</span>
-                            </button>
-                        </div>
-
-                        <!-- Bireysel Kişi Seçim Çubuğu -->
-                        <div id="directChatMemberList" class="direct-members-scroll hidden">
-                            <!-- Dinamik Aile Üyeleri Butonları -->
-                        </div>
-                    </div>
-
-                    <!-- Aktif Sohbet Alanı -->
+                    <!-- Aktif Sohbet Alanı (Tüm Aile Grubu) -->
                     <div class="chat-active-card">
                         <div class="chat-active-header">
                             <div class="chat-user-meta">
@@ -2198,6 +2179,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="client.js?v=35"></script>
+    <script src="client.js?v=36"></script>
 </body>
 </html>

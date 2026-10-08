@@ -3054,8 +3054,8 @@ function renderMembers() {
                 </div>
                 <div class="member-card-actions">
                     ${!isMe ? `
-                        <button class="btn-member-msg" onclick="openDirectChat('${m.id}')" title="Özel Mesaj Gönder">
-                            <i class="fa-solid fa-comment-dots"></i> Mesaj
+                        <button class="btn-member-msg" onclick="openFamilyGroupChat()" title="Aile Sohbetine Git">
+                            <i class="fa-solid fa-comment-dots"></i> Sohbet
                         </button>
                         <button class="btn-member-delete" onclick="handleDeleteMember('${m.id}', '${safeName}')" title="Üyeyi Aileden Çıkar">
                             <i class="fa-solid fa-trash-can"></i>
@@ -5304,19 +5304,11 @@ function closeInAppMsgBanner(e) {
 
 function openActiveChatFromBanner() {
     const banner = document.getElementById('inAppMsgBanner');
-    if (!banner) return;
-    const isGroup = banner.dataset.isGroup === 'true';
-    const targetSenderId = banner.dataset.targetSenderId;
-    banner.classList.add('hidden');
-
-    if (isGroup) {
-        openFamilyGroupChat();
-    } else if (targetSenderId) {
-        openDirectChat(targetSenderId);
-    }
+    if (banner) banner.classList.add('hidden');
+    openFamilyGroupChat();
 }
 
-// Sohbet Arayüzünü Render Et
+// Sohbet Arayüzünü Render Et (Tüm Aile Grubu)
 function renderChat() {
     const family = appState.familyData;
     const currentUser = appState.currentUser;
@@ -5325,93 +5317,37 @@ function renderChat() {
     if (!family.messages) family.messages = [];
     const messages = family.messages;
     const members = family.members || [];
-    const otherMembers = members.filter(m => m.id !== currentUser.id);
 
-    // Bireysel hedef üye seçimi varsayılanı
-    if (appState.chatChannel === 'direct' && !appState.chatTargetMemberId && otherMembers.length > 0) {
-        appState.chatTargetMemberId = otherMembers[0].id;
-    }
-
-    // 1. Kanal Butonları & Bildirim Butonu
-    const btnGroup = document.getElementById('btnChannelGroup');
-    const btnDirect = document.getElementById('btnChannelDirect');
+    // 1. Bildirim Butonu Durumu
     const btnBell = document.getElementById('btnToggleNotifications');
-    const directMembersContainer = document.getElementById('directChatMemberList');
-
-    if (btnGroup) btnGroup.classList.toggle('active', appState.chatChannel === 'group');
-    if (btnDirect) btnDirect.classList.toggle('active', appState.chatChannel === 'direct');
     if (btnBell) {
         btnBell.classList.toggle('active', !!appState.notificationsEnabled);
         btnBell.title = appState.notificationsEnabled ? 'Bildirimler Açık 🔔' : 'Bildirimleri Aç 🔕';
     }
 
-    // 2. Bireysel Üye Seçim Barı
-    if (directMembersContainer) {
-        if (appState.chatChannel === 'direct') {
-            directMembersContainer.classList.remove('hidden');
-            directMembersContainer.innerHTML = otherMembers.map(m => {
-                const isSelected = m.id === appState.chatTargetMemberId;
-                const unreadFromMember = messages.filter(msg => 
-                    msg.senderId === m.id && 
-                    msg.receiverId === currentUser.id && 
-                    !msg.isRead
-                ).length;
-
-                return `
-                    <div class="direct-member-chip ${isSelected ? 'active' : ''}" onclick="switchDirectMember('${m.id}')">
-                        <span class="chip-avatar">${m.avatar || '👤'}</span>
-                        <span class="chip-name">${m.name.split(' ')[0]}</span>
-                        ${unreadFromMember > 0 ? `<span class="chip-unread-badge">${unreadFromMember}</span>` : ''}
-                    </div>
-                `;
-            }).join('');
-        } else {
-            directMembersContainer.classList.add('hidden');
-        }
-    }
-
-    // 3. Aktif Sohbet Başlığı ve Durumu
+    // 2. Aktif Sohbet Başlığı ve Durumu
     const activeAvatar = document.getElementById('activeChatAvatar');
     const activeTitle = document.getElementById('activeChatTitle');
     const activeSubtitle = document.getElementById('activeChatSubtitle');
 
-    let currentChatMessages = [];
-    let chatPartnerName = '';
+    if (activeAvatar) activeAvatar.textContent = '👨‍👩‍👧‍👦';
+    if (activeTitle) activeTitle.textContent = `${family.name} Sohbeti`;
+    if (activeSubtitle) activeSubtitle.textContent = `🟢 ${members.length} Aile Bireyi • Çevrim İçi`;
 
-    if (appState.chatChannel === 'group') {
-        if (activeAvatar) activeAvatar.textContent = '👨‍👩‍👧‍👦';
-        if (activeTitle) activeTitle.textContent = `${family.name} Grubu`;
-        if (activeSubtitle) activeSubtitle.textContent = `🟢 ${members.length} Aile Bireyi • Çevrim İçi`;
-        currentChatMessages = messages.filter(m => m.receiverId === 'group' || m.receiver_id === 'group');
-    } else {
-        const partner = members.find(m => m.id === appState.chatTargetMemberId);
-        chatPartnerName = partner ? partner.name : 'Aile Bireyi';
-        if (activeAvatar) activeAvatar.textContent = partner ? partner.avatar : '👤';
-        if (activeTitle) activeTitle.textContent = partner ? `${partner.name} (${partner.role})` : 'Özel Sohbet';
-        if (activeSubtitle) activeSubtitle.textContent = `🔒 Bireysel Özel Mesajlaşma • ${partner ? partner.phone : ''}`;
-
-        if (partner) {
-            currentChatMessages = messages.filter(m => 
-                (m.senderId === currentUser.id && m.receiverId === partner.id) ||
-                (m.senderId === partner.id && m.receiverId === currentUser.id)
-            );
-        }
-    }
-
-    // 4. Mesaj Baloncuklarını Render Et
+    // 3. Mesaj Baloncuklarını Render Et
     const msgContainer = document.getElementById('chatMessagesContainer');
     if (msgContainer) {
-        if (currentChatMessages.length === 0) {
+        if (messages.length === 0) {
             msgContainer.innerHTML = `
                 <div class="empty-state" style="padding: 40px 10px;">
                     <i class="fa-solid fa-comments" style="font-size: 32px; color: #cbd5e1;"></i>
                     <p style="margin-top: 8px; font-size: 0.85rem; color: #64748b;">
-                        ${appState.chatChannel === 'group' ? 'Aile grubunda henüz mesaj yok. İlk mesajı siz yazın! 🎉' : `${chatPartnerName} ile ilk özel mesajınızı başlatın! 💬`}
+                        Aile grubunda henüz mesaj yok. İlk mesajı siz yazın! 🎉
                     </p>
                 </div>
             `;
         } else {
-            msgContainer.innerHTML = currentChatMessages.map(msg => {
+            msgContainer.innerHTML = messages.map(msg => {
                 const isMe = msg.senderId === currentUser.id;
                 return `
                     <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
@@ -5437,15 +5373,12 @@ function renderChat() {
         }
     }
 
-    // 5. Okunmamış Mesajları Okundu Yap
+    // 4. Okunmamış Mesajları Okundu Yap
     if (appState.currentTab === 'tabChat') {
-        const partnerId = appState.chatChannel === 'group' ? 'group' : appState.chatTargetMemberId;
-        if (partnerId) {
-            markMessagesRead(partnerId);
-        }
+        markMessagesRead('group');
     }
 
-    // 6. Rozetleri Güncelle
+    // 5. Rozetleri Güncelle
     updateChatUnreadCounts();
 }
 
@@ -5456,79 +5389,50 @@ function updateChatUnreadCounts() {
 
     const messages = family.messages || [];
 
-    // Grup okunmamış sayısı (kendi gönderdiklerimiz hariç)
-    const unreadGroup = messages.filter(m => 
-        (m.receiverId === 'group' || m.receiver_id === 'group') && 
+    // Okunmamış mesajlar (başkalarının gönderdikleri)
+    const unreadCount = messages.filter(m => 
         m.senderId !== currentUser.id && 
         !m.isRead
     ).length;
 
-    // Özel mesajlar okunmamış sayısı (bize gelenler)
-    const unreadDirect = messages.filter(m => 
-        m.receiverId === currentUser.id && 
-        !m.isRead
-    ).length;
-
-    const totalUnread = unreadGroup + unreadDirect;
-
-    // Header rozeti
+    // Header rozeti (Sadece yeni mesaj varsa görünür)
     const headerBadge = document.getElementById('headerChatBadge');
     if (headerBadge) {
-        headerBadge.textContent = totalUnread;
-        headerBadge.classList.toggle('hidden', totalUnread === 0);
+        headerBadge.textContent = unreadCount;
+        headerBadge.classList.toggle('hidden', unreadCount === 0);
     }
 
-    // Masaüstü Sol Menü (Sidebar) Sohbet Rozeti
+    // Masaüstü Sol Menü (Sidebar) Sohbet Rozeti (Sadece yeni mesaj varsa görünür)
     const sidebarChatBadge = document.getElementById('sidebarChatBadge');
     if (sidebarChatBadge) {
-        sidebarChatBadge.textContent = totalUnread;
-        sidebarChatBadge.classList.toggle('hidden', totalUnread === 0);
+        sidebarChatBadge.textContent = unreadCount;
+        sidebarChatBadge.classList.toggle('hidden', unreadCount === 0);
     }
 
     // Quick info pill
     const quickUnread = document.getElementById('quickUnreadMessages');
     if (quickUnread) {
-        quickUnread.textContent = totalUnread;
+        quickUnread.textContent = unreadCount;
     }
 
-    // Alt navigasyon rozeti
+    // Alt navigasyon rozeti (Sadece yeni mesaj varsa görünür)
     const navChatBadge = document.getElementById('navChatBadge');
     if (navChatBadge) {
-        navChatBadge.textContent = totalUnread;
-        navChatBadge.classList.toggle('hidden', totalUnread === 0);
-    }
-
-    // Kanal rozetleri
-    const groupBadge = document.getElementById('groupUnreadBadge');
-    if (groupBadge) {
-        groupBadge.textContent = unreadGroup;
-        groupBadge.classList.toggle('hidden', unreadGroup === 0);
-    }
-
-    const directBadge = document.getElementById('directUnreadBadge');
-    if (directBadge) {
-        directBadge.textContent = unreadDirect;
-        directBadge.classList.toggle('hidden', unreadDirect === 0);
+        navChatBadge.textContent = unreadCount;
+        navChatBadge.classList.toggle('hidden', unreadCount === 0);
     }
 }
 
-async function markMessagesRead(chatPartnerId) {
+async function markMessagesRead(chatPartnerId = 'group') {
     if (!appState.familyData || !appState.currentUser) return;
     const familyId = appState.familyData.id;
     const currentUserId = appState.currentUser.id;
 
     let changed = false;
     (appState.familyData.messages || []).forEach(m => {
-        if (chatPartnerId === 'group') {
-            if ((m.receiverId === 'group' || m.receiver_id === 'group') && m.senderId !== currentUserId && !m.isRead) {
-                m.isRead = 1;
-                changed = true;
-            }
-        } else {
-            if (m.senderId === chatPartnerId && m.receiverId === currentUserId && !m.isRead) {
-                m.isRead = 1;
-                changed = true;
-            }
+        if (m.senderId !== currentUserId && !m.isRead) {
+            m.isRead = 1;
+            changed = true;
         }
     });
 
@@ -5536,18 +5440,16 @@ async function markMessagesRead(chatPartnerId) {
         saveStateToStorage();
         updateChatUnreadCounts();
         // SQLite Sunucusuna bildir
-        await AilemAPI.markMessagesAsRead(familyId, currentUserId, chatPartnerId);
+        await AilemAPI.markMessagesAsRead(familyId, currentUserId, 'group');
     }
 }
 
 function switchChatChannel(channel) {
-    appState.chatChannel = channel;
-    renderChat();
+    openFamilyGroupChat();
 }
 
 function switchDirectMember(memberId) {
-    appState.chatTargetMemberId = memberId;
-    renderChat();
+    openFamilyGroupChat();
 }
 
 function openFamilyGroupChat() {
@@ -5557,10 +5459,7 @@ function openFamilyGroupChat() {
 }
 
 function openDirectChat(memberId) {
-    appState.chatChannel = 'direct';
-    appState.chatTargetMemberId = memberId;
-    switchTab('tabChat');
-    renderChat();
+    openFamilyGroupChat();
 }
 
 async function handleSendChatMessage(e) {
@@ -5574,7 +5473,7 @@ async function handleSendChatMessage(e) {
     const family = appState.familyData;
     if (!currentUser || !family) return;
 
-    const receiverId = (appState.chatChannel === 'group') ? 'group' : (appState.chatTargetMemberId || 'group');
+    const receiverId = 'group';
 
     const newMsg = {
         id: 'msg_' + Date.now(),
