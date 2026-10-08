@@ -1755,36 +1755,8 @@ function updateQuickStats() {
     const elCountGunluk = document.getElementById('countHubGunluk');
     if (elCountGunluk) elCountGunluk.textContent = `${countGunluk} Plan`;
 
-    // Navigasyon Rozetleri (Mobil & Masaüstü Sidebar)
-    const plansBadge = document.getElementById('navPlansBadge');
-    const sidePlansBadge = document.getElementById('sidebarPlansBadge');
-    if (pendingPlans > 0) {
-        if (plansBadge) { plansBadge.textContent = pendingPlans; plansBadge.classList.remove('hidden'); }
-        if (sidePlansBadge) { sidePlansBadge.textContent = pendingPlans; sidePlansBadge.classList.remove('hidden'); }
-    } else {
-        if (plansBadge) plansBadge.classList.add('hidden');
-        if (sidePlansBadge) sidePlansBadge.classList.add('hidden');
-    }
-
-    const shopBadge = document.getElementById('navShoppingBadge');
-    const sideShopBadge = document.getElementById('sidebarShoppingBadge');
-    if (pendingShop > 0) {
-        if (shopBadge) { shopBadge.textContent = pendingShop; shopBadge.classList.remove('hidden'); }
-        if (sideShopBadge) { sideShopBadge.textContent = pendingShop; sideShopBadge.classList.remove('hidden'); }
-    } else {
-        if (shopBadge) shopBadge.classList.add('hidden');
-        if (sideShopBadge) sideShopBadge.classList.add('hidden');
-    }
-
-    const taskBadge = document.getElementById('navTasksBadge');
-    const sideTaskBadge = document.getElementById('sidebarTasksBadge');
-    if (pendingTask > 0) {
-        if (taskBadge) { taskBadge.textContent = pendingTask; taskBadge.classList.remove('hidden'); }
-        if (sideTaskBadge) { sideTaskBadge.textContent = pendingTask; sideTaskBadge.classList.remove('hidden'); }
-    } else {
-        if (taskBadge) taskBadge.classList.add('hidden');
-        if (sideTaskBadge) sideTaskBadge.classList.add('hidden');
-    }
+    // Sadece Sohbet/Mesaj için okunmamış mesaj rozetlerini güncelle
+    updateChatUnreadCounts();
 }
 
 // ==========================================================
@@ -5504,6 +5476,13 @@ function updateChatUnreadCounts() {
     if (headerBadge) {
         headerBadge.textContent = totalUnread;
         headerBadge.classList.toggle('hidden', totalUnread === 0);
+    }
+
+    // Masaüstü Sol Menü (Sidebar) Sohbet Rozeti
+    const sidebarChatBadge = document.getElementById('sidebarChatBadge');
+    if (sidebarChatBadge) {
+        sidebarChatBadge.textContent = totalUnread;
+        sidebarChatBadge.classList.toggle('hidden', totalUnread === 0);
     }
 
     // Quick info pill
