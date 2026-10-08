@@ -228,14 +228,14 @@ const AilemDB = {
 // 0. REST API & SQLITE SUNUCU BAĞLANTISI (AilemAPI)
 // ==========================================================
 const AilemAPI = {
-    async login(phone) {
+    async login(phone, password = '') {
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
+                body: JSON.stringify({ phone, password })
             });
-            if (res.ok) return await res.json();
+            return await res.json();
         } catch (e) {
             console.warn('API login hatası, çevrimdışı mod:', e);
         }
@@ -256,14 +256,14 @@ const AilemAPI = {
         return null;
     },
 
-    async joinFamily(inviteCode, phone, name, role, avatar) {
+    async joinFamily(inviteCode, phone, name, role, avatar, password = '') {
         try {
             const res = await fetch('/api/auth/join', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ inviteCode, phone, name, role, avatar })
+                body: JSON.stringify({ inviteCode, phone, name, role, avatar, password })
             });
-            if (res.ok) return await res.json();
+            return await res.json();
         } catch (e) {
             console.warn('API joinFamily hatası:', e);
         }
@@ -1299,15 +1299,62 @@ function saveStateToStorage() {
 }
 
 // ==========================================================
-// 2. KAYIT / GİRİŞ İŞLEMLERİ (UYSAL AİLESİ ÖZEL)
+// 2. KAYIT / GİRİŞ İŞLEMLERİ (UYSAL AİLESİ ÖZEL & ŞİFRELİ)
 // ==========================================================
 let currentAuthMode = 'login'; // 'login' veya 'register'
+
+function selectAuthProfile(profileName, defaultPhone) {
+    const userPhoneInput = document.getElementById('userPhone');
+    const pwdInput = document.getElementById('userPassword');
+    const chipDicle = document.getElementById('chipDicle');
+    const chipFirat = document.getElementById('chipFirat');
+    const hintEl = document.getElementById('authPwdHint');
+
+    if (userPhoneInput) userPhoneInput.value = profileName;
+
+    if (chipDicle) chipDicle.classList.toggle('active', profileName === 'Dicle');
+    if (chipFirat) chipFirat.classList.toggle('active', profileName === 'Fırat');
+
+    if (hintEl) {
+        if (profileName === 'Dicle') {
+            hintEl.innerHTML = '🔑 Dicle için şifre: <b>dicle</b>';
+        } else if (profileName === 'Fırat') {
+            hintEl.innerHTML = '🔑 Fırat için şifre: <b>fırat</b>';
+        }
+    }
+
+    if (pwdInput) {
+        pwdInput.value = '';
+        pwdInput.focus();
+    }
+}
+
+function toggleAuthPasswordVisibility() {
+    const pwdInput = document.getElementById('userPassword');
+    const eyeIcon = document.getElementById('pwdEyeIcon');
+    if (!pwdInput) return;
+
+    if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        if (eyeIcon) {
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        }
+    } else {
+        pwdInput.type = 'password';
+        if (eyeIcon) {
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
+}
 
 function switchAuthMode(mode) {
     currentAuthMode = mode;
     const tabLogin = document.getElementById('tabLogin');
     const tabRegister = document.getElementById('tabRegister');
 
+    const quickSelector = document.getElementById('quickProfileSelector');
     const authNameField = document.getElementById('authNameField');
     const authRoleField = document.getElementById('authRoleField');
     const btnSubmit = document.getElementById('btnAuthSubmit');
@@ -1317,11 +1364,13 @@ function switchAuthMode(mode) {
     if (tabRegister) tabRegister.classList.toggle('active', mode === 'register');
 
     if (mode === 'login') {
+        if (quickSelector) quickSelector.classList.remove('hidden');
         if (authNameField) authNameField.classList.add('hidden');
         if (authRoleField) authRoleField.classList.add('hidden');
         if (userName) userName.required = false;
         if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Uysal Ailesi\'ne Giriş Yap';
     } else {
+        if (quickSelector) quickSelector.classList.add('hidden');
         if (authNameField) authNameField.classList.remove('hidden');
         if (authRoleField) authRoleField.classList.remove('hidden');
         if (userName) userName.required = true;
@@ -1331,43 +1380,81 @@ function switchAuthMode(mode) {
 
 async function handleAuthSubmit(event) {
     event.preventDefault();
-    const phone = document.getElementById('userPhone').value.trim();
+    const identifier = document.getElementById('userPhone').value.trim();
+    const password = document.getElementById('userPassword')?.value.trim() || '';
 
-    if (!phone) {
-        showToast('Lütfen telefon numaranızı girin.');
+    if (!identifier) {
+        showToast('Lütfen telefon numaranızı veya adınızı girin.');
+        return;
+    }
+
+    if (!password) {
+        showToast('Lütfen şifrenizi girin.');
+        return;
+    }
+
+    // Şifre kuralları kontrolü (Dicle -> dicle / Fırat -> fırat veya firat)
+    const idLower = identifier.toLowerCase();
+    const pwdLower = password.toLowerCase();
+
+    if (idLower.includes('dicle') && pwdLower !== 'dicle') {
+        showToast('❌ Hatalı şifre! Dicle için şifre "dicle" olmalıdır.');
+        return;
+    }
+    if ((idLower.includes('fırat') || idLower.includes('firat')) && pwdLower !== 'fırat' && pwdLower !== 'firat') {
+        showToast('❌ Hatalı şifre! Fırat için şifre "fırat" olmalıdır.');
         return;
     }
 
     if (currentAuthMode === 'login') {
-        // 1. SQLite / Neon API üzerinden giriş yap
-        const apiRes = await AilemAPI.login(phone);
+        // 1. API üzerinden giriş yap
+        const apiRes = await AilemAPI.login(identifier, password);
         if (apiRes && apiRes.success && apiRes.user && apiRes.family) {
             appState.currentUser = apiRes.user;
             appState.familyData = normalizeFamilyData(apiRes.family);
             saveStateToStorage();
             renderApp();
-            showToast(`Hoş geldiniz, ${apiRes.user.name}! 🏠`);
+            registerPushSubscription();
+            initRealtimeStream();
+            showToast(`Hoş geldiniz, ${apiRes.user.name}! 🏠✨`);
+            return;
+        } else if (apiRes && apiRes.message && apiRes.message.includes('şifre')) {
+            showToast(`❌ ${apiRes.message}`);
             return;
         }
 
-        // 2. Çevrimdışı / LocalStorage yedek kontrolü
-        const result = await AilemDB.findByPhone(phone);
+        // 2. Çevrimdışı / LocalStorage kontrolü
+        let result = await AilemDB.findByPhone(identifier);
+        if (!result && (idLower.includes('dicle') || idLower.includes('fırat') || idLower.includes('firat'))) {
+            let uysalFamily = await AilemDB.findByCode('UYS123') || AilemDB.getDemoSeed();
+            let matchedUser = null;
+            if (idLower.includes('dicle')) {
+                matchedUser = { id: 'usr_dicle', name: 'Dicle', role: 'Anne', phone: '05551112233', avatar: '👩' };
+            } else {
+                matchedUser = { id: 'usr_firat', name: 'Fırat', role: 'Baba', phone: '05552223344', avatar: '👨' };
+            }
+            if (!uysalFamily.members.some(m => m.id === matchedUser.id)) {
+                uysalFamily.members.push(matchedUser);
+            }
+            result = { user: matchedUser, family: uysalFamily };
+        }
+
         if (result) {
             appState.currentUser = result.user;
             appState.familyData = normalizeFamilyData(result.family);
             saveStateToStorage();
             renderApp();
-            showToast(`Hoş geldiniz, ${result.user.name}! 🏠`);
+            showToast(`Hoş geldiniz, ${result.user.name}! 🏠✨`);
             return;
         }
 
-        // Bulunamazsa nazikçe yeni birey kaydına yönlendir
-        showToast('Bu telefon numarası Uysal Ailesi\'nde bulunamadı. Lütfen adınızı kaydedin.');
+        // Bulunamazsa yönlendir
+        showToast('Bu kullanıcı Uysal Ailesi\'nde bulunamadı. Lütfen "Yeni Aile Bireyi Ekle" kısmından kaydolun.');
         switchAuthMode('register');
         return;
     }
 
-    // Yeni Birey Kaydı (Doğrudan Uysal Ailesi'ne Katılır)
+    // Yeni Birey Kaydı
     const name = document.getElementById('userName').value.trim();
     const role = document.getElementById('userRole').value;
 
@@ -1379,20 +1466,21 @@ async function handleAuthSubmit(event) {
     const avatar = ROLE_AVATARS[role] || '👤';
 
     // API üzerinden doğrudan Uysal ailesine dahil et
-    const apiRes = await AilemAPI.joinFamily('UYS123', phone, name, role, avatar);
+    const apiRes = await AilemAPI.joinFamily('UYS123', identifier, name, role, avatar, password);
     if (apiRes && apiRes.success) {
         appState.currentUser = apiRes.user;
         appState.familyData = normalizeFamilyData(apiRes.family);
         saveStateToStorage();
         renderApp();
         registerPushSubscription();
+        initRealtimeStream();
         showToast(`Uysal Ailesi'ne hoş geldiniz, ${name}! 👋🏠`);
         return;
     }
 
     // Çevrimdışı fallback
     let family = await AilemDB.findByCode('UYS123') || await AilemDB.findByPhone('');
-    const newUser = { id: 'usr_' + Date.now(), name, phone, role, avatar };
+    const newUser = { id: 'usr_' + Date.now(), name, phone: identifier, role, avatar };
     if (!family) {
         family = {
             id: 'fam_1790764019415',
@@ -1415,7 +1503,7 @@ async function handleAuthSubmit(event) {
         };
     } else {
         if (!family.members) family.members = [];
-        const idx = family.members.findIndex(m => m.phone === phone);
+        const idx = family.members.findIndex(m => m.phone === identifier);
         if (idx >= 0) family.members[idx] = newUser;
         else family.members.push(newUser);
     }

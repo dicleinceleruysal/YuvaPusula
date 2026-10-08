@@ -77,16 +77,43 @@
                 </div>
 
                 <form id="authForm" onsubmit="handleAuthSubmit(event)">
-                    <!-- Telefon Alanı (Her Modda Ortak) -->
-                    <div class="form-group">
-                        <label><i class="fa-solid fa-phone"></i> Telefon Numaranız</label>
-                        <input type="tel" id="userPhone" placeholder="05XX XXX XX XX" required>
+                    <!-- Hızlı Profil Seçimi (Dicle & Fırat) -->
+                    <div id="quickProfileSelector" class="form-group">
+                        <label><i class="fa-solid fa-users"></i> Giriş Yapılacak Kişi</label>
+                        <div class="auth-quick-profiles">
+                            <button type="button" class="auth-profile-chip" id="chipDicle" onclick="selectAuthProfile('Dicle', '05551112233')">
+                                <span style="font-size: 1.2rem;">👩</span> <span>Dicle</span>
+                            </button>
+                            <button type="button" class="auth-profile-chip" id="chipFirat" onclick="selectAuthProfile('Fırat', '05552223344')">
+                                <span style="font-size: 1.2rem;">👨</span> <span>Fırat</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Telefon veya Kullanıcı Adı Alanı -->
+                    <div class="form-group" id="authPhoneGroup">
+                        <label><i class="fa-solid fa-user"></i> Telefon veya Kişi Adı</label>
+                        <input type="text" id="userPhone" placeholder="Örn: Dicle, Fırat veya 05XX XXX XX XX" required>
+                    </div>
+
+                    <!-- Şifre Alanı (Dicle: dicle, Fırat: fırat) -->
+                    <div class="form-group" id="authPasswordGroup">
+                        <label><i class="fa-solid fa-lock"></i> Şifreniz</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="userPassword" placeholder="Şifrenizi girin..." required autocomplete="current-password">
+                            <button type="button" class="btn-toggle-pwd" onclick="toggleAuthPasswordVisibility()" title="Şifreyi Göster/Gizle">
+                                <i class="fa-solid fa-eye" id="pwdEyeIcon"></i>
+                            </button>
+                        </div>
+                        <small class="field-hint" id="authPwdHint" style="color: var(--text-muted); margin-top: 4px; display: block;">
+                            🔑 Şifre: Dicle için <b>dicle</b> • Fırat için <b>fırat</b>
+                        </small>
                     </div>
 
                     <!-- İsim Alanı (Yeni Birey Modunda) -->
                     <div id="authNameField" class="form-group hidden">
-                        <label><i class="fa-solid fa-user"></i> Adınız Soyadınız</label>
-                        <input type="text" id="userName" placeholder="Örn: Dicle Uysal / Fırat Uysal">
+                        <label><i class="fa-solid fa-user-tag"></i> Adınız Soyadınız</label>
+                        <input type="text" id="userName" placeholder="Örn: Ayşe Uysal">
                     </div>
 
                     <!-- Rol Alanı (Yeni Birey Modunda) -->
@@ -103,7 +130,7 @@
                         </select>
                     </div>
 
-                    <button type="submit" class="btn-primary" id="btnAuthSubmit">
+                    <button type="submit" class="btn-primary" id="btnAuthSubmit" style="margin-top: 14px;">
                         <i class="fa-solid fa-right-to-bracket"></i> Uysal Ailesi'ne Giriş Yap
                     </button>
                 </form>
