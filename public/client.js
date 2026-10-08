@@ -1681,7 +1681,7 @@ function renderApp() {
     
     // Desktop Sidebar Bilgileri
     const sidebarTitleEl = document.getElementById('sidebarFamilyTitle');
-    if (sidebarTitleEl) sidebarTitleEl.textContent = `${family.name} Ailesi`;
+    if (sidebarTitleEl) sidebarTitleEl.textContent = family.name.endsWith('Ailesi') ? family.name : `${family.name} Ailesi`;
     const sidebarAvatarEl = document.getElementById('sidebarUserAvatar');
     if (sidebarAvatarEl) sidebarAvatarEl.textContent = user.avatar;
     const sidebarUserEl = document.getElementById('sidebarUserName');
