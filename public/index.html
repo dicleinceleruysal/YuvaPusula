@@ -71,7 +71,7 @@
                     <div id="quickProfileSelector" class="form-group">
                         <label><i class="fa-solid fa-users"></i> Giriş Yapılacak Kişi</label>
                         <div class="auth-quick-profiles">
-                            <button type="button" class="auth-profile-chip" id="chipDicle" onclick="selectAuthProfile('Dicle', '5546448989')">
+                            <button type="button" class="auth-profile-chip active" id="chipDicle" onclick="selectAuthProfile('Dicle', '5546448989')">
                                 <span style="font-size: 1.2rem;">👩</span> <span>Dicle</span>
                             </button>
                             <button type="button" class="auth-profile-chip" id="chipFirat" onclick="selectAuthProfile('Fırat', '5458030118')">
@@ -83,7 +83,7 @@
                     <!-- Telefon veya Kullanıcı Adı Alanı -->
                     <div class="form-group" id="authPhoneGroup">
                         <label><i class="fa-solid fa-user"></i> Telefon veya Kişi Adı</label>
-                        <input type="text" id="userPhone" placeholder="Örn: Dicle veya Fırat" required>
+                        <input type="text" id="userPhone" value="Dicle" placeholder="Dicle veya Fırat">
                     </div>
 
                     <!-- Şifre Alanı -->

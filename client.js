@@ -93,6 +93,784 @@ let appState = {
 // ==========================================================
 // 0. VERİTABANI MOTORU (INDEXEDDB & LOCALSTORAGE DUAL-SYNC)
 // ==========================================================
+const UYSAL_DEFAULT_FAMILY = {
+  "id": "fam_1790599516960",
+  "name": "UYSAL Ailesi",
+  "plans": [
+    {
+      "id": "plan_1791371974445",
+      "dish": "Et",
+      "link": "https://maps.app.goo.gl/BzaWZth88yzXajX6A",
+      "price": "₺₺ Orta",
+      "title": "MisafirEt",
+      "status": "PENDING",
+      "addedBy": "Dicle UYSAL",
+      "category": "Restoran",
+      "location": "Etlik Gazze Cad.",
+      "addedById": "usr_1790599516960",
+      "completed": false,
+      "createdAt": "2026-10-07T11:19:34.216Z",
+      "updatedAt": "2026-10-07T11:20:09.673Z",
+      "currentUserId": "usr_1790599516960"
+    },
+    {
+      "id": "plan_1790881272329",
+      "link": "https://app.hb.biz/IuT3my7Rgm8l",
+      "title": "Yürüyüş bandı",
+      "status": "PENDING",
+      "addedBy": "Fırat UYSAL",
+      "category": "Alisveris",
+      "priority": "⭐ Yüksek / Acil",
+      "shopNote": "Spor",
+      "completed": false,
+      "createdAt": "2026-10-01T19:01:12.536Z",
+      "shopPrice": "5.400 ₺"
+    },
+    {
+      "id": "plan_1790832233311",
+      "link": "",
+      "title": "Tuna Panduf",
+      "status": "PENDING",
+      "addedBy": "Dicle UYSAL",
+      "category": "Alisveris",
+      "priority": "⭐ Yüksek / Acil",
+      "shopNote": "",
+      "completed": false,
+      "createdAt": "2026-10-01T05:23:54.300Z",
+      "shopPrice": "500 ₺"
+    },
+    {
+      "id": "plan_1790832195835",
+      "link": "",
+      "title": "Dicle Pantalon",
+      "status": "PENDING",
+      "addedBy": "Dicle UYSAL",
+      "category": "Alisveris",
+      "priority": "⭐ Yüksek / Acil",
+      "shopNote": "",
+      "completed": false,
+      "createdAt": "2026-10-01T05:23:16.835Z",
+      "shopPrice": "1.000 ₺"
+    },
+    {
+      "id": "plan_1790832170504",
+      "link": "",
+      "title": "Dicle Kaban",
+      "status": "PENDING",
+      "addedBy": "Dicle UYSAL",
+      "category": "Alisveris",
+      "priority": "⭐ Yüksek / Acil",
+      "shopNote": "",
+      "completed": false,
+      "createdAt": "2026-10-01T05:22:51.523Z",
+      "shopPrice": "3.000 ₺"
+    }
+  ],
+  "posts": [],
+  "tasks": [
+    {
+      "id": "task_1791346494380",
+      "title": "Yatak odası toz",
+      "addedBy": "Dicle UYSAL",
+      "dueDate": "Bugün",
+      "assignee": "Dicle UYSAL",
+      "completed": false,
+      "createdAt": "2026-10-07T04:14:54.509Z"
+    },
+    {
+      "id": "task_1791346474621",
+      "title": "Börülce kışlık",
+      "addedBy": "Dicle UYSAL",
+      "dueDate": "Hafta Sonu",
+      "assignee": "Dicle UYSAL",
+      "completed": false,
+      "createdAt": "2026-10-07T04:14:34.764Z"
+    },
+    {
+      "id": "task_1791346450111",
+      "title": "Tuna  banyo",
+      "addedBy": "Dicle UYSAL",
+      "dueDate": "Bugün",
+      "assignee": "Dicle UYSAL",
+      "completed": false,
+      "createdAt": "2026-10-07T04:14:10.241Z"
+    },
+    {
+      "id": "task_1791346421044",
+      "title": "Cilt Diş Bakımı",
+      "addedBy": "Dicle UYSAL",
+      "dueDate": "Bugün",
+      "assignee": "Dicle UYSAL",
+      "completed": true,
+      "createdAt": "2026-10-07T04:13:41.485Z"
+    },
+    {
+      "id": "task_1791346401742",
+      "title": "Banyo Tuvalet Temizliği",
+      "addedBy": "Dicle UYSAL",
+      "dueDate": "Bugün",
+      "assignee": "Dicle UYSAL",
+      "completed": true,
+      "createdAt": "2026-10-07T04:13:21.912Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "usr_1790599516960",
+      "name": "Dicle UYSAL",
+      "role": "Anne",
+      "phone": "5546448989",
+      "avatar": "👩"
+    },
+    {
+      "id": "usr_1790661005224",
+      "name": "Fırat UYSAL",
+      "role": "Baba",
+      "phone": "5458030118",
+      "avatar": "👨"
+    },
+    {
+      "id": "usr_1790662017196",
+      "name": "Tuna UYSAL",
+      "role": "Oğul",
+      "phone": "05546448989",
+      "avatar": "👦"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "exp_1791365132858",
+      "date": "07.10.2026",
+      "month": "2026-10",
+      "payer": "Dicle UYSAL",
+      "title": "Dicle Alışveriş Soğuk Kahve",
+      "amount": 390,
+      "category": "Diğer",
+      "createdAt": "2026-10-07T09:25:33.539Z"
+    },
+    {
+      "id": "exp_1791365105918",
+      "date": "07.10.2026",
+      "month": "2026-10",
+      "payer": "Dicle UYSAL",
+      "title": "Yaren Hediye",
+      "amount": 720,
+      "category": "Diğer",
+      "createdAt": "2026-10-07T09:25:06.580Z"
+    },
+    {
+      "id": "exp_1790879497120",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Fırat UYSAL",
+      "title": "Fırat kazak",
+      "amount": 560,
+      "category": "Diğer",
+      "createdAt": "2026-10-01T18:31:37.327Z"
+    },
+    {
+      "id": "exp_1790879485061",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Fırat UYSAL",
+      "title": "Dicle kozmetik",
+      "amount": 516,
+      "category": "Diğer",
+      "createdAt": "2026-10-01T18:31:25.372Z"
+    },
+    {
+      "id": "exp_1790879458019",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Fırat UYSAL",
+      "title": "Tuna mama",
+      "amount": 525,
+      "category": "Mutfak",
+      "createdAt": "2026-10-01T18:30:58.207Z"
+    },
+    {
+      "id": "exp_1790802843773",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Fırat UYSAL",
+      "title": "Ek hesap",
+      "amount": 12000,
+      "category": "Diğer",
+      "createdAt": "2026-09-30T21:14:03.979Z"
+    },
+    {
+      "id": "exp_1790802804188",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Dicle UYSAL",
+      "title": "Fırat İş",
+      "amount": 16000,
+      "category": "Diğer",
+      "createdAt": "2026-09-30T21:13:24.378Z"
+    },
+    {
+      "id": "exp_1790802660049",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "payer": "Dicle UYSAL",
+      "title": "Ziraat Kart",
+      "amount": 16800,
+      "category": "Diğer",
+      "createdAt": "2026-09-30T21:11:00.276Z"
+    },
+    {
+      "id": "exp_1790750226682",
+      "date": "30.09.2026",
+      "payer": "Dicle UYSAL",
+      "title": "Dicle Kredi Kartı",
+      "amount": 7500,
+      "category": "Fatura"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_1790671169707",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "Seni seviyorum ❤️",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "11:39",
+      "timestamp": "2026-09-29T08:39:30.965Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    },
+    {
+      "id": "msg_1790715146187",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Seni seviyorum ömrüm",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "23:52",
+      "timestamp": "2026-09-29T20:52:26.403Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790762978369",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "❤️❤️",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "13:09",
+      "timestamp": "2026-09-30T10:09:39.588Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    },
+    {
+      "id": "msg_1790764029217",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "babamı aspavaya götürelim",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "13:27",
+      "timestamp": "2026-09-30T10:27:10.443Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    },
+    {
+      "id": "msg_1790766979506",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Seni seviyorum ❤️",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "14:16",
+      "timestamp": "2026-09-30T11:16:20.782Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790768795008",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Marketten bir şey lazım mı? 🛒",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "14:46",
+      "timestamp": "2026-09-30T11:46:36.321Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790768862332",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Görüşürüz 👋",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "14:47",
+      "timestamp": "2026-09-30T11:47:43.648Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790768867126",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Akşam ne yiyoruz? 🍲",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "14:47",
+      "timestamp": "2026-09-30T11:47:48.437Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790768909850",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "Seni seviyorum ❤️",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "14:48",
+      "timestamp": "2026-09-30T11:48:31.159Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    },
+    {
+      "id": "msg_1790768934190",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Akşam ne yiyoruz? 🍲",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "14:48",
+      "timestamp": "2026-09-30T11:48:55.516Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790776585456",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Marketten bir şey lazım mı? 🛒",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "16:56",
+      "timestamp": "2026-09-30T13:56:26.911Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790795986548",
+      "isRead": 1,
+      "readBy": [
+        "usr_1790661005224"
+      ],
+      "content": "Seni seviyorum ❤️",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790661005224",
+      "createdAt": "22:19",
+      "timestamp": "2026-09-30T19:19:46.754Z",
+      "receiverId": "group",
+      "senderName": "Fırat UYSAL",
+      "senderRole": "Baba",
+      "messageType": "text",
+      "senderAvatar": "👨"
+    },
+    {
+      "id": "msg_1790803495002",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "Selam",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "00:24",
+      "timestamp": "2026-09-30T21:24:54.904Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    },
+    {
+      "id": "msg_1791377427847",
+      "isRead": 0,
+      "readBy": [
+        "usr_1790599516960"
+      ],
+      "content": "Aşkımmmm",
+      "familyId": "fam_1790599516960",
+      "senderId": "usr_1790599516960",
+      "createdAt": "15:50",
+      "timestamp": "2026-10-07T12:50:28.006Z",
+      "receiverId": "group",
+      "senderName": "Dicle UYSAL",
+      "senderRole": "Anne",
+      "messageType": "text",
+      "senderAvatar": "👩"
+    }
+  ],
+  "salaries": [
+    {
+      "id": "sal_1790762897908",
+      "note": "Kesintili Maaş",
+      "amount": 36500,
+      "payDay": 1,
+      "userId": "usr_1790599516960",
+      "userName": "Dicle UYSAL",
+      "userRole": "Anne",
+      "updatedAt": "2026-09-30T10:08:19.109Z",
+      "userAvatar": "👩"
+    }
+  ],
+  "shopping": [
+    {
+      "id": "shop_1791368782231",
+      "title": "Yarenin nişanına elbise",
+      "addedBy": "Dicle UYSAL",
+      "category": "Giyim",
+      "quantity": "1 Adet",
+      "completed": false,
+      "createdAt": "2026-10-07T10:26:21.929Z"
+    },
+    {
+      "id": "shop_1790764992409",
+      "title": "Panduf",
+      "addedBy": "Dicle UYSAL",
+      "category": "Çocuk",
+      "quantity": "1 Adet",
+      "completed": false,
+      "createdAt": "2026-09-30T10:43:13.783Z"
+    }
+  ],
+  "overtimes": [
+    {
+      "id": "ot_1791371787498",
+      "date": "2026-10-07",
+      "days": 1,
+      "hours": 0,
+      "month": "2026-10",
+      "notes": "",
+      "amount": 1041.67,
+      "person": "Fırat",
+      "addedBy": "Fırat UYSAL",
+      "dayType": "weekday",
+      "isHourly": false,
+      "createdAt": "2026-10-07T11:16:27.245Z",
+      "dailyRate": 1041.67,
+      "hourlyRate": 296.875
+    },
+    {
+      "id": "ot_1791371192127",
+      "date": "2026-10-02",
+      "hours": 2,
+      "month": "2026-10",
+      "notes": "Evden Mesai",
+      "amount": 593.75,
+      "person": "Dicle UYSAL",
+      "addedBy": "Dicle UYSAL",
+      "isHourly": true,
+      "createdAt": "2026-10-07T11:06:31.867Z",
+      "hourlyRate": 296.875
+    }
+  ],
+  "dailyPlans": [
+    {
+      "id": "daily_1791358527613",
+      "icon": "⏰",
+      "time": "07:00",
+      "title": "Cilt Bakımı",
+      "category": "🌅 Sabah",
+      "completed": false,
+      "createdAt": "2026-10-07T07:35:27.613Z",
+      "updatedAt": "2026-10-07T08:55:19.824Z",
+      "assignedTo": "Tüm Aile",
+      "completedAt": null,
+      "isRecurring": true
+    },
+    {
+      "id": "daily_1791358539796",
+      "icon": "⏰",
+      "time": "07:00",
+      "title": "Diş Bakımı",
+      "category": "🌅 Sabah",
+      "completed": false,
+      "createdAt": "2026-10-07T07:35:39.796Z",
+      "assignedTo": "Dicle UYSAL",
+      "completedAt": null,
+      "isRecurring": true
+    },
+    {
+      "id": "daily_1791358560338",
+      "icon": "⏰",
+      "time": "07:00",
+      "title": "Lavabo / Tuvalet Temizliği",
+      "category": "🧹 Temizlik",
+      "completed": false,
+      "createdAt": "2026-10-07T07:36:00.338Z",
+      "updatedAt": "2026-10-07T09:24:05.074Z",
+      "assignedTo": "Dicle UYSAL",
+      "completedAt": null,
+      "isRecurring": true
+    },
+    {
+      "id": "daily_1791358599031",
+      "icon": "⏰",
+      "time": "19:30",
+      "title": "Akşam Yemeği / Mutfak Toplama",
+      "category": "🍽️ Yemek",
+      "completed": false,
+      "createdAt": "2026-10-07T07:36:39.031Z",
+      "assignedTo": "Tüm Aile",
+      "completedAt": null,
+      "isRecurring": true
+    },
+    {
+      "id": "daily_1791358672223",
+      "icon": "⏰",
+      "time": "22:00",
+      "title": "Tuna Mama Yedirme",
+      "category": "🍽️ Yemek",
+      "completed": false,
+      "createdAt": "2026-10-07T07:37:52.223Z",
+      "updatedAt": "2026-10-07T09:24:29.271Z",
+      "assignedTo": "Fırat UYSAL",
+      "completedAt": null,
+      "isRecurring": true
+    }
+  ],
+  "inviteCode": "UYSAL",
+  "investments": [
+    {
+      "id": "inv_1790665383818",
+      "unit": "Gram",
+      "notes": "Kasa",
+      "title": "Bilezik",
+      "amount": 110,
+      "category": "Altın",
+      "userName": "Dicle UYSAL",
+      "currentValueTl": 725552.3
+    },
+    {
+      "id": "inv_1790796064042",
+      "unit": "TL",
+      "notes": "",
+      "title": "Bes Dicle",
+      "amount": 3200,
+      "category": "TL",
+      "userName": "Fırat UYSAL",
+      "currentValueTl": 3200
+    }
+  ],
+  "extraIncomes": [
+    {
+      "id": "inc_1790875830963",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "notes": "",
+      "title": "Figen Abla Doğum Günü",
+      "amount": 10000,
+      "category": "Hediye",
+      "createdAt": "2026-10-01T17:30:31.167Z",
+      "receivedBy": "Fırat UYSAL"
+    },
+    {
+      "id": "inc_1790802625610",
+      "date": "01.10.2026",
+      "month": "2026-10",
+      "notes": "",
+      "title": "Filiz Doğum Günü Hediyesi",
+      "amount": 16500,
+      "category": "Hediye",
+      "createdAt": "2026-09-30T21:10:25.804Z",
+      "receivedBy": "Fırat UYSAL"
+    },
+    {
+      "id": "inc_1790795935970",
+      "date": "01.10.2026",
+      "month": "2026-09",
+      "notes": "",
+      "title": "Filiz Doğum Günü Hediyesi",
+      "amount": 12500,
+      "category": "Hediye",
+      "createdAt": "2026-09-30T19:18:56.195Z",
+      "receivedBy": "Fırat UYSAL"
+    }
+  ],
+  "shoppingList": [
+    {
+      "id": "shop_1791368782231",
+      "title": "Yarenin nişanına elbise",
+      "addedBy": "Dicle UYSAL",
+      "category": "Giyim",
+      "quantity": "1 Adet",
+      "completed": false,
+      "createdAt": "2026-10-07T10:26:21.929Z"
+    },
+    {
+      "id": "shop_1790764992409",
+      "title": "Panduf",
+      "addedBy": "Dicle UYSAL",
+      "category": "Çocuk",
+      "quantity": "1 Adet",
+      "completed": false,
+      "createdAt": "2026-09-30T10:43:13.783Z"
+    }
+  ],
+  "fixedExpenses": [
+    {
+      "id": "fix_1790876416165",
+      "notes": "",
+      "payer": "Dicle UYSAL",
+      "title": "Taksit",
+      "amount": 5500,
+      "dueDay": 1,
+      "isPaid": false,
+      "category": "Kredi"
+    },
+    {
+      "id": "fix_1790708319826",
+      "notes": "",
+      "payer": "Dicle UYSAL",
+      "title": "Taksit",
+      "amount": 370,
+      "dueDay": 20,
+      "isPaid": false,
+      "category": "Kredi"
+    },
+    {
+      "id": "fix_1790708170308",
+      "notes": "",
+      "payer": "Dicle UYSAL",
+      "title": "Dicle Tel Fatura",
+      "amount": 580,
+      "dueDay": 8,
+      "isPaid": false,
+      "category": "İnternet"
+    },
+    {
+      "id": "fix_1790708124168",
+      "notes": "",
+      "payer": "Fırat UYSAL",
+      "title": "İnternet",
+      "amount": 970,
+      "dueDay": 11,
+      "isPaid": false,
+      "category": "İnternet"
+    },
+    {
+      "id": "fix_1790708068333",
+      "notes": "",
+      "payer": "Dicle UYSAL",
+      "title": "Fırat Tel Fatura",
+      "amount": 480,
+      "dueDay": 22,
+      "isPaid": false,
+      "category": "Fatura"
+    },
+    {
+      "id": "fix_1790691647559",
+      "notes": "",
+      "payer": "Dicle UYSAL",
+      "title": "Netflix",
+      "amount": 190,
+      "dueDay": 1,
+      "isPaid": false,
+      "category": "Abonelik"
+    },
+    {
+      "id": "fix_1790666150012",
+      "notes": "Bu ay kombi kesintisi ile ödenecek tutar",
+      "payer": "Dicle UYSAL",
+      "title": "Ev Kirası",
+      "amount": 27500,
+      "dueDay": 1,
+      "isPaid": false,
+      "category": "Kira"
+    }
+  ],
+  "investmentHistory": [
+    {
+      "id": "hist_1790796064267",
+      "date": "30.09.2026",
+      "note": "İlk Portföy Kaydı",
+      "type": "BUY",
+      "unit": "TL",
+      "amountDelta": 3200,
+      "investmentId": "inv_1790796064042",
+      "valueDeltaTl": 3200
+    },
+    {
+      "id": "hist_1790665383775",
+      "date": "29.09.2026",
+      "note": "İlk Portföy Kaydı",
+      "type": "BUY",
+      "unit": "Gram",
+      "amountDelta": 110,
+      "investmentId": "inv_1790665383818",
+      "valueDeltaTl": 725552.3
+    }
+  ],
+  "investmentTransactions": []
+};
+
 const AilemDB = {
     dbName: 'AilemFamilyDB',
     version: 1,
@@ -204,22 +982,21 @@ const AilemDB = {
     async getAllFamilies() {
         if (this.db) {
             try {
-                return await new Promise((resolve) => {
+                const fams = await new Promise((resolve) => {
                     const tx = this.db.transaction('families', 'readonly');
                     const store = tx.objectStore('families');
                     const req = store.getAll();
                     req.onsuccess = () => resolve(req.result || []);
                     req.onerror = () => resolve([]);
                 });
-            } catch (e) {
-                // fallback
-            }
+                if (fams && fams.length > 0) return fams;
+            } catch (e) {}
         }
         try {
-            return JSON.parse(localStorage.getItem('ailem_db_families') || '[]');
-        } catch (e) {
-            return [];
-        }
+            const stored = JSON.parse(localStorage.getItem('ailem_db_families') || '[]');
+            if (stored && stored.length > 0) return stored;
+        } catch (e) {}
+        return [JSON.parse(JSON.stringify(UYSAL_DEFAULT_FAMILY))];
     },
 
     // Telefon Numarası ile Aile ve Kullanıcı Bul
@@ -1440,13 +2217,19 @@ function switchAuthMode(mode) {
 }
 
 async function handleAuthSubmit(event) {
-    event.preventDefault();
-    const identifier = (document.getElementById('userPhone')?.value || '').trim();
+    if (event && event.preventDefault) event.preventDefault();
+    let identifier = (document.getElementById('userPhone')?.value || '').trim();
     const password = (document.getElementById('userPassword')?.value || '').trim();
 
+    const pwdNorm = normalizeTr(password);
+
+    // Eğer kullanıcı kişi adı girmeden sadece şifre girdiyse otomatik algıla
     if (!identifier) {
-        showToast('Lütfen profilinizi seçin veya adınızı girin.');
-        return;
+        if (pwdNorm === 'dicle') identifier = 'Dicle';
+        else if (pwdNorm === 'firat') identifier = 'Fırat';
+        else {
+            identifier = 'Dicle'; // Varsayılan profil
+        }
     }
 
     if (!password) {
@@ -1456,81 +2239,80 @@ async function handleAuthSubmit(event) {
 
     // Şifre kuralları kontrolü (Dicle -> dicle / Fırat -> fırat veya firat)
     const idNorm = normalizeTr(identifier);
-    const pwdNorm = normalizeTr(password);
     const cleanPhone = identifier.replace(/[\s\-\(\)\+]/g, '');
 
-    const isDicle = idNorm.includes('dicle') || cleanPhone.includes('5546448989');
-    const isFirat = idNorm.includes('firat') || cleanPhone.includes('5458030118');
+    const isDicle = idNorm.includes('dicle') || cleanPhone.includes('5546448989') || pwdNorm === 'dicle';
+    const isFirat = idNorm.includes('firat') || cleanPhone.includes('5458030118') || pwdNorm === 'firat';
 
     if (isDicle && pwdNorm !== 'dicle') {
-        showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
+        showToast('❌ Hatalı şifre! (Dicle için şifre: dicle)');
         return;
     }
     if (isFirat && pwdNorm !== 'firat') {
-        showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
+        showToast('❌ Hatalı şifre! (Fırat için şifre: fırat)');
         return;
     }
 
     if (currentAuthMode === 'login') {
-        // 1. API üzerinden giriş yap
-        const apiRes = await AilemAPI.login(identifier, password);
-        if (apiRes && apiRes.success && apiRes.user && apiRes.family) {
-            appState.currentUser = apiRes.user;
-            appState.familyData = normalizeFamilyData(apiRes.family);
-            saveStateToStorage();
-            renderApp();
-            registerPushSubscription();
-            initRealtimeStream();
-            showToast(`Hoş geldiniz, ${apiRes.user.name}! 🏠✨`);
-            return;
-        } else if (apiRes && apiRes.message && apiRes.message.includes('şifre')) {
-            showToast(`❌ ${apiRes.message}`);
-            return;
-        }
-
-        // 2. Çevrimdışı / LocalStorage fallback
-        const allFams = await AilemDB.getAllFamilies();
-        let uysalFamily = await AilemDB.findByCode('UYSAL') || await AilemDB.findByCode('UYS123') || (allFams && allFams[0]);
-        let matchedUser = null;
-
-        if (isDicle) {
-            matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => normalizeTr(m.name).includes('dicle') || (m.phone && m.phone.includes('5546448989'))) : null;
-            if (!matchedUser) matchedUser = { id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' };
-        } else if (isFirat) {
-            matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => normalizeTr(m.name).includes('firat') || (m.phone && m.phone.includes('5458030118'))) : null;
-            if (!matchedUser) matchedUser = { id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' };
-        }
-
-        if (matchedUser) {
-            if (!uysalFamily) {
-                uysalFamily = {
-                    id: 'fam_1790599516960',
-                    name: 'UYSAL Ailesi',
-                    inviteCode: 'UYSAL',
-                    members: [matchedUser],
-                    plans: [],
-                    dailyPlans: [],
-                    shoppingList: [],
-                    tasks: [],
-                    expenses: [],
-                    salaries: [],
-                    extraIncomes: [],
-                    fixedExpenses: [],
-                    investments: [],
-                    investmentHistory: [],
-                    charities: [],
-                    messages: []
-                };
+        // 1. API üzerinden giriş yapmayı dene
+        try {
+            const apiRes = await AilemAPI.login(identifier, password);
+            if (apiRes && apiRes.success && apiRes.user && apiRes.family) {
+                appState.currentUser = apiRes.user;
+                appState.familyData = normalizeFamilyData(apiRes.family);
+                saveStateToStorage();
+                renderApp();
+                registerPushSubscription();
+                initRealtimeStream();
+                showToast(`Hoş geldiniz, ${apiRes.user.name}! 🏠✨`);
+                return;
+            } else if (apiRes && apiRes.message && apiRes.message.includes('şifre')) {
+                showToast(`❌ ${apiRes.message}`);
+                return;
             }
-            appState.currentUser = matchedUser;
-            appState.familyData = normalizeFamilyData(uysalFamily);
-            saveStateToStorage();
-            renderApp();
-            showToast(`Hoş geldiniz, ${matchedUser.name}! 🏠✨`);
-            return;
+        } catch (apiErr) {
+            console.warn('API login hatası, yerel mod ile açılıyor:', apiErr);
         }
 
-        showToast('Bu kullanıcı Uysal Ailesi\'nde bulunamadı.');
+        // 2. Çevrimdışı / Statik GitHub Pages Modu (%100 Garantili Giriş)
+        const allFams = await AilemDB.getAllFamilies();
+        let uysalFamily = (allFams && allFams.length > 0) ? allFams[0] : JSON.parse(JSON.stringify(UYSAL_DEFAULT_FAMILY));
+
+        let matchedUser = null;
+        if (isDicle) {
+            matchedUser = (uysalFamily.members || []).find(m => normalizeTr(m.name).includes('dicle') || (m.phone && m.phone.includes('5546448989'))) || {
+                id: 'usr_1790599516960',
+                name: 'Dicle UYSAL',
+                role: 'Anne',
+                phone: '5546448989',
+                avatar: '👩'
+            };
+        } else if (isFirat) {
+            matchedUser = (uysalFamily.members || []).find(m => normalizeTr(m.name).includes('firat') || (m.phone && m.phone.includes('5458030118'))) || {
+                id: 'usr_1790661005224',
+                name: 'Fırat UYSAL',
+                role: 'Baba',
+                phone: '5458030118',
+                avatar: '👨'
+            };
+        } else {
+            matchedUser = (uysalFamily.members || []).find(m => {
+                const nNorm = normalizeTr(m.name);
+                return nNorm === idNorm || nNorm.includes(idNorm) || (m.phone && m.phone === identifier);
+            }) || {
+                id: 'usr_' + Date.now(),
+                name: identifier,
+                role: 'Birey',
+                phone: identifier,
+                avatar: '👤'
+            };
+        }
+
+        appState.currentUser = matchedUser;
+        appState.familyData = normalizeFamilyData(uysalFamily);
+        saveStateToStorage();
+        renderApp();
+        showToast(`Hoş geldiniz, ${matchedUser.name}! 🏠✨`);
         return;
     }
 
