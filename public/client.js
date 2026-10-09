@@ -3908,6 +3908,8 @@ function renderInvestments() {
             }).join('');
         }
     }
+}
+
 function renderCharities(monthKey, monthLabel, yearNum) {
     const container = document.getElementById('charitiesListContainer');
     const family = appState.familyData;
