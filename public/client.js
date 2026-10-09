@@ -2092,9 +2092,72 @@ function initPWA() {
     } catch (e) {}
 }
 
+function deduplicateMembers(members = []) {
+    const canonicalList = [];
+    const seen = new Set();
+
+    (members || []).forEach(m => {
+        if (!m || !m.name) return;
+        const norm = normalizeTr(m.name);
+        let key = norm;
+        if (norm.includes('dicle')) key = 'dicle';
+        else if (norm.includes('firat')) key = 'firat';
+        else if (norm.includes('tuna')) key = 'tuna';
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            let standardName = m.name;
+            let standardRole = m.role || 'Birey';
+            let standardAvatar = m.avatar || '👤';
+            let standardPhone = m.phone || '';
+            let standardId = m.id || ('usr_' + key);
+
+            if (key === 'dicle') {
+                standardName = 'Dicle UYSAL';
+                standardRole = 'Anne';
+                standardAvatar = '👩';
+                standardPhone = '5546448989';
+                standardId = 'usr_1790599516960';
+            } else if (key === 'firat') {
+                standardName = 'Fırat UYSAL';
+                standardRole = 'Baba';
+                standardAvatar = '👨';
+                standardPhone = '5458030118';
+                standardId = 'usr_1790661005224';
+            } else if (key === 'tuna') {
+                standardName = 'Tuna UYSAL';
+                standardRole = 'Oğul';
+                standardAvatar = '👶';
+                standardPhone = '05546448989';
+                standardId = 'usr_1790662017196';
+            }
+
+            canonicalList.push({
+                id: standardId,
+                name: standardName,
+                role: standardRole,
+                phone: standardPhone,
+                avatar: standardAvatar
+            });
+        }
+    });
+
+    if (!seen.has('dicle')) {
+        canonicalList.unshift({ id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' });
+    }
+    if (!seen.has('firat')) {
+        canonicalList.push({ id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' });
+    }
+    if (!seen.has('tuna')) {
+        canonicalList.push({ id: 'usr_1790662017196', name: 'Tuna UYSAL', role: 'Oğul', phone: '05546448989', avatar: '👶' });
+    }
+
+    return canonicalList;
+}
+
 function normalizeFamilyData(fam) {
     if (!fam) return fam;
-    if (!fam.members) fam.members = [];
+    fam.members = deduplicateMembers(fam.members);
     if (!fam.posts) fam.posts = [];
     if (!fam.plans) fam.plans = [];
     fam.plans = fam.plans.map(p => ({
