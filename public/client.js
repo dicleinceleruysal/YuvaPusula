@@ -51,8 +51,10 @@ let appState = {
     currentUser: null,
     familyData: null,
     currentTab: 'tabPano',
-    activeBudgetSubTab: 'expenses', // 'expenses', 'fixed', 'investments'
+    activeBudgetSubTab: 'expenses', // 'expenses', 'fixed', 'investments', 'charity'
     fixedStatusFilter: 'ALL',       // 'ALL', 'UNPAID', 'PAID'
+    charityCategoryFilter: 'ALL',   // 'ALL', 'MONTH', 'Sadaka', 'Zekat', ...
+    charityMemberFilter: 'ALL',     // 'ALL', 'Dicle', 'Fırat', 'Tüm Aile'
     currentAdjustType: 'buy',       // 'buy', 'sell'
     currentAdjustInvestmentId: null,
     marketRates: null,              // Altınkaynak canlı kurları
@@ -759,6 +761,37 @@ const AilemAPI = {
         return null;
     },
 
+    // Hayır & Sadaka İşlemleri
+    async addCharity(familyId, charity) {
+        try {
+            const res = await fetch('/api/charities/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, charity })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async deleteCharity(familyId, charityId) {
+        try {
+            const res = await fetch('/api/charities/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, charityId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     async sendMessage(familyId, message) {
         try {
             const res = await fetch('/api/messages/send', {
@@ -1280,6 +1313,7 @@ function normalizeFamilyData(fam) {
     if (!fam.fixedExpenses) fam.fixedExpenses = [];
     if (!fam.investments) fam.investments = [];
     if (!fam.investmentHistory) fam.investmentHistory = [];
+    if (!fam.charities) fam.charities = [];
     if (!fam.messages) fam.messages = [];
     return fam;
 }
@@ -2548,6 +2582,30 @@ const INVESTMENT_ICONS = {
     'Nakit': '💰'
 };
 
+const CHARITY_ICONS = {
+    'Sadaka': '🤲',
+    'Zekat': '🕊️',
+    'Fitre': '📦',
+    'Burs': '🎓',
+    'Hayvanlar': '🐾',
+    'Iftar': '🍲',
+    'Saglik': '🏥',
+    'Fidan': '🌳',
+    'Diger': '✨'
+};
+
+const CHARITY_LABELS = {
+    'Sadaka': 'Sadaka / İyilik',
+    'Zekat': 'Zekat',
+    'Fitre': 'Fitre / Fidye',
+    'Burs': 'Öğrenci & Burs',
+    'Hayvanlar': 'Sokak Hayvanları & Mama',
+    'Iftar': 'İkram & Yemek',
+    'Saglik': 'Şifa & Sağlık',
+    'Fidan': 'Fidan & Çevre',
+    'Diger': 'Diğer İyilik'
+};
+
 function formatTL(num) {
     return (Number(num) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
 }
@@ -2671,6 +2729,9 @@ function renderBudget() {
 
     const heroPortfolio = document.getElementById('heroPortfolioTotal');
     if (heroPortfolio) heroPortfolio.textContent = formatTL(totalPortfolio);
+
+    // Hayır & Sadaka Render
+    renderCharities(currentMonthKey, currentMonthLabel, currentYear);
 
     // 4. Aile Fertleri Maaş Dağılımı Listesi
     const salariesContainer = document.getElementById('salariesListContainer');
@@ -3029,6 +3090,136 @@ function renderInvestments() {
             }).join('');
         }
     }
+function renderCharities(monthKey, monthLabel, yearNum) {
+    const container = document.getElementById('charitiesListContainer');
+    const family = appState.familyData;
+    if (!family) return;
+
+    if (!family.charities) family.charities = [];
+    const charities = family.charities;
+
+    const now = new Date();
+    const curYear = String(yearNum || now.getFullYear());
+    const curMonthKey = monthKey || `${curYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthNamesTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const curMonthLabel = monthLabel || `${monthNamesTr[now.getMonth()]} ${curYear}`;
+
+    // 1. Ay / Yıl / Zekat İstatistikleri
+    const monthCharities = charities.filter(c => {
+        if (c.month) return c.month === curMonthKey;
+        if (c.date && c.date.startsWith(curMonthKey)) return true;
+        if (c.createdAt && c.createdAt.startsWith(curMonthKey)) return true;
+        return false;
+    });
+    const monthTotal = monthCharities.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+    const yearCharities = charities.filter(c => {
+        if (c.date && c.date.startsWith(curYear)) return true;
+        if (c.month && c.month.startsWith(curYear)) return true;
+        if (c.createdAt && c.createdAt.startsWith(curYear)) return true;
+        return true;
+    });
+    const yearTotal = yearCharities.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+    const zakatCharities = charities.filter(c => c.category === 'Zekat' || c.category === 'Fitre');
+    const zakatTotal = zakatCharities.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+    // Rozet & Kart Güncellemeleri
+    const charityBadge = document.getElementById('charityTotalBadge');
+    if (charityBadge) charityBadge.textContent = formatTL(monthTotal);
+
+    const elMonthTotal = document.getElementById('statCharityMonthTotal');
+    if (elMonthTotal) elMonthTotal.textContent = formatTL(monthTotal);
+
+    const elMonthCount = document.getElementById('statCharityMonthCount');
+    if (elMonthCount) elMonthCount.textContent = `${monthCharities.length} hayır kaydı`;
+
+    const elMonthLabel = document.getElementById('charityMonthLabel');
+    if (elMonthLabel) elMonthLabel.textContent = curMonthLabel;
+
+    const elYearTotal = document.getElementById('statCharityYearTotal');
+    if (elYearTotal) elYearTotal.textContent = formatTL(yearTotal);
+
+    const elYearCount = document.getElementById('statCharityYearCount');
+    if (elYearCount) elYearCount.textContent = `${yearCharities.length} toplam bağış`;
+
+    const elYearLabel = document.getElementById('charityYearLabel');
+    if (elYearLabel) elYearLabel.textContent = `${curYear} Yılı`;
+
+    const elZakatTotal = document.getElementById('statCharityZakatTotal');
+    if (elZakatTotal) elZakatTotal.textContent = formatTL(zakatTotal);
+
+    const elZakatCount = document.getElementById('statCharityZakatCount');
+    if (elZakatCount) elZakatCount.textContent = `${zakatCharities.length} zekat/fitre kaydı`;
+
+    if (!container) return;
+
+    // 2. Filtrelere göre liste
+    let filteredList = charities;
+
+    const catFilter = appState.charityCategoryFilter || 'ALL';
+    if (catFilter === 'MONTH') {
+        filteredList = monthCharities;
+    } else if (catFilter !== 'ALL') {
+        filteredList = filteredList.filter(c => c.category === catFilter);
+    }
+
+    const memFilter = appState.charityMemberFilter || 'ALL';
+    if (memFilter !== 'ALL') {
+        filteredList = filteredList.filter(c => (c.payer || '').toLowerCase().includes(memFilter.toLowerCase()));
+    }
+
+    if (filteredList.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 30px 10px;">
+                <i class="fa-solid fa-hand-holding-heart" style="font-size: 36px; color: #a7f3d0; margin-bottom: 8px;"></i>
+                <p style="font-size: 0.88rem; color: #64748b;">
+                    Henüz hayır / sadaka kaydı bulunmuyor.<br>
+                    <small style="color: #94a3b8;">Verilen sadaka, zekat veya bursları kaydederek aile bereketinizi takip edebilirsiniz.</small>
+                </p>
+                <button class="btn-primary-sm" onclick="openAddCharityModal()" style="margin-top: 10px; background: linear-gradient(135deg, #059669, #047857);">
+                    <i class="fa-solid fa-plus"></i> İlk Hayrı Ekle
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filteredList.map(item => {
+        const catIcon = CHARITY_ICONS[item.category] || '🤲';
+        const catLabel = CHARITY_LABELS[item.category] || item.category || 'Sadaka';
+        const isDicle = (item.payer || '').toLowerCase().includes('dicle');
+        const isFirat = (item.payer || '').toLowerCase().includes('fırat') || (item.payer || '').toLowerCase().includes('firat');
+        const payerEmoji = isDicle ? '👩 ' : (isFirat ? '👨 ' : '👨‍👩‍👧‍👦 ');
+
+        return `
+            <div class="charity-item-card">
+                <div class="charity-item-left">
+                    <div class="charity-item-icon">
+                        ${catIcon}
+                    </div>
+                    <div class="charity-item-details">
+                        <div class="charity-item-title-row">
+                            <span class="charity-item-title">${escapeHtml(item.title)}</span>
+                            <span class="charity-tag-cat">${catIcon} ${catLabel}</span>
+                            <span class="charity-tag-payer">${payerEmoji}${escapeHtml(item.payer || 'Aile')}</span>
+                            ${item.beneficiary ? `<span class="charity-beneficiary-tag"><i class="fa-solid fa-building-ngo"></i> ${escapeHtml(item.beneficiary)}</span>` : ''}
+                        </div>
+                        ${item.notes ? `<div class="charity-item-notes">"${escapeHtml(item.notes)}"</div>` : ''}
+                        <div class="charity-item-date">
+                            <i class="fa-regular fa-calendar"></i> ${item.date || ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="charity-item-right">
+                    <div class="charity-item-amount">+ ${formatTL(item.amount)}</div>
+                    <button class="btn-delete-item" onclick="handleDeleteCharity('${item.id}')" title="Kaydı Sil" style="padding: 4px 8px;">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderExpenses() {
@@ -3097,6 +3288,12 @@ function updateMemberSelectDropdowns() {
     }
     if (editDailyAssigneeSelect) {
         editDailyAssigneeSelect.innerHTML = dailyOptions;
+    }
+
+    const charitySelect = document.getElementById('charityPayer');
+    if (charitySelect) {
+        charitySelect.innerHTML = memberOptions + `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile (Ortak)</option>`;
+        if (curName) charitySelect.value = curName;
     }
 }
 
@@ -3780,22 +3977,29 @@ function filterTasks(status, btn) {
 // BÜTÇE, MAAŞ, SABİT GİDER VE YATIRIM ETKİLEŞİMLERİ
 // ==========================================================
 
-// Alt Sekme Geçişi (Harcamalar, Sabit Giderler, Yatırımlar)
+// Alt Sekme Geçişi (Harcamalar, Sabit Giderler, Yatırımlar, Hayır & Sadaka)
 function switchBudgetSubTab(tabKey) {
     appState.activeBudgetSubTab = tabKey;
 
     // Subtab butonları aktifliği
     document.querySelectorAll('.budget-subtab-btn').forEach(btn => btn.classList.remove('active'));
-    const activeSubBtn = document.getElementById(tabKey === 'expenses' ? 'subtabBtnExpenses' : (tabKey === 'fixed' ? 'subtabBtnFixed' : 'subtabBtnInvestments'));
+    let activeBtnId = 'subtabBtnExpenses';
+    if (tabKey === 'fixed') activeBtnId = 'subtabBtnFixed';
+    else if (tabKey === 'investments') activeBtnId = 'subtabBtnInvestments';
+    else if (tabKey === 'charity') activeBtnId = 'subtabBtnCharity';
+
+    const activeSubBtn = document.getElementById(activeBtnId);
     if (activeSubBtn) activeSubBtn.classList.add('active');
 
     // Subview panellerini göster/gizle
     const viewExp = document.getElementById('budgetViewExpenses');
     const viewFixed = document.getElementById('budgetViewFixed');
     const viewInv = document.getElementById('budgetViewInvestments');
+    const viewCharity = document.getElementById('budgetViewCharity');
 
     if (viewExp) viewExp.classList.toggle('hidden', tabKey !== 'expenses');
     if (viewFixed) viewFixed.classList.toggle('hidden', tabKey !== 'fixed');
+    if (viewCharity) viewCharity.classList.toggle('hidden', tabKey !== 'charity');
     if (viewInv) {
         viewInv.classList.toggle('hidden', tabKey !== 'investments');
         if (tabKey === 'investments') {
@@ -3809,6 +4013,7 @@ function switchBudgetSubTab(tabKey) {
         if (tabKey === 'expenses') btnActionText.textContent = 'Harcama Ekle';
         else if (tabKey === 'fixed') btnActionText.textContent = 'Sabit Gider Ekle';
         else if (tabKey === 'investments') btnActionText.textContent = 'Yatırım Ekle';
+        else if (tabKey === 'charity') btnActionText.textContent = 'Hayır Ekle';
     }
 }
 
@@ -3819,7 +4024,110 @@ function openCurrentBudgetActionModal() {
         openModal('modalNewFixedExpense');
     } else if (appState.activeBudgetSubTab === 'investments') {
         openModal('modalNewInvestment');
+    } else if (appState.activeBudgetSubTab === 'charity') {
+        openAddCharityModal();
     }
+}
+
+// 0. Hayır & Sadaka Modalını Aç ve Kaydet
+function openAddCharityModal() {
+    updateMemberSelectDropdowns();
+    const dateInput = document.getElementById('charityDate');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    const titleInput = document.getElementById('charityTitle');
+    if (titleInput) titleInput.value = '';
+    const amountInput = document.getElementById('charityAmount');
+    if (amountInput) amountInput.value = '';
+    const benInput = document.getElementById('charityBeneficiary');
+    if (benInput) benInput.value = '';
+    const notesInput = document.getElementById('charityNotes');
+    if (notesInput) notesInput.value = '';
+
+    openModal('modalNewCharity');
+}
+
+async function handleAddCharity(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const title = document.getElementById('charityTitle').value.trim();
+    const amount = parseFloat(document.getElementById('charityAmount').value) || 0;
+    const category = document.getElementById('charityCategory').value;
+    const payer = document.getElementById('charityPayer').value || (appState.currentUser ? appState.currentUser.name : 'Aile');
+    const date = document.getElementById('charityDate').value || new Date().toISOString().split('T')[0];
+    const beneficiary = document.getElementById('charityBeneficiary').value.trim();
+    const notes = document.getElementById('charityNotes').value.trim();
+
+    if (!title || amount <= 0) {
+        showToast('Lütfen geçerli bir başlık ve tutar girin.');
+        return;
+    }
+
+    const family = appState.familyData;
+    if (!family) return;
+
+    const newCharity = {
+        id: 'charity_' + Date.now(),
+        title,
+        amount,
+        category,
+        payer,
+        date,
+        beneficiary,
+        notes,
+        createdAt: new Date().toISOString()
+    };
+
+    closeModal('modalNewCharity');
+    showToast('Hayır / Sadaka kaydı bereketiyle eklendi ✨');
+
+    const updatedFamily = await AilemAPI.addCharity(family.id, newCharity);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.charities) appState.familyData.charities = [];
+        appState.familyData.charities.unshift(newCharity);
+    }
+
+    saveStateToStorage();
+    renderBudget();
+}
+
+async function handleDeleteCharity(id) {
+    if (!confirm('Bu hayır / sadaka kaydını silmek istediğinize emin misiniz?')) return;
+    const family = appState.familyData;
+    if (!family) return;
+
+    showToast('Kayıt silindi.');
+    const updatedFamily = await AilemAPI.deleteCharity(family.id, id);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (appState.familyData.charities) {
+            appState.familyData.charities = appState.familyData.charities.filter(c => c.id !== id);
+        }
+    }
+
+    saveStateToStorage();
+    renderBudget();
+}
+
+function filterCharityCategory(cat, btn) {
+    appState.charityCategoryFilter = cat;
+    if (btn) {
+        btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderCharities();
+}
+
+function filterCharityMember(mem, btn) {
+    appState.charityMemberFilter = mem;
+    if (btn) {
+        btn.parentElement.querySelectorAll('.pill-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderCharities();
 }
 
 // 1. Aylık Maaş Modalını Aç ve Kaydet
@@ -5579,6 +5887,12 @@ function openModal(modalId) {
             const dailyAssignee = document.getElementById('newDailyPlanAssignedTo');
             if (dailyAssignee && appState.currentUser && appState.currentUser.name) {
                 dailyAssignee.value = appState.currentUser.name;
+            }
+        } else if (modalId === 'modalNewCharity') {
+            updateMemberSelectDropdowns();
+            const dateInput = document.getElementById('charityDate');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
             }
         }
     }

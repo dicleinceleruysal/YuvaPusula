@@ -689,7 +689,7 @@
                     </div>
                 </div>
 
-                <!-- 3'LÜ ALT SEKME GEÇİŞİ (SUB-TABS) -->
+                <!-- 4'LÜ ALT SEKME GEÇİŞİ (SUB-TABS) -->
                 <div class="budget-subtabs-nav">
                     <button class="budget-subtab-btn active" id="subtabBtnExpenses" onclick="switchBudgetSubTab('expenses')">
                         <i class="fa-solid fa-receipt"></i> Harcamalar
@@ -701,6 +701,10 @@
                     <button class="budget-subtab-btn" id="subtabBtnInvestments" onclick="switchBudgetSubTab('investments')">
                         <i class="fa-solid fa-gem"></i> Yatırımlar & Birikim
                         <span class="subtab-badge-val" id="investmentTotalBadge">0 ₺</span>
+                    </button>
+                    <button class="budget-subtab-btn" id="subtabBtnCharity" onclick="switchBudgetSubTab('charity')">
+                        <i class="fa-solid fa-hand-holding-heart"></i> Hayır & Sadaka
+                        <span class="subtab-badge-val" id="charityTotalBadge" style="background:#ecfdf5; color:#059669;">0 ₺</span>
                     </button>
                 </div>
 
@@ -889,6 +893,103 @@
                     </div>
                     <div class="list-container" id="investmentHistoryList">
                         <!-- Dinamik Alış/Satış Geçmişi -->
+                    </div>
+                </div>
+
+                <!-- SUB-VIEW 4: HAYIR & SADAKA ALANI -->
+                <div id="budgetViewCharity" class="budget-subview hidden">
+                    <!-- Manevi / İlham Verici Kart -->
+                    <div class="charity-hero-card">
+                        <div class="charity-hero-bg-art">🤲</div>
+                        <div class="charity-hero-content">
+                            <div class="charity-quote-badge">
+                                <i class="fa-solid fa-heart"></i> İyilik & Bereket Köşesi
+                            </div>
+                            <blockquote class="charity-quote-text">
+                                "Sevdiğiniz şeylerden infak etmedikçe gerçek iyiliğe erişemezsiniz."
+                            </blockquote>
+                            <cite class="charity-quote-source">— Âl-i İmrân Suresi, 92. Ayet</cite>
+                        </div>
+                    </div>
+
+                    <!-- 3'lü Hayır & Sadaka Özet İstatistikleri -->
+                    <div class="charity-stats-grid">
+                        <div class="charity-stat-card card-charity-month">
+                            <div class="charity-stat-header">
+                                <span class="charity-stat-icon">🌿</span>
+                                <div>
+                                    <span class="charity-stat-title">Bu Ayki İyilik</span>
+                                    <small class="charity-stat-sub" id="charityMonthLabel">Bu Ay</small>
+                                </div>
+                            </div>
+                            <div class="charity-stat-val" id="statCharityMonthTotal">0,00 ₺</div>
+                            <div class="charity-stat-footer" id="statCharityMonthCount">0 hayır kaydı</div>
+                        </div>
+
+                        <div class="charity-stat-card card-charity-year">
+                            <div class="charity-stat-header">
+                                <span class="charity-stat-icon">🕊️</span>
+                                <div>
+                                    <span class="charity-stat-title">Yıllık Toplam Hayır</span>
+                                    <small class="charity-stat-sub" id="charityYearLabel">2026 Yılı</small>
+                                </div>
+                            </div>
+                            <div class="charity-stat-val" id="statCharityYearTotal">0,00 ₺</div>
+                            <div class="charity-stat-footer" id="statCharityYearCount">Tüm hayır & bağışlar</div>
+                        </div>
+
+                        <div class="charity-stat-card card-charity-zakat">
+                            <div class="charity-stat-header">
+                                <span class="charity-stat-icon">✨</span>
+                                <div>
+                                    <span class="charity-stat-title">Zekat & Fitre / Fidye</span>
+                                    <small class="charity-stat-sub">Farz & Vacip İnfaklar</small>
+                                </div>
+                            </div>
+                            <div class="charity-stat-val" id="statCharityZakatTotal">0,00 ₺</div>
+                            <div class="charity-stat-footer" id="statCharityZakatCount">0 zekat/fitre kaydı</div>
+                        </div>
+                    </div>
+
+                    <!-- Hayır Ekleme Butonu ve Filtre Çipleri -->
+                    <div class="charity-actions-bar">
+                        <div class="section-title" style="margin-bottom: 0;">
+                            <h4><i class="fa-solid fa-hand-holding-heart"></i> Yapılan Hayır ve Sadakalar</h4>
+                        </div>
+                        <button class="btn-primary-sm" onclick="openAddCharityModal()" style="background: linear-gradient(135deg, #059669, #047857);">
+                            <i class="fa-solid fa-plus"></i> Hayır / Sadaka Ekle
+                        </button>
+                    </div>
+
+                    <!-- Kategori Filtre Çipleri -->
+                    <div class="category-chips charity-category-chips" style="margin-top: 12px;">
+                        <button class="chip active" onclick="filterCharityCategory('ALL', this)">Tümü</button>
+                        <button class="chip" onclick="filterCharityCategory('MONTH', this)">📅 Bu Ay</button>
+                        <button class="chip" onclick="filterCharityCategory('Sadaka', this)">🤲 Sadaka</button>
+                        <button class="chip" onclick="filterCharityCategory('Zekat', this)">🕊️ Zekat</button>
+                        <button class="chip" onclick="filterCharityCategory('Fitre', this)">📦 Fitre / Fidye</button>
+                        <button class="chip" onclick="filterCharityCategory('Burs', this)">🎓 Öğrenci & Burs</button>
+                        <button class="chip" onclick="filterCharityCategory('Hayvanlar', this)">🐾 Sokak Hayvanları</button>
+                        <button class="chip" onclick="filterCharityCategory('Iftar', this)">🍲 Yemek & İkram</button>
+                        <button class="chip" onclick="filterCharityCategory('Saglik', this)">🏥 Şifa & Sağlık</button>
+                        <button class="chip" onclick="filterCharityCategory('Fidan', this)">🌳 Fidan & Çevre</button>
+                        <button class="chip" onclick="filterCharityCategory('Diger', this)">✨ Diğer</button>
+                    </div>
+
+                    <!-- Kişi Filtresi -->
+                    <div class="charity-member-filter-row">
+                        <span class="filter-label"><i class="fa-solid fa-user-check"></i> Veren Kişi:</span>
+                        <div class="filter-pills" id="charityMemberFilterPills">
+                            <button class="pill-chip active" onclick="filterCharityMember('ALL', this)">Tümü</button>
+                            <button class="pill-chip" onclick="filterCharityMember('Dicle', this)">👩 Dicle</button>
+                            <button class="pill-chip" onclick="filterCharityMember('Fırat', this)">👨 Fırat</button>
+                            <button class="pill-chip" onclick="filterCharityMember('Tüm Aile', this)">👨‍👩‍👧‍👦 Tüm Aile</button>
+                        </div>
+                    </div>
+
+                    <!-- Hayır & Sadaka Listesi -->
+                    <div class="list-container" id="charitiesListContainer">
+                        <!-- Dinamik Hayır Kartları -->
                     </div>
                 </div>
             </section>
@@ -1136,6 +1237,65 @@
                     </select>
                 </div>
                 <button type="submit" class="btn-primary">Harcamayı Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YENİ HAYIR / SADAKA EKLE -->
+    <div id="modalNewCharity" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-hand-holding-heart" style="color: #059669;"></i> Hayır & Sadaka Ekle</h3>
+                <button class="btn-close" onclick="closeModal('modalNewCharity')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddCharity(event)">
+                <div class="form-group">
+                    <label>Hayır / İyilik Başlığı</label>
+                    <input type="text" id="charityTitle" placeholder="Örn: Köy Okuluna Kitap, Cuma Sadakası..." required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Tutar (₺)</label>
+                        <input type="number" step="0.5" id="charityAmount" placeholder="Örn: 250" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Kategori / Tür</label>
+                        <select id="charityCategory" required>
+                            <option value="Sadaka">🤲 Sadaka / İyilik</option>
+                            <option value="Zekat">🕊️ Zekat</option>
+                            <option value="Fitre">📦 Fitre / Fidye</option>
+                            <option value="Burs">🎓 Öğrenci Bursu & Eğitim</option>
+                            <option value="Hayvanlar">🐾 Sokak Hayvanları & Mama</option>
+                            <option value="Iftar">🍲 Yemek & İkram</option>
+                            <option value="Saglik">🏥 Şifa & Sağlık Yardımı</option>
+                            <option value="Fidan">🌳 Fidan & Çevre</option>
+                            <option value="Diger">✨ Diğer Hayır & İyilik</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Kim Verdi / Yapan Kişi</label>
+                        <select id="charityPayer" required>
+                            <!-- Dinamik Üyeler Gelecek -->
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Tarih</label>
+                        <input type="date" id="charityDate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Kurum / Alıcı / Muhatap (Opsiyonel)</label>
+                    <input type="text" id="charityBeneficiary" placeholder="Örn: Kızılay, İhtiyaç Sahibi Komşu, Öğrenci...">
+                </div>
+                <div class="form-group">
+                    <label>Niyet / Açıklama Notu (Opsiyonel)</label>
+                    <textarea id="charityNotes" rows="2" placeholder="Örn: Şifa niyetiyle verildi, ay başı infakı..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #059669, #047857); margin-top: 6px;">
+                    <i class="fa-solid fa-heart"></i> Hayrı Kaydet & Bereketlendir
+                </button>
             </form>
         </div>
     </div>
@@ -2179,6 +2339,6 @@
     </div>
 
     <!-- App Logic -->
-    <script src="client.js?v=36"></script>
+    <script src="client.js?v=37"></script>
 </body>
 </html>

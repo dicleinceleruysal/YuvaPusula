@@ -276,6 +276,7 @@ async function createFamily(familyName, inviteCode, user) {
         fixedExpenses: [],
         investments: [],
         investmentHistory: [],
+        charities: [],
         messages: []
     };
 
@@ -763,6 +764,17 @@ async function deleteTask(familyId, taskId) {
     });
 }
 
+async function resetWeeklyTasks(familyId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.tasks) fam.tasks = [];
+        fam.tasks = fam.tasks.map(t => ({
+            ...t,
+            completed: false
+        }));
+        return fam;
+    });
+}
+
 // Harcama İşlemleri
 async function addExpense(familyId, expense) {
     return await updateFamilyHelper(familyId, (fam) => {
@@ -1034,6 +1046,32 @@ async function deleteOvertime(familyId, overtimeId) {
     });
 }
 
+// Hayır / Sadaka / Zekat İşlemleri
+async function addCharity(familyId, charity) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.charities) fam.charities = [];
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        fam.charities.unshift({
+            id: 'charity_' + Date.now(),
+            ...charity,
+            amount: parseFloat(charity.amount) || 0,
+            date: charity.date || new Date().toISOString().split('T')[0],
+            month: charity.month || currentMonthKey,
+            createdAt: new Date().toISOString()
+        });
+        return fam;
+    });
+}
+
+async function deleteCharity(familyId, charityId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.charities) fam.charities = [];
+        fam.charities = fam.charities.filter(c => c.id !== charityId);
+        return fam;
+    });
+}
+
 // Push Subscription İşlemleri (Uygulama Kapalıyken Bildirim Gönderme)
 async function savePushSubscription(familyId, userId, subscription) {
     if (!subscription || !subscription.endpoint) return false;
@@ -1214,7 +1252,7 @@ async function sendPushToTarget(familyId, payload, targetUserOrName, excludeUser
     const normTarget = normalizeTargetName(rawTarget);
 
     // Hedef "Tüm Aile", "all", "group", "herkes" veya boşsa tüm aileye gönder (oluşturan kişi excludeUserId hariç)
-    if (!rawTarget || normTarget === 'tumaile' || normTarget === 'tümaile' || normTarget === 'all' || normTarget === 'group' || normTarget === 'herkes') {
+    if (!rawTarget || normTarget === 'tumaile' || normTarget === 'tümaile' || normTarget.includes('tumaile') || normTarget.includes('tümaile') || normTarget === 'all' || normTarget === 'group' || normTarget === 'herkes') {
         return await sendPushToFamily(familyId, payload, excludeUserId);
     }
 
@@ -1283,6 +1321,7 @@ module.exports = {
     addTask,
     toggleTask,
     deleteTask,
+    resetWeeklyTasks,
     addExpense,
     deleteExpense,
     setSalary,
@@ -1298,6 +1337,8 @@ module.exports = {
     addInvestment,
     adjustInvestment,
     deleteInvestment,
+    addCharity,
+    deleteCharity,
     addMessage,
     markMessagesAsRead,
     savePushSubscription,

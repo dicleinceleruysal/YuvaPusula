@@ -623,6 +623,12 @@ async function appHandler(req, res) {
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
+            if (pathname === '/api/tasks/reset-week' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.resetWeeklyTasks(body.familyId);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
 
             // 10. Harcama İşlemleri
             if (pathname === '/api/expenses/add' && req.method === 'POST') {
@@ -708,6 +714,20 @@ async function appHandler(req, res) {
             if (pathname === '/api/investments/delete' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
                 const updatedFamily = await dbManager.deleteInvestment(body.familyId, body.investmentId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
+            // 13.1 Hayır / Sadaka İşlemleri
+            if (pathname === '/api/charities/add' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.addCharity(body.familyId, body.charity);
+                broadcastToFamilyLive(body.familyId, 'charity_added', { charity: body.charity });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/charities/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteCharity(body.familyId, body.charityId);
+                broadcastToFamilyLive(body.familyId, 'charity_deleted', { charityId: body.charityId });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 

@@ -717,6 +717,20 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 13.1 Hayır / Sadaka İşlemleri
+            if (pathname === '/api/charities/add' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.addCharity(body.familyId, body.charity);
+                broadcastToFamilyLive(body.familyId, 'charity_added', { charity: body.charity });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/charities/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteCharity(body.familyId, body.charityId);
+                broadcastToFamilyLive(body.familyId, 'charity_deleted', { charityId: body.charityId });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 14. Mesajlaşma İşlemleri (Aile Grubu & Bireysel)
             if (pathname === '/api/messages/send' && req.method === 'POST') {
                 const body = await parseJsonBody(req);

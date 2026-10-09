@@ -276,6 +276,7 @@ async function createFamily(familyName, inviteCode, user) {
         fixedExpenses: [],
         investments: [],
         investmentHistory: [],
+        charities: [],
         messages: []
     };
 
@@ -1045,6 +1046,32 @@ async function deleteOvertime(familyId, overtimeId) {
     });
 }
 
+// Hayır / Sadaka / Zekat İşlemleri
+async function addCharity(familyId, charity) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.charities) fam.charities = [];
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        fam.charities.unshift({
+            id: 'charity_' + Date.now(),
+            ...charity,
+            amount: parseFloat(charity.amount) || 0,
+            date: charity.date || new Date().toISOString().split('T')[0],
+            month: charity.month || currentMonthKey,
+            createdAt: new Date().toISOString()
+        });
+        return fam;
+    });
+}
+
+async function deleteCharity(familyId, charityId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.charities) fam.charities = [];
+        fam.charities = fam.charities.filter(c => c.id !== charityId);
+        return fam;
+    });
+}
+
 // Push Subscription İşlemleri (Uygulama Kapalıyken Bildirim Gönderme)
 async function savePushSubscription(familyId, userId, subscription) {
     if (!subscription || !subscription.endpoint) return false;
@@ -1310,6 +1337,8 @@ module.exports = {
     addInvestment,
     adjustInvestment,
     deleteInvestment,
+    addCharity,
+    deleteCharity,
     addMessage,
     markMessagesAsRead,
     savePushSubscription,
