@@ -163,6 +163,315 @@ async function getAltinkaynakLiveRates(forceRefresh = false) {
     }
 }
 
+// ==========================================================
+// CANLI ÜRÜN FİYATI ÇEKME VE İNDİRİM TAKİP MOTORU
+// (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
+// ==========================================================
+function fetchHtmlContent(targetUrl, maxRedirects = 5) {
+    return new Promise((resolve) => {
+        if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
+            return resolve('');
+        }
+
+        try {
+            const parsedUrl = new URL(targetUrl);
+            const client = parsedUrl.protocol === 'https:' ? https : http;
+
+            const options = {
+                hostname: parsedUrl.hostname,
+                path: parsedUrl.pathname + parsedUrl.search,
+                port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Sec-Ch-Ua': '"Chromium";v="123", "Not:A-Brand";v="8"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"Windows"',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                timeout: 10000
+            };
+
+            const req = client.get(options, (res) => {
+                // Yönlendirme (Redirect 301, 302, 307, 308) yönetimi (Örn: Hepsiburada app.hb.biz linkleri)
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+                    let redirectUrl = res.headers.location;
+                    if (!redirectUrl.startsWith('http')) {
+                        redirectUrl = new URL(redirectUrl, targetUrl).href;
+                    }
+                    return fetchHtmlContent(redirectUrl, maxRedirects - 1).then(resolve);
+                }
+
+                let data = '';
+                res.setEncoding('utf8');
+                res.on('data', chunk => {
+                    data += chunk;
+                    if (data.length > 2 * 1024 * 1024) {
+                        req.destroy();
+                        resolve(data);
+                    }
+                });
+                res.on('end', () => resolve(data));
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve('');
+            });
+            req.on('error', () => resolve(''));
+        } catch (e) {
+            resolve('');
+        }
+    });
+}
+
+function parsePriceToNumber(priceStr) {
+    if (!priceStr) return 0;
+    if (typeof priceStr === 'number') return priceStr;
+    let str = String(priceStr).replace(/[^\d,\.]/g, '').trim();
+    if (!str) return 0;
+
+    if (str.includes('.') && str.includes(',')) {
+        if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            str = str.replace(/,/g, '');
+        }
+    } else if (str.includes(',')) {
+        const parts = str.split(',');
+        if (parts[1] && parts[1].length === 2) {
+            str = str.replace(',', '.');
+        } else if (parts[1] && parts[1].length === 3) {
+            str = parts.join('');
+        } else {
+            str = str.replace(',', '.');
+        }
+    } else if (str.includes('.')) {
+        const parts = str.split('.');
+        if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+            str = parts.join('');
+        }
+    }
+    return parseFloat(str) || 0;
+}
+
+function formatPriceTr(num) {
+    if (!num || isNaN(num)) return '';
+    return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num) + ' ₺';
+}
+
+function extractPriceFromHtml(html) {
+    if (!html || typeof html !== 'string') return null;
+
+    try {
+        // 1. JSON-LD Schema (application/ld+json) Taraması
+        const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+        if (jsonLdMatches) {
+            for (const match of jsonLdMatches) {
+                const inner = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+                try {
+                    const parsed = JSON.parse(inner);
+                    const items = Array.isArray(parsed) ? parsed : [parsed];
+                    for (const item of items) {
+                        if (item['@type'] === 'Product' || (item['@graph'] && Array.isArray(item['@graph']))) {
+                            const graphList = item['@graph'] || [item];
+                            for (const g of graphList) {
+                                if (g.offers) {
+                                    const offers = Array.isArray(g.offers) ? g.offers : [g.offers];
+                                    for (const off of offers) {
+                                        const p = off.price || off.lowPrice || off.highPrice;
+                                        if (p) {
+                                            const num = parsePriceToNumber(p);
+                                            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'jsonld' };
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (item.offers) {
+                            const offers = Array.isArray(item.offers) ? item.offers : [item.offers];
+                            for (const off of offers) {
+                                const p = off.price || off.lowPrice;
+                                if (p) {
+                                    const num = parsePriceToNumber(p);
+                                    if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'jsonld-direct' };
+                                }
+                            }
+                        }
+                    }
+                } catch (jsonErr) {}
+            }
+        }
+
+        // 2. OpenGraph ve E-Ticaret Meta Tagları
+        const metaPricePatterns = [
+            /<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']product:price:amount["']/i,
+            /<meta[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*name=["']twitter:data1["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*itemprop=["']price["'][^>]*content=["']([^"']+)["']/i
+        ];
+
+        for (const pattern of metaPricePatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const num = parsePriceToNumber(m[1]);
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'meta' };
+            }
+        }
+
+        // 3. Trendyol, Hepsiburada, Zara, Amazon DOM Kalıpları
+        const tyMatch = html.match(/class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices)[^"']*["'][^>]*>([^<]+)/i);
+        if (tyMatch && tyMatch[1]) {
+            const num = parsePriceToNumber(tyMatch[1]);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'trendyol' };
+        }
+
+        const hbMatch = html.match(/(?:data-test-id=["']price-current-price["']|class=["'][^"']*price-value[^"']*["'])[^>]*>([^<]+)/i);
+        if (hbMatch && hbMatch[1]) {
+            const num = parsePriceToNumber(hbMatch[1]);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'hepsiburada' };
+        }
+
+        const amzWhole = html.match(/class=["']a-price-whole["'][^>]*>([^<]+)/i);
+        if (amzWhole && amzWhole[1]) {
+            const amzFrac = html.match(/class=["']a-price-fraction["'][^>]*>([^<]+)/i);
+            const wholeClean = amzWhole[1].replace(/[^\d]/g, '');
+            const fracClean = amzFrac && amzFrac[1] ? amzFrac[1].replace(/[^\d]/g, '') : '00';
+            const num = parseFloat(`${wholeClean}.${fracClean}`);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'amazon' };
+        }
+
+        const generalClassMatch = html.match(/class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|discounted-price|last-price)[^"']*["'][^>]*>([^<]+)/i);
+        if (generalClassMatch && generalClassMatch[1]) {
+            const num = parsePriceToNumber(generalClassMatch[1]);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'general-class' };
+        }
+
+        // 4. Regex ile ₺ / TL Fiyat Kalıbı
+        const tlRegex = /([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?)\s*(?:TL|₺|TRY)/i;
+        const tlMatch = html.match(tlRegex);
+        if (tlMatch && tlMatch[1]) {
+            const num = parsePriceToNumber(tlMatch[1]);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'regex-tl' };
+        }
+    } catch (e) {
+        console.error('extractPriceFromHtml error:', e);
+    }
+
+    return null;
+}
+
+async function checkWishlistPriceForPlan(familyId, planId) {
+    const family = await dbManager.getFullFamilyData(familyId);
+    if (!family || !Array.isArray(family.plans)) return null;
+
+    const plan = family.plans.find(p => p.id === planId);
+    if (!plan || !plan.link || (!plan.link.startsWith('http://') && !plan.link.startsWith('https://'))) {
+        return { success: false, message: 'Geçerli bir ürün linki bulunamadı.' };
+    }
+
+    const html = await fetchHtmlContent(plan.link);
+    const priceResult = extractPriceFromHtml(html);
+
+    if (!priceResult || !priceResult.number) {
+        return { success: false, message: 'Ürün sayfasından fiyat bilgisi okunamadı.' };
+    }
+
+    const newPriceNum = priceResult.number;
+    const newPriceFormatted = priceResult.formatted;
+
+    const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
+    const prevPriceNum = parsePriceToNumber(rawPrevPrice);
+
+    let priceDropped = false;
+    let oldPriceFormatted = plan.oldPrice || rawPrevPrice;
+
+    if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
+        priceDropped = true;
+        oldPriceFormatted = formatPriceTr(prevPriceNum);
+    }
+
+    const updatedPlan = {
+        ...plan,
+        shopPrice: newPriceFormatted,
+        currentPrice: newPriceFormatted,
+        lastPriceCheck: new Date().toISOString()
+    };
+
+    if (priceDropped) {
+        updatedPlan.priceDropped = true;
+        updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastPriceDropTime = new Date().toISOString();
+    } else if (prevPriceNum > 0 && newPriceNum >= prevPriceNum) {
+        if (!plan.initialPrice) {
+            updatedPlan.initialPrice = formatPriceTr(prevPriceNum);
+        }
+    }
+
+    const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
+
+    if (priceDropped) {
+        broadcastToFamilyLive(familyId, 'price_drop', {
+            family: updatedFamily,
+            planId: plan.id,
+            title: plan.title,
+            oldPrice: oldPriceFormatted,
+            newPrice: newPriceFormatted
+        });
+
+        dbManager.sendPushToFamily(familyId, {
+            title: `🔥 İndirim Yakalandı! (${plan.title})`,
+            body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Eski: ${oldPriceFormatted})`,
+            icon: './icons/icon-192.png',
+            url: './index.html?tab=plans'
+        }).catch(e => {});
+    } else {
+        broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
+    }
+
+    return {
+        success: true,
+        priceDropped,
+        oldPrice: oldPriceFormatted,
+        newPrice: newPriceFormatted,
+        foundPrice: newPriceFormatted,
+        family: updatedFamily
+    };
+}
+
+async function checkAllWishlistPricesPeriodic() {
+    try {
+        const families = await dbManager.getAllFamilies();
+        if (!families || !Array.isArray(families)) return;
+
+        for (const fam of families) {
+            if (!fam || !Array.isArray(fam.plans)) continue;
+            const shopPlansWithLinks = fam.plans.filter(p => 
+                p.category === 'Alisveris' && 
+                !p.completed && 
+                p.link && 
+                (p.link.startsWith('http://') || p.link.startsWith('https://'))
+            );
+
+            for (const plan of shopPlansWithLinks) {
+                try {
+                    await checkWishlistPriceForPlan(fam.id, plan.id);
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (err) {
+                    console.error(`[Wishlist Price Check] Plan ${plan.id} hata:`, err.message);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Wishlist Price Check Periodic Error]:', e);
+    }
+}
+
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -519,6 +828,15 @@ async function appHandler(req, res) {
                 const updatedFamily = await dbManager.deletePlan(body.familyId, body.planId);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/plans/check-price' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const result = await checkWishlistPriceForPlan(body.familyId, body.planId);
+                if (result) {
+                    return sendJson(res, 200, result);
+                } else {
+                    return sendJson(res, 400, { success: false, message: 'Fiyat kontrolü gerçekleştirilemedi.' });
+                }
             }
 
             // 7.1 Günlük Planlama İşlemleri (Her Gün Sıfırlanır)
@@ -881,6 +1199,12 @@ if (require.main === module) {
         }
         console.log('====================================================');
     });
+
+    // İlk açılışta 15 saniye sonra, ardından her 20 dakikada bir istek/ürün fiyatlarını tara
+    setTimeout(() => {
+        checkAllWishlistPricesPeriodic();
+    }, 15000);
+    setInterval(checkAllWishlistPricesPeriodic, 20 * 60 * 1000);
 }
 
 module.exports = appHandler;

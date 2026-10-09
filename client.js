@@ -1221,6 +1221,22 @@ const AilemAPI = {
         return null;
     },
 
+    async checkPlanPrice(familyId, planId) {
+        try {
+            const res = await fetch('/api/plans/check-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId })
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (e) {
+            console.warn('API checkPlanPrice hatası:', e);
+        }
+        return null;
+    },
+
     async addShoppingItem(familyId, item) {
         try {
             const res = await fetch('/api/shopping/add', {
@@ -1855,6 +1871,29 @@ function initRealtimeStream() {
                     renderApp();
                 }
             } catch (err) {}
+        });
+
+        familyEventSource.addEventListener('price_drop', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.family) {
+                    appState.familyData = normalizeFamilyData(data.family);
+                    saveStateToStorage();
+                    renderApp();
+                }
+                triggerHapticAndSound();
+                showToast(`🔥 Fiyat İndirimi! "${data.title || 'Ürün'}" fiyatı düştü: ${data.newPrice || ''} (Eski: ${data.oldPrice || ''})`);
+                if (appState.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+                    try {
+                        new Notification('🔥 Fiyat İndirimi Yakalandı!', {
+                            body: `${data.title || 'Ürün'} fiyatı ${data.newPrice} seviyesine düştü! (Eski: ${data.oldPrice})`,
+                            icon: 'icons/icon.svg'
+                        });
+                    } catch (e) {}
+                }
+            } catch (err) {
+                console.warn('SSE price_drop ayrıştırma:', err);
+            }
         });
 
         familyEventSource.onerror = () => {
@@ -3259,12 +3298,44 @@ function renderPlans() {
                 </div>
             `;
         } else if (plan.category === 'Alisveris') {
+            const hasDrop = !!plan.priceDropped && !!plan.oldPrice;
+            const priceHtml = hasDrop ? `
+                <div class="plan-detail-row plan-price-drop-row">
+                    <i class="fa-solid fa-fire" style="color: #dc2626;"></i> 
+                    <b>Fiyat:</b> 
+                    <span class="price-drop-wrap">
+                        <del class="old-price-del">${plan.oldPrice}</del>
+                        <strong class="new-price-highlight">${plan.shopPrice || plan.currentPrice}</strong>
+                        <span class="badge-price-drop"><i class="fa-solid fa-arrow-trend-down"></i> İndirim!</span>
+                    </span>
+                </div>
+            ` : (plan.shopPrice ? `<div class="plan-detail-row"><i class="fa-solid fa-tag"></i> <b>Fiyat:</b> <span>${plan.shopPrice}</span></div>` : '');
+
+            const hasHttpLink = plan.link && (plan.link.startsWith('http://') || plan.link.startsWith('https://'));
+            const linkBtnsHtml = hasHttpLink ? `
+                <div class="plan-shop-actions">
+                    <a href="${plan.link}" target="_blank" class="plan-link-btn" style="flex: 1;"><i class="fa-solid fa-bag-shopping"></i> Ürüne Git</a>
+                    <button class="btn-check-price" onclick="checkPlanPrice('${plan.id}', event)" title="Canlı fiyatı web sitesinden kontrol et">
+                        <i class="fa-solid fa-rotate"></i> Fiyatı Kontrol Et
+                    </button>
+                </div>
+            ` : (plan.link ? `<a href="${plan.link}" target="_blank" class="plan-link-btn"><i class="fa-solid fa-bag-shopping"></i> Ürünü İncele</a>` : '');
+
+            let lastCheckStr = '';
+            if (plan.lastPriceCheck) {
+                try {
+                    const checkDate = new Date(plan.lastPriceCheck);
+                    lastCheckStr = `<div class="plan-detail-row plan-check-meta"><i class="fa-regular fa-clock"></i> <span>Son Kontrol: ${checkDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} ${checkDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span></div>`;
+                } catch (e) {}
+            }
+
             detailsHtml = `
-                <div class="plan-details-box">
-                    ${plan.shopPrice ? `<div class="plan-detail-row"><i class="fa-solid fa-tag"></i> <b>Tahmini Fiyat:</b> <span>${plan.shopPrice}</span></div>` : ''}
+                <div class="plan-details-box ${hasDrop ? 'has-price-drop-box' : ''}">
+                    ${priceHtml}
                     ${plan.priority ? `<div class="plan-detail-row"><i class="fa-solid fa-star"></i> <b>Öncelik:</b> <span>${plan.priority}</span></div>` : ''}
                     ${plan.shopNote ? `<div class="plan-detail-row"><i class="fa-solid fa-note-sticky"></i> <b>Not / Amaç:</b> <span>${plan.shopNote}</span></div>` : ''}
-                    ${plan.link ? `<a href="${plan.link}" target="_blank" class="plan-link-btn"><i class="fa-solid fa-bag-shopping"></i> Ürünü İncele / Satın Al</a>` : ''}
+                    ${lastCheckStr}
+                    ${linkBtnsHtml}
                 </div>
             `;
         }
@@ -3273,11 +3344,12 @@ function renderPlans() {
         const badgeClass = `badge-${plan.category}`;
 
         return `
-            <div class="plan-card ${catClass} ${plan.completed ? 'completed' : ''}">
+            <div class="plan-card ${catClass} ${plan.completed ? 'completed' : ''} ${plan.priceDropped ? 'card-price-dropped' : ''}">
                 <div class="plan-top">
                     <div class="plan-badges">
                         <span class="plan-cat-badge ${badgeClass}">${CAT_ICONS[plan.category] || plan.category}</span>
                         ${plan.travelType ? `<span class="plan-cat-badge" style="background:#f1f5f9; color:#475569;">${plan.travelType === 'Yurtdisi' ? '🌍 Yurt Dışı' : '🇹🇷 Yurt İçi'}</span>` : ''}
+                        ${plan.priceDropped ? `<span class="plan-cat-badge badge-price-drop-glow"><i class="fa-solid fa-fire"></i> FİYAT DÜŞTÜ</span>` : ''}
                     </div>
                     <span class="plan-status-badge ${plan.completed ? 'status-completed' : 'status-pending'}">
                         ${plan.completed ? '⭐ Gerçekleşti' : '🎯 Hedef Plan'}
@@ -3304,6 +3376,47 @@ function renderPlans() {
             </div>
         `;
     }).join('');
+}
+
+// Alışveriş / Hayal Ürün Fiyatını Anlık Kontrol Et
+async function checkPlanPrice(planId, evt) {
+    if (!appState.familyData || !appState.familyData.id) return;
+    const btn = evt ? evt.currentTarget : null;
+    let oldBtnHtml = '';
+    if (btn) {
+        oldBtnHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Kontrol Ediliyor...`;
+    }
+    showToast('🔍 Ürün sayfası taranıyor ve güncel fiyat sorgulanıyor...');
+
+    try {
+        const result = await AilemAPI.checkPlanPrice(appState.familyData.id, planId);
+        if (result && result.success) {
+            if (result.family) {
+                appState.familyData = normalizeFamilyData(result.family);
+                saveStateToStorage();
+                renderPlans();
+            }
+            if (result.priceDropped) {
+                triggerHapticAndSound();
+                showToast(`🔥 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Eski: ${result.oldPrice})`);
+            } else if (result.foundPrice) {
+                showToast(`✅ Güncel fiyat: ${result.foundPrice} (Fiyat değişikliği yok)`);
+            } else {
+                showToast(result.message || 'Fiyat bilgisi güncellendi.');
+            }
+        } else {
+            showToast(result?.message || 'Ürün fiyatı okunamadı veya sayfa yanıt vermedi.', 'warning');
+        }
+    } catch (e) {
+        showToast('Fiyat kontrolü sırasında bir hata oluştu.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = oldBtnHtml || `<i class="fa-solid fa-rotate"></i> Fiyatı Kontrol Et`;
+        }
+    }
 }
 
 // Alışveriş Listesi

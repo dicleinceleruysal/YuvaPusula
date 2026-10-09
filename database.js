@@ -485,6 +485,23 @@ function normalizeFamily(fam) {
     return fam;
 }
 
+// 4.9 Tüm Aileleri Getir (Periyodik İşler & Kontroller İçin)
+async function getAllFamilies() {
+    const sql = getNeon();
+    if (sql) {
+        try {
+            const rows = await sql`SELECT data FROM families`;
+            if (rows && rows.length > 0) {
+                return rows.map(r => normalizeFamily(r.data));
+            }
+        } catch (e) {
+            console.error('Neon getAllFamilies error:', e);
+        }
+    }
+    loadJsonStore();
+    return (jsonStore.families || []).map(f => normalizeFamily(f));
+}
+
 // 5. Güncel Aile Verilerini Getir
 async function getFullFamilyData(familyId) {
     const sql = getNeon();
@@ -1309,6 +1326,7 @@ module.exports = {
     syncFamily,
     deleteMember,
     getFullFamilyData,
+    getAllFamilies,
     addPost,
     deletePost,
     addPlan,

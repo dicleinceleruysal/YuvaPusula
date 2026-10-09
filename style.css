@@ -5622,6 +5622,130 @@ body {
     }
 }
 
+/* ==========================================================
+   ALIŞVERİŞ & HAYAL ÜRÜNÜ CANLI FİYAT VE İNDİRİM TAKİP STİLLERİ
+   ========================================================== */
+.card-price-dropped {
+    border: 2px solid #ef4444 !important;
+    background: linear-gradient(180deg, #fff 0%, #fff7f7 100%) !important;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12) !important;
+    position: relative;
+}
+
+.badge-price-drop-glow {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    animation: pulseGlow 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 14px rgba(239, 68, 68, 0.8);
+        transform: scale(1.04);
+    }
+}
+
+.has-price-drop-box {
+    border-color: #fecaca !important;
+    background: #fff5f5 !important;
+}
+
+.plan-price-drop-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fee2e2;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid #fca5a5;
+    margin-bottom: 6px;
+}
+
+.price-drop-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.old-price-del {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    text-decoration: line-through;
+    font-weight: 600;
+}
+
+.new-price-highlight {
+    color: #dc2626;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.badge-price-drop {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.plan-shop-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-check-price {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    color: #334155;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-check-price:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.btn-check-price:active {
+    transform: translateY(0);
+}
+
+.btn-check-price:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.plan-check-meta {
+    font-size: 0.75rem !important;
+    color: #94a3b8 !important;
+    margin-top: 4px !important;
+}
+
 
 
 
