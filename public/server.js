@@ -24,6 +24,24 @@ function parseTrNumber(str) {
     return parseFloat(clean) || 0;
 }
 
+function normalizeTr(str) {
+    if (!str) return '';
+    return str
+        .toString()
+        .trim()
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .toLowerCase();
+}
+
 function fetchHttpsJson(url, timeoutMs = 8000) {
     return new Promise((resolve) => {
         const req = https.get(url, {
@@ -274,88 +292,76 @@ async function appHandler(req, res) {
                 const body = await parseJsonBody(req);
                 const identifier = (body.phone || body.username || body.name || '').trim();
                 const inputPassword = (body.password || '').trim();
+                const idNorm = normalizeTr(identifier);
+                const pwdNorm = normalizeTr(inputPassword);
+                const cleanPhone = identifier.replace(/[\s\-\(\)\+]/g, '');
 
-                // 1. Önce telefon / isim ile ara
-                let found = await dbManager.findUserAndFamilyByPhone(identifier);
+                // 1. UYSAL Ailesini bul
+                let uysalFamily = await dbManager.findFamilyByCode('UYSAL') || await dbManager.findFamilyByCode('UYS123');
+                if (!uysalFamily && dbManager.getAllFamilies) {
+                    const allFams = await dbManager.getAllFamilies();
+                    if (allFams && allFams.length > 0) uysalFamily = allFams[0];
+                }
 
-                // Eğer telefonla bulunamadıysa, Uysal ailesi üyeleri arasında isimle ara
-                if (!found) {
-                    const uysalFamily = await dbManager.findFamilyByCode('UYSAL') || await dbManager.findFamilyByCode('UYS123');
+                // 2. Kullanıcıyı tespit et
+                const isDicle = idNorm.includes('dicle') || cleanPhone.includes('5546448989');
+                const isFirat = idNorm.includes('firat') || cleanPhone.includes('5458030118');
+
+                let targetUser = null;
+                let isPasswordCorrect = false;
+
+                if (isDicle) {
+                    isPasswordCorrect = (pwdNorm === 'dicle');
                     if (uysalFamily && Array.isArray(uysalFamily.members)) {
-                        const targetUser = uysalFamily.members.find(m => {
-                            const n = (m.name || '').toLowerCase();
-                            const idLower = identifier.toLowerCase();
-                            return n === idLower || n.includes(idLower) || (m.phone && m.phone === identifier);
+                        targetUser = uysalFamily.members.find(m => normalizeTr(m.name).includes('dicle') || (m.phone && m.phone.includes('5546448989')));
+                    }
+                    if (!targetUser) {
+                        targetUser = { id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' };
+                        if (uysalFamily) {
+                            uysalFamily = await dbManager.addUserToFamily(uysalFamily.id, targetUser) || uysalFamily;
+                        }
+                    }
+                } else if (isFirat) {
+                    isPasswordCorrect = (pwdNorm === 'firat');
+                    if (uysalFamily && Array.isArray(uysalFamily.members)) {
+                        targetUser = uysalFamily.members.find(m => normalizeTr(m.name).includes('firat') || (m.phone && m.phone.includes('5458030118')));
+                    }
+                    if (!targetUser) {
+                        targetUser = { id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' };
+                        if (uysalFamily) {
+                            uysalFamily = await dbManager.addUserToFamily(uysalFamily.id, targetUser) || uysalFamily;
+                        }
+                    }
+                } else {
+                    // Telefon veya isimle genel arama
+                    let found = await dbManager.findUserAndFamilyByPhone(identifier);
+                    if (found) {
+                        targetUser = found.user;
+                        uysalFamily = found.family;
+                        isPasswordCorrect = (inputPassword.length > 0);
+                    } else if (uysalFamily && Array.isArray(uysalFamily.members)) {
+                        targetUser = uysalFamily.members.find(m => {
+                            const nNorm = normalizeTr(m.name);
+                            return nNorm === idNorm || nNorm.includes(idNorm) || (m.phone && m.phone === identifier);
                         });
                         if (targetUser) {
-                            found = { user: targetUser, family: uysalFamily };
+                            const targetNorm = normalizeTr(targetUser.name);
+                            if (targetNorm.includes('dicle')) isPasswordCorrect = (pwdNorm === 'dicle');
+                            else if (targetNorm.includes('firat')) isPasswordCorrect = (pwdNorm === 'firat');
+                            else isPasswordCorrect = (inputPassword.length > 0);
                         }
                     }
                 }
 
-                // Dicle ve Fırat için doğrudan eşleşme (eğer DB'de henüz yoksa bile oluşturur)
-                if (!found && (identifier.toLowerCase().includes('dicle') || inputPassword.toLowerCase() === 'dicle')) {
-                    const uysalFamily = await dbManager.findFamilyByCode('UYSAL') || await dbManager.findFamilyByCode('UYS123');
-                    if (uysalFamily) {
-                        const dicleUser = { id: 'usr_dicle', name: 'Dicle', role: 'Anne', phone: '05551112233', avatar: '👩' };
-                        const updated = await dbManager.addUserToFamily(uysalFamily.id, dicleUser);
-                        found = { user: dicleUser, family: updated };
-                    }
-                } else if (!found && (identifier.toLowerCase().includes('fırat') || identifier.toLowerCase().includes('firat') || inputPassword.toLowerCase() === 'fırat' || inputPassword.toLowerCase() === 'firat')) {
-                    const uysalFamily = await dbManager.findFamilyByCode('UYSAL') || await dbManager.findFamilyByCode('UYS123');
-                    if (uysalFamily) {
-                        const firatUser = { id: 'usr_firat', name: 'Fırat', role: 'Baba', phone: '05552223344', avatar: '👨' };
-                        const updated = await dbManager.addUserToFamily(uysalFamily.id, firatUser);
-                        found = { user: firatUser, family: updated };
-                    }
-                }
-
-                if (!found) {
+                if (!targetUser) {
                     return sendJson(res, 404, { success: false, message: 'Bu kullanıcı bilgisine ait kayıt bulunamadı.' });
-                }
-
-                // Şifre Doğrulama Kontrolü (Dicle: dicle, Fırat: fırat veya firat)
-                const userName = typeof found.user === 'string' ? found.user : ((found.user && found.user.name) || '');
-                const userNameLower = userName.toLowerCase();
-                const idLower = identifier.toLowerCase();
-                const pwdLower = inputPassword.toLowerCase();
-                let isPasswordCorrect = false;
-
-                if (userNameLower.includes('dicle') || idLower.includes('dicle')) {
-                    isPasswordCorrect = (pwdLower === 'dicle');
-                } else if (userNameLower.includes('fırat') || userNameLower.includes('firat') || idLower.includes('fırat') || idLower.includes('firat')) {
-                    isPasswordCorrect = (pwdLower === 'fırat' || pwdLower === 'firat');
-                } else if (found.user && typeof found.user === 'object' && found.user.password) {
-                    isPasswordCorrect = (found.user.password.toLowerCase() === pwdLower);
-                } else {
-                    isPasswordCorrect = (inputPassword.length > 0);
                 }
 
                 if (!isPasswordCorrect) {
                     return sendJson(res, 401, { success: false, message: 'Hatalı şifre! Lütfen şifrenizi kontrol edin.' });
                 }
 
-                let userObj = typeof found.user === 'string'
-                    ? { id: 'usr_' + Date.now(), name: found.user, phone: identifier, role: 'Birey', avatar: '👤' }
-                    : { ...found.user };
-
-                if (idLower.includes('dicle') || userNameLower.includes('dicle')) {
-                    userObj = {
-                        ...userObj,
-                        name: (!userObj.name || userObj.name === 'TestUser') ? 'Dicle' : userObj.name,
-                        role: userObj.role || 'Anne',
-                        avatar: userObj.avatar || '👩'
-                    };
-                } else if (idLower.includes('fırat') || idLower.includes('firat') || userNameLower.includes('fırat') || userNameLower.includes('firat')) {
-                    userObj = {
-                        ...userObj,
-                        name: (!userObj.name || userObj.name === 'TestUser') ? 'Fırat' : userObj.name,
-                        role: userObj.role || 'Baba',
-                        avatar: userObj.avatar || '👨'
-                    };
-                }
-
-                return sendJson(res, 200, { success: true, user: userObj, family: found.family });
+                return sendJson(res, 200, { success: true, user: targetUser, family: uysalFamily });
             }
 
             // 2. Yeni Aile Kur

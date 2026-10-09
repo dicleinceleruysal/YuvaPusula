@@ -46,6 +46,24 @@ const EXTRA_INCOME_ICONS = {
     'Diğer': '🌟'
 };
 
+function normalizeTr(str) {
+    if (!str) return '';
+    return str
+        .toString()
+        .trim()
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .toLowerCase();
+}
+
 // Global Uygulama Durumu (State)
 let appState = {
     currentUser: null,
@@ -1362,8 +1380,9 @@ function selectAuthProfile(profileName, defaultPhone) {
 
     if (userPhoneInput) userPhoneInput.value = profileName;
 
-    if (chipDicle) chipDicle.classList.toggle('active', profileName === 'Dicle');
-    if (chipFirat) chipFirat.classList.toggle('active', profileName === 'Fırat');
+    const norm = normalizeTr(profileName);
+    if (chipDicle) chipDicle.classList.toggle('active', norm === 'dicle');
+    if (chipFirat) chipFirat.classList.toggle('active', norm === 'firat');
 
     if (pwdInput) {
         pwdInput.value = '';
@@ -1422,11 +1441,11 @@ function switchAuthMode(mode) {
 
 async function handleAuthSubmit(event) {
     event.preventDefault();
-    const identifier = document.getElementById('userPhone').value.trim();
-    const password = document.getElementById('userPassword')?.value.trim() || '';
+    const identifier = (document.getElementById('userPhone')?.value || '').trim();
+    const password = (document.getElementById('userPassword')?.value || '').trim();
 
     if (!identifier) {
-        showToast('Lütfen telefon numaranızı veya adınızı girin.');
+        showToast('Lütfen profilinizi seçin veya adınızı girin.');
         return;
     }
 
@@ -1436,14 +1455,18 @@ async function handleAuthSubmit(event) {
     }
 
     // Şifre kuralları kontrolü (Dicle -> dicle / Fırat -> fırat veya firat)
-    const idLower = identifier.toLowerCase();
-    const pwdLower = password.toLowerCase();
+    const idNorm = normalizeTr(identifier);
+    const pwdNorm = normalizeTr(password);
+    const cleanPhone = identifier.replace(/[\s\-\(\)\+]/g, '');
 
-    if (idLower.includes('dicle') && pwdLower !== 'dicle') {
+    const isDicle = idNorm.includes('dicle') || cleanPhone.includes('5546448989');
+    const isFirat = idNorm.includes('firat') || cleanPhone.includes('5458030118');
+
+    if (isDicle && pwdNorm !== 'dicle') {
         showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
         return;
     }
-    if ((idLower.includes('fırat') || idLower.includes('firat')) && pwdLower !== 'fırat' && pwdLower !== 'firat') {
+    if (isFirat && pwdNorm !== 'firat') {
         showToast('❌ Hatalı şifre! Lütfen şifrenizi kontrol edin.');
         return;
     }
@@ -1465,36 +1488,49 @@ async function handleAuthSubmit(event) {
             return;
         }
 
-        // 2. Çevrimdışı / LocalStorage kontrolü
-        let result = await AilemDB.findByPhone(identifier);
-        if (!result && (idLower.includes('dicle') || idLower.includes('fırat') || idLower.includes('firat'))) {
-            const allFams = await AilemDB.getAllFamilies();
-            let uysalFamily = await AilemDB.findByCode('UYSAL') || await AilemDB.findByCode('UYS307') || await AilemDB.findByCode('UYS123') || allFams[0];
-            let matchedUser = null;
-            if (idLower.includes('dicle')) {
-                matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => (m.name||'').toLowerCase().includes('dicle') || (m.phone && m.phone.includes('5546448989'))) : null;
-                if (!matchedUser) matchedUser = { id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' };
-            } else {
-                matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => (m.name||'').toLowerCase().includes('fırat') || (m.name||'').toLowerCase().includes('firat') || (m.phone && m.phone.includes('5458030118'))) : null;
-                if (!matchedUser) matchedUser = { id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' };
-            }
-            if (uysalFamily) {
-                result = { user: matchedUser, family: uysalFamily };
-            }
+        // 2. Çevrimdışı / LocalStorage fallback
+        const allFams = await AilemDB.getAllFamilies();
+        let uysalFamily = await AilemDB.findByCode('UYSAL') || await AilemDB.findByCode('UYS123') || (allFams && allFams[0]);
+        let matchedUser = null;
+
+        if (isDicle) {
+            matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => normalizeTr(m.name).includes('dicle') || (m.phone && m.phone.includes('5546448989'))) : null;
+            if (!matchedUser) matchedUser = { id: 'usr_1790599516960', name: 'Dicle UYSAL', role: 'Anne', phone: '5546448989', avatar: '👩' };
+        } else if (isFirat) {
+            matchedUser = (uysalFamily && uysalFamily.members) ? uysalFamily.members.find(m => normalizeTr(m.name).includes('firat') || (m.phone && m.phone.includes('5458030118'))) : null;
+            if (!matchedUser) matchedUser = { id: 'usr_1790661005224', name: 'Fırat UYSAL', role: 'Baba', phone: '5458030118', avatar: '👨' };
         }
 
-        if (result) {
-            appState.currentUser = result.user;
-            appState.familyData = normalizeFamilyData(result.family);
+        if (matchedUser) {
+            if (!uysalFamily) {
+                uysalFamily = {
+                    id: 'fam_1790599516960',
+                    name: 'UYSAL Ailesi',
+                    inviteCode: 'UYSAL',
+                    members: [matchedUser],
+                    plans: [],
+                    dailyPlans: [],
+                    shoppingList: [],
+                    tasks: [],
+                    expenses: [],
+                    salaries: [],
+                    extraIncomes: [],
+                    fixedExpenses: [],
+                    investments: [],
+                    investmentHistory: [],
+                    charities: [],
+                    messages: []
+                };
+            }
+            appState.currentUser = matchedUser;
+            appState.familyData = normalizeFamilyData(uysalFamily);
             saveStateToStorage();
             renderApp();
-            showToast(`Hoş geldiniz, ${result.user.name}! 🏠✨`);
+            showToast(`Hoş geldiniz, ${matchedUser.name}! 🏠✨`);
             return;
         }
 
-        // Bulunamazsa yönlendir
-        showToast('Bu kullanıcı Uysal Ailesi\'nde bulunamadı. Lütfen "Yeni Aile Bireyi Ekle" kısmından kaydolun.');
-        switchAuthMode('register');
+        showToast('Bu kullanıcı Uysal Ailesi\'nde bulunamadı.');
         return;
     }
 
