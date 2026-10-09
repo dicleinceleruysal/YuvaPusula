@@ -845,15 +845,59 @@ async function appHandler(req, res) {
             }
             if (pathname === '/api/plans/update' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
+                const currentFam = await dbManager.getFullFamilyData(body.familyId);
+                const existingPlan = currentFam && currentFam.plans ? currentFam.plans.find(p => p.id === body.planId) : null;
+                
+                let isPriceDrop = false;
+                let oldPriceFormatted = '';
+                let newPriceFormatted = '';
+
+                if (existingPlan && body.plan) {
+                    const newShopPrice = body.plan.shopPrice || body.plan.currentPrice;
+                    const oldShopPrice = existingPlan.shopPrice || existingPlan.currentPrice || existingPlan.initialPrice;
+                    if (newShopPrice && oldShopPrice) {
+                        const newNum = parsePriceToNumber(newShopPrice);
+                        const oldNum = parsePriceToNumber(oldShopPrice);
+                        if (oldNum > 0 && newNum > 0 && newNum < oldNum) {
+                            isPriceDrop = true;
+                            oldPriceFormatted = formatPriceTr(oldNum);
+                            newPriceFormatted = formatPriceTr(newNum);
+                            body.plan.priceDropped = true;
+                            body.plan.oldPrice = oldPriceFormatted;
+                            body.plan.lastPriceDropTime = new Date().toISOString();
+                        }
+                    }
+                }
+
                 const updatedFamily = await dbManager.updatePlan(body.familyId, body.planId, body.plan);
-                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                
+                if (isPriceDrop) {
+                    broadcastToFamilyLive(body.familyId, 'price_drop', {
+                        family: updatedFamily,
+                        planId: body.planId,
+                        title: (body.plan && body.plan.title) || (existingPlan && existingPlan.title) || 'Ürün',
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: `🔥 İndirim Müjdesi! (${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)})`,
+                        body: `Takip ettiğiniz "${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
+                } else {
+                    broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                }
+
                 const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: '🗺️ Aile Planı Güncellendi',
-                    body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
-                    icon: './icons/icon-192.png',
-                    url: './index.html?tab=plans'
-                }, authorId).catch(e => {});
+                if (!isPriceDrop) {
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: '🗺️ Aile Planı Güncellendi',
+                        body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, authorId).catch(e => {});
+                }
 
                 // Alışveriş linki güncellendiyse anında canlı fiyatı çek ve karşılaştır
                 if (body.plan && body.plan.category === 'Alisveris' && body.plan.link) {
@@ -862,7 +906,7 @@ async function appHandler(req, res) {
                     }, 400);
                 }
 
-                return sendJson(res, 200, { success: true, family: updatedFamily });
+                return sendJson(res, 200, { success: true, family: updatedFamily, priceDropped: isPriceDrop });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
