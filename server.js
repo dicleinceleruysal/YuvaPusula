@@ -297,42 +297,69 @@ function extractPriceFromHtml(html) {
     if (!html || typeof html !== 'string') return null;
 
     try {
-        // 1. JSON-LD Schema (application/ld+json) Taraması
-        const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-        if (jsonLdMatches) {
-            for (const match of jsonLdMatches) {
-                const inner = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
-                try {
-                    const parsed = JSON.parse(inner);
-                    const pNum = findPriceInObject(parsed);
-                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'jsonld' };
-                } catch (jsonErr) {}
+        // 1. Sepette İndirim / Kampanyalı / İndirimli Fiyat DOM Taraması (En Yüksek Öncelik)
+        const cartDiscountPatterns = [
+            /<div[^>]*class=["'][^"']*(?:cart-price|highlighted-discount|basket-price|sepette|cart-campaign)[^"']*["'][\s\S]*?<div[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+            /<div[^>]*class=["'][^"']*(?:cart-price|price-group-2|special-price|discounted-price)[^"']*["'][\s\S]*?>([\s\S]*?)<\/div>/i,
+            /class=["'][^"']*(?:prc-dsc|extra-discount-price|basket-discount|sepette-fiyat)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
+            /<[^>]*data-discounted-price=["']([^"']+)["']/i,
+            /<[^>]*data-sale-price=["']([^"']+)["']/i
+        ];
+
+        for (const pattern of cartDiscountPatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const textWithoutTags = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                const num = parsePriceToNumber(textWithoutTags);
+                if (num > 0) {
+                    return { number: num, formatted: formatPriceTr(num), source: 'cart-discount' };
+                }
             }
         }
 
-        // 1.1 Next.js & React Script State (__NEXT_DATA__, __INITIAL_STATE__, __PRODUCT_DETAIL__)
-        const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-        if (nextDataMatch && nextDataMatch[1]) {
-            try {
-                const nextJson = JSON.parse(nextDataMatch[1]);
-                const pNum = findPriceInObject(nextJson);
-                if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'next-data' };
-            } catch (e) {}
-        }
-
-        const stateMatches = html.match(/(?:window\.__INITIAL_STATE__|window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__|window\.__PRODUCT_DATA__|window\.__APP_STATE__)\s*=\s*(\{[\s\S]*?\});/gi);
-        if (stateMatches) {
-            for (const sm of stateMatches) {
-                const jsonPart = sm.replace(/^[^{]*/, '').replace(/;?\s*$/, '');
-                try {
-                    const parsedState = JSON.parse(jsonPart);
-                    const pNum = findPriceInObject(parsedState);
-                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'window-state' };
-                } catch (e) {}
+        // 2. Genel Fiyat Gösterim Alanları (eb-price-show, price-box vb.)
+        const priceBoxMatch = html.match(/<eb-price-show[\s\S]*?<\/eb-price-show>/i) || html.match(/class=["'][^"']*price-box--detail[^"']*["'][\s\S]*?<\/div>\s*<\/div>/i);
+        if (priceBoxMatch) {
+            const block = priceBoxMatch[0];
+            const cartMatch = block.match(/class=["'][^"']*cart-price[^"']*["'][\s\S]*?<div[^>]*class=["']price["'][^>]*>([\s\S]*?)<\/div>/i);
+            if (cartMatch && cartMatch[1]) {
+                const num = parsePriceToNumber(cartMatch[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'eb-cart' };
+            }
+            const generalMatch = block.match(/class=["']price["'][^>]*>([\s\S]*?)<\/div>/i);
+            if (generalMatch && generalMatch[1]) {
+                const num = parsePriceToNumber(generalMatch[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'eb-price' };
             }
         }
 
-        // 2. OpenGraph, Meta Tagları ve Microdata
+        // 3. E-Ticaret DOM Kalıpları (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
+        const domClassPatterns = [
+            /class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices|discounted-price)[^"']*["'][^>]*>([^<]+)/i,
+            /(?:data-test-id=["']price-current-price["']|class=["'][^"']*(?:price-value|extra-discount-price|price-current-price)[^"']*["'])[^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:price-current__amount|money-amount__main|price-current)[^"']*["'][^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|last-price|newPrice|p-detail__price|advanced-price)[^"']*["'][^>]*>([^<]+)/i
+        ];
+
+        for (const pattern of domClassPatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const num = parsePriceToNumber(m[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'dom-class' };
+            }
+        }
+
+        // 4. Amazon Whole + Fraction
+        const amzWhole = html.match(/class=["']a-price-whole["'][^>]*>([^<]+)/i);
+        if (amzWhole && amzWhole[1]) {
+            const amzFrac = html.match(/class=["']a-price-fraction["'][^>]*>([^<]+)/i);
+            const wholeClean = amzWhole[1].replace(/[^\d]/g, '');
+            const fracClean = amzFrac && amzFrac[1] ? amzFrac[1].replace(/[^\d]/g, '') : '00';
+            const num = parseFloat(`${wholeClean}.${fracClean}`);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'amazon' };
+        }
+
+        // 5. OpenGraph, Meta Tagları ve Microdata
         const metaPricePatterns = [
             /<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i,
             /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']product:price:amount["']/i,
@@ -354,33 +381,42 @@ function extractPriceFromHtml(html) {
             }
         }
 
-        // 3. E-Ticaret DOM Kalıpları (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
-        const domClassPatterns = [
-            /class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices|discounted-price)[^"']*["'][^>]*>([^<]+)/i,
-            /(?:data-test-id=["']price-current-price["']|class=["'][^"']*(?:price-value|extra-discount-price|price-current-price)[^"']*["'])[^>]*>([^<]+)/i,
-            /class=["'][^"']*(?:price-current__amount|money-amount__main|price-current)[^"']*["'][^>]*>([^<]+)/i,
-            /class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|last-price|newPrice|p-detail__price|advanced-price)[^"']*["'][^>]*>([^<]+)/i
-        ];
-
-        for (const pattern of domClassPatterns) {
-            const m = html.match(pattern);
-            if (m && m[1]) {
-                const num = parsePriceToNumber(m[1]);
-                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'dom-class' };
+        // 6. JSON-LD Schema (application/ld+json) Taraması
+        const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+        if (jsonLdMatches) {
+            for (const match of jsonLdMatches) {
+                const inner = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+                try {
+                    const parsed = JSON.parse(inner);
+                    const pNum = findPriceInObject(parsed);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'jsonld' };
+                } catch (jsonErr) {}
             }
         }
 
-        // Amazon Whole + Fraction
-        const amzWhole = html.match(/class=["']a-price-whole["'][^>]*>([^<]+)/i);
-        if (amzWhole && amzWhole[1]) {
-            const amzFrac = html.match(/class=["']a-price-fraction["'][^>]*>([^<]+)/i);
-            const wholeClean = amzWhole[1].replace(/[^\d]/g, '');
-            const fracClean = amzFrac && amzFrac[1] ? amzFrac[1].replace(/[^\d]/g, '') : '00';
-            const num = parseFloat(`${wholeClean}.${fracClean}`);
-            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'amazon' };
+        // 6.1 Next.js & React Script State
+        const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch && nextDataMatch[1]) {
+            try {
+                const nextJson = JSON.parse(nextDataMatch[1]);
+                const pNum = findPriceInObject(nextJson);
+                if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'next-data' };
+            } catch (e) {}
         }
 
-        // 4. Regex ile ₺ / TL Fiyat Kalıbı
+        const stateMatches = html.match(/(?:window\.__INITIAL_STATE__|window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__|window\.__PRODUCT_DATA__|window\.__APP_STATE__)\s*=\s*(\{[\s\S]*?\});/gi);
+        if (stateMatches) {
+            for (const sm of stateMatches) {
+                const jsonPart = sm.replace(/^[^{]*/, '').replace(/;?\s*$/, '');
+                try {
+                    const parsedState = JSON.parse(jsonPart);
+                    const pNum = findPriceInObject(parsedState);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'window-state' };
+                } catch (e) {}
+            }
+        }
+
+        // 7. Regex ile ₺ / TL Fiyat Kalıbı
         const tlRegex = /([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?)\s*(?:TL|₺|TRY)/i;
         const tlMatch = html.match(tlRegex);
         if (tlMatch && tlMatch[1]) {
