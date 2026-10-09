@@ -971,12 +971,17 @@ async function markMessagesAsRead(familyId, currentUserId, chatPartnerId) {
         if (!fam.messages) fam.messages = [];
         fam.messages.forEach(msg => {
             if (!msg.readBy) msg.readBy = [msg.senderId];
-            if (!chatPartnerId) {
-                if (!msg.recipientId && !msg.readBy.includes(currentUserId)) {
-                    msg.readBy.push(currentUserId);
+            // Eğer grup sohbeti ise veya chatPartnerId group ise
+            if (!chatPartnerId || chatPartnerId === 'group') {
+                if (msg.senderId !== currentUserId) {
+                    msg.isRead = 1;
+                    if (!msg.readBy.includes(currentUserId)) {
+                        msg.readBy.push(currentUserId);
+                    }
                 }
             } else {
-                if (msg.senderId === chatPartnerId && msg.recipientId === currentUserId && !msg.readBy.includes(currentUserId)) {
+                if (msg.senderId === chatPartnerId && !msg.readBy.includes(currentUserId)) {
+                    msg.isRead = 1;
                     msg.readBy.push(currentUserId);
                 }
             }

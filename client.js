@@ -6517,24 +6517,33 @@ function updateChatUnreadCounts() {
 
     const messages = family.messages || [];
 
-    // Okunmamış mesajlar (başkalarının gönderdikleri)
+    // Okunmamış mesajlar (başkalarının gönderdikleri ve henüz okunmamış olanlar)
     const unreadCount = messages.filter(m => 
         m.senderId !== currentUser.id && 
-        !m.isRead
+        !m.isRead &&
+        !(m.readBy && m.readBy.includes(currentUser.id))
     ).length;
 
-    // Header rozeti (Sadece yeni mesaj varsa görünür)
+    // Header rozeti (Sadece yeni mesaj varsa görünür, aksi takdirde tamamen gizlenir)
     const headerBadge = document.getElementById('headerChatBadge');
     if (headerBadge) {
         headerBadge.textContent = unreadCount;
-        headerBadge.classList.toggle('hidden', unreadCount === 0);
+        if (unreadCount > 0) {
+            headerBadge.classList.remove('hidden');
+        } else {
+            headerBadge.classList.add('hidden');
+        }
     }
 
-    // Masaüstü Sol Menü (Sidebar) Sohbet Rozeti (Sadece yeni mesaj varsa görünür)
+    // Masaüstü Sol Menü (Sidebar) Sohbet Rozeti
     const sidebarChatBadge = document.getElementById('sidebarChatBadge');
     if (sidebarChatBadge) {
         sidebarChatBadge.textContent = unreadCount;
-        sidebarChatBadge.classList.toggle('hidden', unreadCount === 0);
+        if (unreadCount > 0) {
+            sidebarChatBadge.classList.remove('hidden');
+        } else {
+            sidebarChatBadge.classList.add('hidden');
+        }
     }
 
     // Quick info pill
@@ -6543,11 +6552,15 @@ function updateChatUnreadCounts() {
         quickUnread.textContent = unreadCount;
     }
 
-    // Alt navigasyon rozeti (Sadece yeni mesaj varsa görünür)
+    // Alt navigasyon rozeti
     const navChatBadge = document.getElementById('navChatBadge');
     if (navChatBadge) {
         navChatBadge.textContent = unreadCount;
-        navChatBadge.classList.toggle('hidden', unreadCount === 0);
+        if (unreadCount > 0) {
+            navChatBadge.classList.remove('hidden');
+        } else {
+            navChatBadge.classList.add('hidden');
+        }
     }
 }
 
@@ -6558,9 +6571,13 @@ async function markMessagesRead(chatPartnerId = 'group') {
 
     let changed = false;
     (appState.familyData.messages || []).forEach(m => {
-        if (m.senderId !== currentUserId && !m.isRead) {
-            m.isRead = 1;
-            changed = true;
+        if (m.senderId !== currentUserId) {
+            if (!m.isRead || !(m.readBy && m.readBy.includes(currentUserId))) {
+                m.isRead = 1;
+                if (!m.readBy) m.readBy = [];
+                if (!m.readBy.includes(currentUserId)) m.readBy.push(currentUserId);
+                changed = true;
+            }
         }
     });
 

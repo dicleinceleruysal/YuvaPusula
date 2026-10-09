@@ -237,9 +237,10 @@
       "messages": [
         {
           "id": "msg_1790671169707",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "Seni seviyorum ❤️",
           "familyId": "fam_1790599516960",
@@ -256,6 +257,7 @@
           "id": "msg_1790715146187",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Seni seviyorum ömrüm",
@@ -271,9 +273,10 @@
         },
         {
           "id": "msg_1790762978369",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "❤️❤️",
           "familyId": "fam_1790599516960",
@@ -288,9 +291,10 @@
         },
         {
           "id": "msg_1790764029217",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "babamı aspavaya götürelim",
           "familyId": "fam_1790599516960",
@@ -307,6 +311,7 @@
           "id": "msg_1790766979506",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Seni seviyorum ❤️",
@@ -324,6 +329,7 @@
           "id": "msg_1790768795008",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Marketten bir şey lazım mı? 🛒",
@@ -341,6 +347,7 @@
           "id": "msg_1790768862332",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Görüşürüz 👋",
@@ -358,6 +365,7 @@
           "id": "msg_1790768867126",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Akşam ne yiyoruz? 🍲",
@@ -373,9 +381,10 @@
         },
         {
           "id": "msg_1790768909850",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "Seni seviyorum ❤️",
           "familyId": "fam_1790599516960",
@@ -392,6 +401,7 @@
           "id": "msg_1790768934190",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Akşam ne yiyoruz? 🍲",
@@ -409,6 +419,7 @@
           "id": "msg_1790776585456",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Marketten bir şey lazım mı? 🛒",
@@ -426,6 +437,7 @@
           "id": "msg_1790795986548",
           "isRead": 1,
           "readBy": [
+            "usr_1790599516960",
             "usr_1790661005224"
           ],
           "content": "Seni seviyorum ❤️",
@@ -441,9 +453,10 @@
         },
         {
           "id": "msg_1790803495002",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "Selam",
           "familyId": "fam_1790599516960",
@@ -458,9 +471,10 @@
         },
         {
           "id": "msg_1791377427847",
-          "isRead": 0,
+          "isRead": 1,
           "readBy": [
-            "usr_1790599516960"
+            "usr_1790599516960",
+            "usr_1790661005224"
           ],
           "content": "Aşkımmmm",
           "familyId": "fam_1790599516960",
