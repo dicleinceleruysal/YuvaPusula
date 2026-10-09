@@ -264,6 +264,43 @@ function formatPriceTr(num) {
     return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num) + ' ₺';
 }
 
+function findPriceInObject(obj, depth = 0) {
+    if (!obj || depth > 8) return 0;
+    if (typeof obj !== 'object') return 0;
+
+    const priceKeys = ['discountedPrice', 'salePrice', 'sellingPrice', 'currentPrice', 'lowPrice', 'price', 'totalPrice', 'unformattedPrice', 'priceValue'];
+    for (const key of priceKeys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+            if (typeof obj[key] === 'number' && obj[key] > 0) return obj[key];
+            if (typeof obj[key] === 'string') {
+                const num = parsePriceToNumber(obj[key]);
+                if (num > 0) return num;
+            }
+            if (typeof obj[key] === 'object' && obj[key] !== null) {
+                if (obj[key].value) {
+                    const num = parsePriceToNumber(obj[key].value);
+                    if (num > 0) return num;
+                }
+            }
+        }
+    }
+
+    if (Array.isArray(obj)) {
+        for (const item of obj) {
+            const found = findPriceInObject(item, depth + 1);
+            if (found > 0) return found;
+        }
+    } else {
+        for (const k of Object.keys(obj)) {
+            if (typeof obj[k] === 'object' && obj[k] !== null) {
+                const found = findPriceInObject(obj[k], depth + 1);
+                if (found > 0) return found;
+            }
+        }
+    }
+    return 0;
+}
+
 function extractPriceFromHtml(html) {
     if (!html || typeof html !== 'string') return null;
 
@@ -275,45 +312,46 @@ function extractPriceFromHtml(html) {
                 const inner = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
                 try {
                     const parsed = JSON.parse(inner);
-                    const items = Array.isArray(parsed) ? parsed : [parsed];
-                    for (const item of items) {
-                        if (item['@type'] === 'Product' || (item['@graph'] && Array.isArray(item['@graph']))) {
-                            const graphList = item['@graph'] || [item];
-                            for (const g of graphList) {
-                                if (g.offers) {
-                                    const offers = Array.isArray(g.offers) ? g.offers : [g.offers];
-                                    for (const off of offers) {
-                                        const p = off.price || off.lowPrice || off.highPrice;
-                                        if (p) {
-                                            const num = parsePriceToNumber(p);
-                                            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'jsonld' };
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (item.offers) {
-                            const offers = Array.isArray(item.offers) ? item.offers : [item.offers];
-                            for (const off of offers) {
-                                const p = off.price || off.lowPrice;
-                                if (p) {
-                                    const num = parsePriceToNumber(p);
-                                    if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'jsonld-direct' };
-                                }
-                            }
-                        }
-                    }
+                    const pNum = findPriceInObject(parsed);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'jsonld' };
                 } catch (jsonErr) {}
             }
         }
 
-        // 2. OpenGraph ve E-Ticaret Meta Tagları
+        // 1.1 Next.js & React Script State (__NEXT_DATA__, __INITIAL_STATE__, __PRODUCT_DETAIL__)
+        const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch && nextDataMatch[1]) {
+            try {
+                const nextJson = JSON.parse(nextDataMatch[1]);
+                const pNum = findPriceInObject(nextJson);
+                if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'next-data' };
+            } catch (e) {}
+        }
+
+        const stateMatches = html.match(/(?:window\.__INITIAL_STATE__|window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__|window\.__PRODUCT_DATA__|window\.__APP_STATE__)\s*=\s*(\{[\s\S]*?\});/gi);
+        if (stateMatches) {
+            for (const sm of stateMatches) {
+                const jsonPart = sm.replace(/^[^{]*/, '').replace(/;?\s*$/, '');
+                try {
+                    const parsedState = JSON.parse(jsonPart);
+                    const pNum = findPriceInObject(parsedState);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'window-state' };
+                } catch (e) {}
+            }
+        }
+
+        // 2. OpenGraph, Meta Tagları ve Microdata
         const metaPricePatterns = [
             /<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i,
             /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']product:price:amount["']/i,
             /<meta[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:price:amount["']/i,
             /<meta[^>]*name=["']twitter:data1["'][^>]*content=["']([^"']+)["']/i,
-            /<meta[^>]*itemprop=["']price["'][^>]*content=["']([^"']+)["']/i
+            /<meta[^>]*itemprop=["']price["'][^>]*content=["']([^"']+)["']/i,
+            /<[^>]*itemprop=["']price["'][^>]*>([^<]+)<\/[^>]+>/i,
+            /<[^>]*data-price=["']([^"']+)["'][^>]*>/i,
+            /<[^>]*data-product-price=["']([^"']+)["'][^>]*>/i,
+            /<[^>]*data-sale-price=["']([^"']+)["'][^>]*>/i
         ];
 
         for (const pattern of metaPricePatterns) {
@@ -324,19 +362,23 @@ function extractPriceFromHtml(html) {
             }
         }
 
-        // 3. Trendyol, Hepsiburada, Zara, Amazon DOM Kalıpları
-        const tyMatch = html.match(/class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices)[^"']*["'][^>]*>([^<]+)/i);
-        if (tyMatch && tyMatch[1]) {
-            const num = parsePriceToNumber(tyMatch[1]);
-            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'trendyol' };
+        // 3. E-Ticaret DOM Kalıpları (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
+        const domClassPatterns = [
+            /class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices|discounted-price)[^"']*["'][^>]*>([^<]+)/i,
+            /(?:data-test-id=["']price-current-price["']|class=["'][^"']*(?:price-value|extra-discount-price|price-current-price)[^"']*["'])[^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:price-current__amount|money-amount__main|price-current)[^"']*["'][^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|last-price|newPrice|p-detail__price|advanced-price)[^"']*["'][^>]*>([^<]+)/i
+        ];
+
+        for (const pattern of domClassPatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const num = parsePriceToNumber(m[1]);
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'dom-class' };
+            }
         }
 
-        const hbMatch = html.match(/(?:data-test-id=["']price-current-price["']|class=["'][^"']*price-value[^"']*["'])[^>]*>([^<]+)/i);
-        if (hbMatch && hbMatch[1]) {
-            const num = parsePriceToNumber(hbMatch[1]);
-            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'hepsiburada' };
-        }
-
+        // Amazon Whole + Fraction
         const amzWhole = html.match(/class=["']a-price-whole["'][^>]*>([^<]+)/i);
         if (amzWhole && amzWhole[1]) {
             const amzFrac = html.match(/class=["']a-price-fraction["'][^>]*>([^<]+)/i);
@@ -344,12 +386,6 @@ function extractPriceFromHtml(html) {
             const fracClean = amzFrac && amzFrac[1] ? amzFrac[1].replace(/[^\d]/g, '') : '00';
             const num = parseFloat(`${wholeClean}.${fracClean}`);
             if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'amazon' };
-        }
-
-        const generalClassMatch = html.match(/class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|discounted-price|last-price)[^"']*["'][^>]*>([^<]+)/i);
-        if (generalClassMatch && generalClassMatch[1]) {
-            const num = parsePriceToNumber(generalClassMatch[1]);
-            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'general-class' };
         }
 
         // 4. Regex ile ₺ / TL Fiyat Kalıbı
@@ -389,8 +425,9 @@ async function checkWishlistPriceForPlan(familyId, planId) {
     const prevPriceNum = parsePriceToNumber(rawPrevPrice);
 
     let priceDropped = false;
-    let oldPriceFormatted = plan.oldPrice || rawPrevPrice;
+    let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
 
+    // Eğer önceki bir fiyat varsa ve yeni fiyat bundan daha düşükse: İNDİRİM BİLDİRİMİ!
     if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
         priceDropped = true;
         oldPriceFormatted = formatPriceTr(prevPriceNum);
@@ -407,15 +444,16 @@ async function checkWishlistPriceForPlan(familyId, planId) {
         updatedPlan.priceDropped = true;
         updatedPlan.oldPrice = oldPriceFormatted;
         updatedPlan.lastPriceDropTime = new Date().toISOString();
-    } else if (prevPriceNum > 0 && newPriceNum >= prevPriceNum) {
-        if (!plan.initialPrice) {
-            updatedPlan.initialPrice = formatPriceTr(prevPriceNum);
+    } else {
+        if (!plan.initialPrice && prevPriceNum === 0) {
+            updatedPlan.initialPrice = newPriceFormatted;
         }
     }
 
     const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
 
     if (priceDropped) {
+        // 1. Canlı SSE ile AÇIK OLAN TÜM CİHAZLARA ANINDA SESLİ & GÖRSEL BİLDİRİM FIRLAT
         broadcastToFamilyLive(familyId, 'price_drop', {
             family: updatedFamily,
             planId: plan.id,
@@ -424,12 +462,13 @@ async function checkWishlistPriceForPlan(familyId, planId) {
             newPrice: newPriceFormatted
         });
 
+        // 2. Web Push ile TÜM AİLE ÜYELERİNİN TELEFONLARINA BİLDİRİM GÖNDER (excludeUserId = null -> Herkese gider!)
         dbManager.sendPushToFamily(familyId, {
-            title: `🔥 İndirim Yakalandı! (${plan.title})`,
-            body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Eski: ${oldPriceFormatted})`,
+            title: `🔥 İndirim Müjdesi! (${plan.title})`,
+            body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
             icon: './icons/icon-192.png',
             url: './index.html?tab=plans'
-        }).catch(e => {});
+        }, null).catch(e => {});
     } else {
         broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
     }
@@ -802,6 +841,14 @@ async function appHandler(req, res) {
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=plans'
                 }, authorId).catch(e => {});
+
+                // Alışveriş ürünü linki eklendiyse hemen canlı fiyatını çek
+                if (body.plan && body.plan.category === 'Alisveris' && body.plan.link && body.plan.id) {
+                    setTimeout(() => {
+                        checkWishlistPriceForPlan(body.familyId, body.plan.id).catch(e => {});
+                    }, 400);
+                }
+
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/update' && req.method === 'POST') {
@@ -815,6 +862,14 @@ async function appHandler(req, res) {
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=plans'
                 }, authorId).catch(e => {});
+
+                // Alışveriş linki güncellendiyse anında canlı fiyatı çek ve karşılaştır
+                if (body.plan && body.plan.category === 'Alisveris' && body.plan.link) {
+                    setTimeout(() => {
+                        checkWishlistPriceForPlan(body.familyId, body.planId).catch(e => {});
+                    }, 400);
+                }
+
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {

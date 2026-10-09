@@ -4612,6 +4612,13 @@ async function handleAddPlan(e) {
     // Formu temizle
     document.getElementById('planTitleInput').value = '';
     showToast('Yeni aile planı kaydedildi! 🗺️');
+
+    // Alışveriş ürünü linki varsa hemen otomatik güncel fiyatı çek ve kontrol et
+    if (category === 'Alisveris' && newPlan.link) {
+        setTimeout(() => {
+            checkPlanPrice(newPlan.id);
+        }, 500);
+    }
 }
 
 async function togglePlanStatus(id) {
@@ -4780,6 +4787,13 @@ async function handleEditPlan(e) {
     renderPlans();
     updateQuickStats();
     showToast('Plan güncellendi! ⭐');
+
+    // Alışveriş ürünü linki varsa güncel fiyatı kontrol et
+    if (category === 'Alisveris' && updatedPlan.link) {
+        setTimeout(() => {
+            checkPlanPrice(planId);
+        }, 500);
+    }
 }
 
 // Pano Notu Ekle / Sil
