@@ -1908,9 +1908,19 @@ async function syncWithServer(silent = false) {
             });
         }
 
-        appState.familyData = normFresh;
-        saveStateToStorage();
-        renderApp();
+        const isDifferent = JSON.stringify(appState.familyData) !== JSON.stringify(normFresh);
+        if (isDifferent) {
+            appState.familyData = normFresh;
+            saveStateToStorage();
+
+            const isAnyModalOpen = !!document.querySelector('.modal-overlay:not(.hidden)');
+            if (!isAnyModalOpen) {
+                renderApp();
+            } else {
+                updateQuickStats();
+                updateChatUnreadCounts();
+            }
+        }
     } else {
         // Eğer sunucu sıfırlanmış veya aile sunucuda yoksa, mevcut aileyi sunucuya otomatik senkronize et (Self-healing)!
         if (appState.familyData && appState.familyData.id && appState.familyData.members && appState.familyData.members.length > 0) {
@@ -4078,43 +4088,41 @@ function renderMembers() {
     }).join('');
 }
 
-function updateMemberSelectDropdowns() {
+function updateMemberSelectDropdowns(forceDefault = false) {
     const members = appState.familyData ? (appState.familyData.members || []) : [];
     const taskSelect = document.getElementById('taskAssignee');
     const expenseSelect = document.getElementById('expensePayer');
     const fixedSelect = document.getElementById('fixedPayer');
     const dailyAssigneeSelect = document.getElementById('newDailyPlanAssignedTo');
     const editDailyAssigneeSelect = document.getElementById('editDailyPlanAssignedTo');
+    const charitySelect = document.getElementById('charityPayer');
 
     const curName = appState.currentUser ? appState.currentUser.name : '';
 
-    const memberOptions = members.map(m => `
-        <option value="${m.name}" ${m.name === curName ? 'selected' : ''}>
-            ${m.avatar || '👤'} ${m.name} (${m.role}) ${m.name === curName ? '(Siz)' : ''}
-        </option>
-    `).join('');
+    const populateSelect = (selectEl, includeFamily = false) => {
+        if (!selectEl) return;
+        const currentVal = selectEl.value;
+        const optionsHtml = members.map(m => `
+            <option value="${m.name}">
+                ${m.avatar || '👤'} ${m.name} (${m.role}) ${m.name === curName ? '(Siz)' : ''}
+            </option>
+        `).join('') + (includeFamily ? `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile (Ortak)</option>` : '');
 
-    const dailyOptions = memberOptions + `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile (Ortak)</option>`;
+        selectEl.innerHTML = optionsHtml;
 
-    if (taskSelect) taskSelect.innerHTML = memberOptions;
-    if (expenseSelect) expenseSelect.innerHTML = memberOptions;
-    if (fixedSelect) fixedSelect.innerHTML = memberOptions;
-
-    if (dailyAssigneeSelect) {
-        dailyAssigneeSelect.innerHTML = dailyOptions;
-        if (curName) {
-            dailyAssigneeSelect.value = curName;
+        if (!forceDefault && currentVal && Array.from(selectEl.options).some(opt => opt.value === currentVal)) {
+            selectEl.value = currentVal;
+        } else if (curName && Array.from(selectEl.options).some(opt => opt.value === curName)) {
+            selectEl.value = curName;
         }
-    }
-    if (editDailyAssigneeSelect) {
-        editDailyAssigneeSelect.innerHTML = dailyOptions;
-    }
+    };
 
-    const charitySelect = document.getElementById('charityPayer');
-    if (charitySelect) {
-        charitySelect.innerHTML = memberOptions + `<option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile (Ortak)</option>`;
-        if (curName) charitySelect.value = curName;
-    }
+    populateSelect(taskSelect, true);
+    populateSelect(expenseSelect, false);
+    populateSelect(fixedSelect, false);
+    populateSelect(dailyAssigneeSelect, true);
+    populateSelect(editDailyAssigneeSelect, true);
+    populateSelect(charitySelect, true);
 }
 
 // ==========================================================
@@ -6717,12 +6725,18 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hidden');
-        if (modalId === 'modalNewInvestment') {
+        if (modalId === 'modalNewTask') {
+            updateMemberSelectDropdowns();
+            const taskAssignee = document.getElementById('taskAssignee');
+            if (taskAssignee && !taskAssignee.value && appState.currentUser && appState.currentUser.name) {
+                taskAssignee.value = appState.currentUser.name;
+            }
+        } else if (modalId === 'modalNewInvestment') {
             autoCalculateInvestmentTL();
         } else if (modalId === 'modalNewDailyPlan') {
             updateMemberSelectDropdowns();
             const dailyAssignee = document.getElementById('newDailyPlanAssignedTo');
-            if (dailyAssignee && appState.currentUser && appState.currentUser.name) {
+            if (dailyAssignee && !dailyAssignee.value && appState.currentUser && appState.currentUser.name) {
                 dailyAssignee.value = appState.currentUser.name;
             }
         } else if (modalId === 'modalNewCharity') {
