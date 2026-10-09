@@ -1237,6 +1237,22 @@ const AilemAPI = {
         return null;
     },
 
+    async updatePlanPrice(familyId, planId, newPrice) {
+        try {
+            const res = await fetch('/api/plans/update-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, planId, newPrice })
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (e) {
+            console.warn('API updatePlanPrice hatası:', e);
+        }
+        return null;
+    },
+
     async addShoppingItem(familyId, item) {
         try {
             const res = await fetch('/api/shopping/add', {
@@ -3312,14 +3328,19 @@ function renderPlans() {
             ` : (plan.shopPrice ? `<div class="plan-detail-row"><i class="fa-solid fa-tag"></i> <b>Fiyat:</b> <span>${plan.shopPrice}</span></div>` : '');
 
             const hasHttpLink = plan.link && (plan.link.startsWith('http://') || plan.link.startsWith('https://'));
-            const linkBtnsHtml = hasHttpLink ? `
+            const linkBtnsHtml = `
                 <div class="plan-shop-actions">
-                    <a href="${plan.link}" target="_blank" class="plan-link-btn" style="flex: 1;"><i class="fa-solid fa-bag-shopping"></i> Ürüne Git</a>
-                    <button class="btn-check-price" onclick="checkPlanPrice('${plan.id}', event)" title="Canlı fiyatı web sitesinden kontrol et">
-                        <i class="fa-solid fa-rotate"></i> Fiyatı Kontrol Et
+                    ${hasHttpLink ? `<a href="${plan.link}" target="_blank" class="plan-link-btn" style="flex: 1;"><i class="fa-solid fa-bag-shopping"></i> Ürüne Git</a>` : ''}
+                    ${hasHttpLink ? `
+                        <button class="btn-check-price" onclick="checkPlanPrice('${plan.id}', event)" title="Canlı fiyatı web sitesinden tara ve kontrol et">
+                            <i class="fa-solid fa-rotate"></i> Fiyatı Kontrol Et
+                        </button>
+                    ` : ''}
+                    <button class="btn-check-price btn-quick-price" onclick="quickUpdatePlanPrice('${plan.id}')" title="Fiyatı güncelle ve indirimi aileye bildir">
+                        <i class="fa-solid fa-pen"></i> Fiyatı Güncelle
                     </button>
                 </div>
-            ` : (plan.link ? `<a href="${plan.link}" target="_blank" class="plan-link-btn"><i class="fa-solid fa-bag-shopping"></i> Ürünü İncele</a>` : '');
+            `;
 
             let lastCheckStr = '';
             if (plan.lastPriceCheck) {
@@ -3400,14 +3421,27 @@ async function checkPlanPrice(planId, evt) {
             }
             if (result.priceDropped) {
                 triggerHapticAndSound();
-                showToast(`🔥 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Eski: ${result.oldPrice})`);
+                showToast(`🔥 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Önceki: ${result.oldPrice})`);
             } else if (result.foundPrice) {
-                showToast(`✅ Güncel fiyat: ${result.foundPrice} (Fiyat değişikliği yok)`);
+                showToast(`✅ Güncel satış fiyatı: ${result.foundPrice} (Fiyat değişikliği yok)`);
             } else {
                 showToast(result.message || 'Fiyat bilgisi güncellendi.');
             }
         } else {
-            showToast(result?.message || 'Ürün fiyatı okunamadı veya sayfa yanıt vermedi.', 'warning');
+            // Web sitesi bot koruması (Cloudflare/Akamai) uyguluyorsa hızlı fiyat girişi öner
+            const plan = (appState.familyData.plans || []).find(p => p.id === planId);
+            const currentPriceStr = plan ? (plan.shopPrice || plan.currentPrice || '') : '';
+            
+            const promptVal = prompt(
+                `🤖 "${plan ? plan.title : 'Ürün'}" web sitesi otomatik robot koruması uyguladığı için fiyat doğrudan okunamadı.\n\nSitedeki güncel satış fiyatını girmek ister misiniz? (Örn: 4800 veya 4.800 ₺)\n\nEğer yeni fiyat eskisinden (${currentPriceStr || 'Kayıtlı fiyat'}) düşükse TÜM AİLEYE otomatik bildirim gidecektir:`,
+                currentPriceStr.replace(/[^0-9]/g, '')
+            );
+
+            if (promptVal && promptVal.trim()) {
+                await quickUpdatePlanPrice(planId, promptVal.trim());
+            } else {
+                showToast('Fiyat kontrolü tamamlandı.');
+            }
         }
     } catch (e) {
         showToast('Fiyat kontrolü sırasında bir hata oluştu.', 'error');
@@ -3416,6 +3450,46 @@ async function checkPlanPrice(planId, evt) {
             btn.disabled = false;
             btn.innerHTML = oldBtnHtml || `<i class="fa-solid fa-rotate"></i> Fiyatı Kontrol Et`;
         }
+    }
+}
+
+// Fiyatı Hızlıca Güncelle ve İndirimi Tüm Aileye Bildir
+async function quickUpdatePlanPrice(planId, presetPrice = null) {
+    if (!appState.familyData || !appState.familyData.id) return;
+    const plan = (appState.familyData.plans || []).find(p => p.id === planId);
+    if (!plan) return;
+
+    let enteredPrice = presetPrice;
+    if (!enteredPrice) {
+        const currentPriceStr = plan.shopPrice || plan.currentPrice || '';
+        enteredPrice = prompt(
+            `💰 "${plan.title}" için güncel satış fiyatını girin:\n(Örn: 4800 veya 4.800 ₺)\n\nEğer yeni fiyat eskisinden (${currentPriceStr || '0 ₺'}) düşükse tüm aileye anında indirim bildirimi gönderilecektir!`,
+            currentPriceStr.replace(/[^0-9]/g, '')
+        );
+    }
+
+    if (!enteredPrice || !enteredPrice.trim()) return;
+
+    showToast('💾 Fiyat güncelleniyor ve kontrol ediliyor...');
+    try {
+        const result = await AilemAPI.updatePlanPrice(appState.familyData.id, planId, enteredPrice.trim());
+        if (result && result.success) {
+            if (result.family) {
+                appState.familyData = normalizeFamilyData(result.family);
+                saveStateToStorage();
+                renderPlans();
+            }
+            if (result.priceDropped) {
+                triggerHapticAndSound();
+                showToast(`🔥 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Önceki: ${result.oldPrice}) - Tüm aileye bildirildi! 🔔`);
+            } else {
+                showToast(`✅ Güncel fiyat kaydedildi: ${result.newPrice}`);
+            }
+        } else {
+            showToast(result?.message || 'Fiyat güncellenemedi.', 'warning');
+        }
+    } catch (e) {
+        showToast('Fiyat güncellenirken bir hata oluştu.', 'error');
     }
 }
 

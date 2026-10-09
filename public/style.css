@@ -5740,6 +5740,18 @@ body {
     cursor: not-allowed;
 }
 
+.btn-quick-price {
+    background: #f0fdf4 !important;
+    border-color: #86efac !important;
+    color: #166534 !important;
+}
+
+.btn-quick-price:hover {
+    background: #dcfce7 !important;
+    border-color: #4ade80 !important;
+    color: #14532d !important;
+}
+
 .plan-check-meta {
     font-size: 0.75rem !important;
     color: #94a3b8 !important;

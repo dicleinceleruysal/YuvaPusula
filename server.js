@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { exec } = require('child_process');
 const dbManager = require('./database.js');
 
 // Veritabanını başlat
@@ -173,59 +174,50 @@ function fetchHtmlContent(targetUrl, maxRedirects = 5) {
             return resolve('');
         }
 
-        try {
-            const parsedUrl = new URL(targetUrl);
-            const client = parsedUrl.protocol === 'https:' ? https : http;
+        // 1. curl.exe ile gerçek tarayıcı simülasyonu
+        const sanitizedUrl = targetUrl.replace(/"/g, '%22');
+        const cmd = `curl.exe -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" -H "Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8" -H "Sec-Ch-Ua: \\"Chromium\\";v=\\"124\\", \\"Google Chrome\\";v=\\"124\\"" -H "Sec-Ch-Ua-Mobile: ?0" -H "Sec-Ch-Ua-Platform: \\"Windows\\"" -H "Sec-Fetch-Dest: document" -H "Sec-Fetch-Mode: navigate" -H "Sec-Fetch-Site: none" -H "Sec-Fetch-User: ?1" -H "Upgrade-Insecure-Requests: 1" --max-time 12 "${sanitizedUrl}"`;
 
-            const options = {
-                hostname: parsedUrl.hostname,
-                path: parsedUrl.pathname + parsedUrl.search,
-                port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'Sec-Ch-Ua': '"Chromium";v="123", "Not:A-Brand";v="8"',
-                    'Sec-Ch-Ua-Mobile': '?0',
-                    'Sec-Ch-Ua-Platform': '"Windows"',
-                    'Upgrade-Insecure-Requests': '1'
-                },
-                timeout: 10000
-            };
+        exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+            if (!err && stdout && stdout.length > 50) {
+                return resolve(stdout);
+            }
 
-            const req = client.get(options, (res) => {
-                // Yönlendirme (Redirect 301, 302, 307, 308) yönetimi (Örn: Hepsiburada app.hb.biz linkleri)
-                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
-                    let redirectUrl = res.headers.location;
-                    if (!redirectUrl.startsWith('http')) {
-                        redirectUrl = new URL(redirectUrl, targetUrl).href;
+            // 2. Fallback: Node https.get
+            try {
+                const parsedUrl = new URL(targetUrl);
+                const client = parsedUrl.protocol === 'https:' ? https : http;
+
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    path: parsedUrl.pathname + parsedUrl.search,
+                    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'tr-TR,tr;q=0.9',
+                    },
+                    timeout: 8000
+                };
+
+                const req = client.get(options, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+                        let redirectUrl = res.headers.location;
+                        if (!redirectUrl.startsWith('http')) redirectUrl = new URL(redirectUrl, targetUrl).href;
+                        return fetchHtmlContent(redirectUrl, maxRedirects - 1).then(resolve);
                     }
-                    return fetchHtmlContent(redirectUrl, maxRedirects - 1).then(resolve);
-                }
-
-                let data = '';
-                res.setEncoding('utf8');
-                res.on('data', chunk => {
-                    data += chunk;
-                    if (data.length > 2 * 1024 * 1024) {
-                        req.destroy();
-                        resolve(data);
-                    }
+                    let data = '';
+                    res.setEncoding('utf8');
+                    res.on('data', chunk => { data += chunk; });
+                    res.on('end', () => resolve(data));
                 });
-                res.on('end', () => resolve(data));
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
+                req.on('timeout', () => { req.destroy(); resolve(''); });
+                req.on('error', () => resolve(''));
+            } catch (e) {
                 resolve('');
-            });
-            req.on('error', () => resolve(''));
-        } catch (e) {
-            resolve('');
-        }
+            }
+        });
     });
 }
 
@@ -892,6 +884,85 @@ async function appHandler(req, res) {
                 } else {
                     return sendJson(res, 400, { success: false, message: 'Fiyat kontrolü gerçekleştirilemedi.' });
                 }
+            }
+            if (pathname === '/api/plans/update-price' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const familyId = body.familyId;
+                const planId = body.planId;
+                const inputPrice = body.newPrice;
+
+                const family = await dbManager.getFullFamilyData(familyId);
+                if (!family || !Array.isArray(family.plans)) {
+                    return sendJson(res, 404, { success: false, message: 'Aile bulunamadı.' });
+                }
+
+                const plan = family.plans.find(p => p.id === planId);
+                if (!plan) {
+                    return sendJson(res, 404, { success: false, message: 'Plan bulunamadı.' });
+                }
+
+                const newPriceNum = parsePriceToNumber(inputPrice);
+                if (newPriceNum <= 0) {
+                    return sendJson(res, 400, { success: false, message: 'Lütfen geçerli bir fiyat girin.' });
+                }
+
+                const newPriceFormatted = formatPriceTr(newPriceNum);
+                const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
+                const prevPriceNum = parsePriceToNumber(rawPrevPrice);
+
+                let priceDropped = false;
+                let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
+
+                if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
+                    priceDropped = true;
+                    oldPriceFormatted = formatPriceTr(prevPriceNum);
+                }
+
+                const updatedPlan = {
+                    ...plan,
+                    shopPrice: newPriceFormatted,
+                    currentPrice: newPriceFormatted,
+                    lastPriceCheck: new Date().toISOString()
+                };
+
+                if (priceDropped) {
+                    updatedPlan.priceDropped = true;
+                    updatedPlan.oldPrice = oldPriceFormatted;
+                    updatedPlan.lastPriceDropTime = new Date().toISOString();
+                } else {
+                    if (!plan.initialPrice && prevPriceNum === 0) {
+                        updatedPlan.initialPrice = newPriceFormatted;
+                    }
+                }
+
+                const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
+
+                if (priceDropped) {
+                    broadcastToFamilyLive(familyId, 'price_drop', {
+                        family: updatedFamily,
+                        planId: plan.id,
+                        title: plan.title,
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+
+                    dbManager.sendPushToFamily(familyId, {
+                        title: `🔥 İndirim Müjdesi! (${plan.title})`,
+                        body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
+                } else {
+                    broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
+                }
+
+                return sendJson(res, 200, {
+                    success: true,
+                    priceDropped,
+                    oldPrice: oldPriceFormatted,
+                    newPrice: newPriceFormatted,
+                    family: updatedFamily
+                });
             }
 
             // 7.1 Günlük Planlama İşlemleri (Her Gün Sıfırlanır)
