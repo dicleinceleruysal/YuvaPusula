@@ -3426,7 +3426,7 @@ async function checkPlanPrice(planId, evt) {
                 showToast(result.message || 'Fiyat kontrol edildi.');
             }
         } else {
-            showToast(result?.message || 'Fiyat kontrolü yapıldı, fiyat değişikliği tespit edilmedi.');
+            showToast(result?.message || 'ℹ️ Bu mağaza robot koruması uyguladığı için fiyatı gizledi. Dilerseniz plan düzenleden fiyatı belirleyebilirsiniz.', 'info');
         }
     } catch (e) {
         showToast('Fiyat kontrolü sırasında bir hata oluştu.', 'error');
