@@ -1238,6 +1238,13 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 12.1 Ayın 1'i Bütçe Sıfırlama (Tüm Gelir & Giderler Sıfırlanır, Sadece Sabit Giderler Kalır)
+            if (pathname === '/api/budget/reset-month' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.resetMonthlyBudget(body.familyId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 13. Yatırım ve Birikim İşlemleri
             if (pathname === '/api/investments/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);

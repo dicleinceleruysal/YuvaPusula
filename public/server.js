@@ -3,7 +3,16 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { exec } = require('child_process');
 const dbManager = require('./database.js');
+
+// Uncaught exception ve unhandled rejection yakalayıcıları (sunucunun çökmesini engeller)
+process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT EXCEPTION]:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]:', reason);
+});
 
 // Veritabanını başlat
 dbManager.initDatabase();
@@ -160,6 +169,381 @@ async function getAltinkaynakLiveRates(forceRefresh = false) {
                 TL: { code: 'TL', name: 'Türk Lirası (₺)', symbol: '₺', buy: 1, sell: 1 }
             }
         };
+    }
+}
+
+// ==========================================================
+// CANLI ÜRÜN FİYATI ÇEKME VE İNDİRİM TAKİP MOTORU
+// (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
+// ==========================================================
+function fetchHtmlContent(targetUrl, maxRedirects = 5) {
+    return new Promise((resolve) => {
+        if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
+            return resolve('');
+        }
+
+        // 1. curl.exe ile gerçek tarayıcı simülasyonu
+        const sanitizedUrl = targetUrl.replace(/"/g, '%22');
+        const cmd = `curl.exe -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" -H "Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8" -H "Sec-Ch-Ua: \\"Chromium\\";v=\\"124\\", \\"Google Chrome\\";v=\\"124\\"" -H "Sec-Ch-Ua-Mobile: ?0" -H "Sec-Ch-Ua-Platform: \\"Windows\\"" -H "Sec-Fetch-Dest: document" -H "Sec-Fetch-Mode: navigate" -H "Sec-Fetch-Site: none" -H "Sec-Fetch-User: ?1" -H "Upgrade-Insecure-Requests: 1" --max-time 12 "${sanitizedUrl}"`;
+
+        exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+            if (!err && stdout && stdout.length > 50) {
+                return resolve(stdout);
+            }
+
+            // 2. Fallback: Node https.get
+            try {
+                const parsedUrl = new URL(targetUrl);
+                const client = parsedUrl.protocol === 'https:' ? https : http;
+
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    path: parsedUrl.pathname + parsedUrl.search,
+                    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'tr-TR,tr;q=0.9',
+                    },
+                    timeout: 8000
+                };
+
+                const req = client.get(options, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+                        let redirectUrl = res.headers.location;
+                        if (!redirectUrl.startsWith('http')) redirectUrl = new URL(redirectUrl, targetUrl).href;
+                        return fetchHtmlContent(redirectUrl, maxRedirects - 1).then(resolve);
+                    }
+                    let data = '';
+                    res.setEncoding('utf8');
+                    res.on('data', chunk => { data += chunk; });
+                    res.on('end', () => resolve(data));
+                });
+                req.on('timeout', () => { req.destroy(); resolve(''); });
+                req.on('error', () => resolve(''));
+            } catch (e) {
+                resolve('');
+            }
+        });
+    });
+}
+
+function parsePriceToNumber(priceStr) {
+    if (!priceStr) return 0;
+    if (typeof priceStr === 'number') return priceStr;
+    let str = String(priceStr).replace(/[^\d,\.]/g, '').trim();
+    if (!str) return 0;
+
+    if (str.includes('.') && str.includes(',')) {
+        if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            str = str.replace(/,/g, '');
+        }
+    } else if (str.includes(',')) {
+        const parts = str.split(',');
+        if (parts[1] && parts[1].length === 2) {
+            str = str.replace(',', '.');
+        } else if (parts[1] && parts[1].length === 3) {
+            str = parts.join('');
+        } else {
+            str = str.replace(',', '.');
+        }
+    } else if (str.includes('.')) {
+        const parts = str.split('.');
+        if (parts[1] && parts[1].length === 3 && parts[0].length <= 3) {
+            str = parts.join('');
+        }
+    }
+    return parseFloat(str) || 0;
+}
+
+function formatPriceTr(num) {
+    if (!num || isNaN(num)) return '';
+    return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num) + ' ₺';
+}
+
+function findPriceInObject(obj, depth = 0) {
+    if (!obj || depth > 8) return 0;
+    if (typeof obj !== 'object') return 0;
+
+    const priceKeys = ['discountedPrice', 'salePrice', 'sellingPrice', 'currentPrice', 'lowPrice', 'price', 'totalPrice', 'unformattedPrice', 'priceValue'];
+    for (const key of priceKeys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+            if (typeof obj[key] === 'number' && obj[key] > 0) return obj[key];
+            if (typeof obj[key] === 'string') {
+                const num = parsePriceToNumber(obj[key]);
+                if (num > 0) return num;
+            }
+            if (typeof obj[key] === 'object' && obj[key] !== null) {
+                if (obj[key].value) {
+                    const num = parsePriceToNumber(obj[key].value);
+                    if (num > 0) return num;
+                }
+            }
+        }
+    }
+
+    if (Array.isArray(obj)) {
+        for (const item of obj) {
+            const found = findPriceInObject(item, depth + 1);
+            if (found > 0) return found;
+        }
+    } else {
+        for (const k of Object.keys(obj)) {
+            if (typeof obj[k] === 'object' && obj[k] !== null) {
+                const found = findPriceInObject(obj[k], depth + 1);
+                if (found > 0) return found;
+            }
+        }
+    }
+    return 0;
+}
+
+function extractPriceFromHtml(html) {
+    if (!html || typeof html !== 'string') return null;
+
+    try {
+        // 1. Sepette İndirim / Kampanyalı / İndirimli Fiyat DOM Taraması (En Yüksek Öncelik)
+        const cartDiscountPatterns = [
+            /<div[^>]*class=["'][^"']*(?:cart-price|highlighted-discount|basket-price|sepette|cart-campaign)[^"']*["'][\s\S]*?<div[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+            /<div[^>]*class=["'][^"']*(?:cart-price|price-group-2|special-price|discounted-price)[^"']*["'][\s\S]*?>([\s\S]*?)<\/div>/i,
+            /class=["'][^"']*(?:prc-dsc|extra-discount-price|basket-discount|sepette-fiyat)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
+            /<[^>]*data-discounted-price=["']([^"']+)["']/i,
+            /<[^>]*data-sale-price=["']([^"']+)["']/i
+        ];
+
+        for (const pattern of cartDiscountPatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const textWithoutTags = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                const num = parsePriceToNumber(textWithoutTags);
+                if (num > 0) {
+                    return { number: num, formatted: formatPriceTr(num), source: 'cart-discount' };
+                }
+            }
+        }
+
+        // 2. Genel Fiyat Gösterim Alanları (eb-price-show, price-box vb.)
+        const priceBoxMatch = html.match(/<eb-price-show[\s\S]*?<\/eb-price-show>/i) || html.match(/class=["'][^"']*price-box--detail[^"']*["'][\s\S]*?<\/div>\s*<\/div>/i);
+        if (priceBoxMatch) {
+            const block = priceBoxMatch[0];
+            const cartMatch = block.match(/class=["'][^"']*cart-price[^"']*["'][\s\S]*?<div[^>]*class=["']price["'][^>]*>([\s\S]*?)<\/div>/i);
+            if (cartMatch && cartMatch[1]) {
+                const num = parsePriceToNumber(cartMatch[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'eb-cart' };
+            }
+            const generalMatch = block.match(/class=["']price["'][^>]*>([\s\S]*?)<\/div>/i);
+            if (generalMatch && generalMatch[1]) {
+                const num = parsePriceToNumber(generalMatch[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'eb-price' };
+            }
+        }
+
+        // 3. E-Ticaret DOM Kalıpları (Trendyol, Hepsiburada, Amazon, Zara, N11, Boyner vb.)
+        const domClassPatterns = [
+            /class=["'][^"']*(?:prc-dsc|prc-slg|featured-prices|discounted-price)[^"']*["'][^>]*>([^<]+)/i,
+            /(?:data-test-id=["']price-current-price["']|class=["'][^"']*(?:price-value|extra-discount-price|price-current-price)[^"']*["'])[^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:price-current__amount|money-amount__main|price-current)[^"']*["'][^>]*>([^<]+)/i,
+            /class=["'][^"']*(?:product-price|sale-price|current-price|priceToPay|last-price|newPrice|p-detail__price|advanced-price)[^"']*["'][^>]*>([^<]+)/i
+        ];
+
+        for (const pattern of domClassPatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const num = parsePriceToNumber(m[1].replace(/<[^>]+>/g, ' '));
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'dom-class' };
+            }
+        }
+
+        // 4. Amazon Whole + Fraction
+        const amzWhole = html.match(/class=["']a-price-whole["'][^>]*>([^<]+)/i);
+        if (amzWhole && amzWhole[1]) {
+            const amzFrac = html.match(/class=["']a-price-fraction["'][^>]*>([^<]+)/i);
+            const wholeClean = amzWhole[1].replace(/[^\d]/g, '');
+            const fracClean = amzFrac && amzFrac[1] ? amzFrac[1].replace(/[^\d]/g, '') : '00';
+            const num = parseFloat(`${wholeClean}.${fracClean}`);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'amazon' };
+        }
+
+        // 5. OpenGraph, Meta Tagları ve Microdata
+        const metaPricePatterns = [
+            /<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']product:price:amount["']/i,
+            /<meta[^>]*property=["']og:price:amount["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:price:amount["']/i,
+            /<meta[^>]*name=["']twitter:data1["'][^>]*content=["']([^"']+)["']/i,
+            /<meta[^>]*itemprop=["']price["'][^>]*content=["']([^"']+)["']/i,
+            /<[^>]*itemprop=["']price["'][^>]*>([^<]+)<\/[^>]+>/i,
+            /<[^>]*data-price=["']([^"']+)["'][^>]*>/i,
+            /<[^>]*data-product-price=["']([^"']+)["'][^>]*>/i,
+            /<[^>]*data-sale-price=["']([^"']+)["'][^>]*>/i
+        ];
+
+        for (const pattern of metaPricePatterns) {
+            const m = html.match(pattern);
+            if (m && m[1]) {
+                const num = parsePriceToNumber(m[1]);
+                if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'meta' };
+            }
+        }
+
+        // 6. JSON-LD Schema (application/ld+json) Taraması
+        const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+        if (jsonLdMatches) {
+            for (const match of jsonLdMatches) {
+                const inner = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+                try {
+                    const parsed = JSON.parse(inner);
+                    const pNum = findPriceInObject(parsed);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'jsonld' };
+                } catch (jsonErr) {}
+            }
+        }
+
+        // 6.1 Next.js & React Script State
+        const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch && nextDataMatch[1]) {
+            try {
+                const nextJson = JSON.parse(nextDataMatch[1]);
+                const pNum = findPriceInObject(nextJson);
+                if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'next-data' };
+            } catch (e) {}
+        }
+
+        const stateMatches = html.match(/(?:window\.__INITIAL_STATE__|window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__|window\.__PRODUCT_DATA__|window\.__APP_STATE__)\s*=\s*(\{[\s\S]*?\});/gi);
+        if (stateMatches) {
+            for (const sm of stateMatches) {
+                const jsonPart = sm.replace(/^[^{]*/, '').replace(/;?\s*$/, '');
+                try {
+                    const parsedState = JSON.parse(jsonPart);
+                    const pNum = findPriceInObject(parsedState);
+                    if (pNum > 0) return { number: pNum, formatted: formatPriceTr(pNum), source: 'window-state' };
+                } catch (e) {}
+            }
+        }
+
+        // 7. Regex ile ₺ / TL Fiyat Kalıbı
+        const tlRegex = /([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?)\s*(?:TL|₺|TRY)/i;
+        const tlMatch = html.match(tlRegex);
+        if (tlMatch && tlMatch[1]) {
+            const num = parsePriceToNumber(tlMatch[1]);
+            if (num > 0) return { number: num, formatted: formatPriceTr(num), source: 'regex-tl' };
+        }
+    } catch (e) {
+        console.error('extractPriceFromHtml error:', e);
+    }
+
+    return null;
+}
+
+async function checkWishlistPriceForPlan(familyId, planId) {
+    const family = await dbManager.getFullFamilyData(familyId);
+    if (!family || !Array.isArray(family.plans)) return null;
+
+    const plan = family.plans.find(p => p.id === planId);
+    if (!plan || !plan.link || (!plan.link.startsWith('http://') && !plan.link.startsWith('https://'))) {
+        return { success: false, message: 'Geçerli bir ürün linki bulunamadı.' };
+    }
+
+    const html = await fetchHtmlContent(plan.link);
+    const priceResult = extractPriceFromHtml(html);
+
+    if (!priceResult || !priceResult.number) {
+        return { success: false, message: 'Ürün sayfasından fiyat bilgisi okunamadı.' };
+    }
+
+    const newPriceNum = priceResult.number;
+    const newPriceFormatted = priceResult.formatted;
+
+    const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
+    const prevPriceNum = parsePriceToNumber(rawPrevPrice);
+
+    let priceDropped = false;
+    let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
+
+    // Eğer önceki bir fiyat varsa ve yeni fiyat bundan daha düşükse: İNDİRİM BİLDİRİMİ!
+    if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
+        priceDropped = true;
+        oldPriceFormatted = formatPriceTr(prevPriceNum);
+    }
+
+    const updatedPlan = {
+        ...plan,
+        shopPrice: newPriceFormatted,
+        currentPrice: newPriceFormatted,
+        lastPriceCheck: new Date().toISOString()
+    };
+
+    if (priceDropped) {
+        updatedPlan.priceDropped = true;
+        updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastPriceDropTime = new Date().toISOString();
+    } else {
+        if (!plan.initialPrice && prevPriceNum === 0) {
+            updatedPlan.initialPrice = newPriceFormatted;
+        }
+    }
+
+    const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
+
+    if (priceDropped) {
+        // 1. Canlı SSE ile AÇIK OLAN TÜM CİHAZLARA ANINDA SESLİ & GÖRSEL BİLDİRİM FIRLAT
+        broadcastToFamilyLive(familyId, 'price_drop', {
+            family: updatedFamily,
+            planId: plan.id,
+            title: plan.title,
+            oldPrice: oldPriceFormatted,
+            newPrice: newPriceFormatted
+        });
+
+        // 2. Web Push ile TÜM AİLE ÜYELERİNİN TELEFONLARINA BİLDİRİM GÖNDER (excludeUserId = null -> Herkese gider!)
+        dbManager.sendPushToFamily(familyId, {
+            title: `🔥 İndirim Müjdesi! (${plan.title})`,
+            body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+            icon: './icons/icon-192.png',
+            url: './index.html?tab=plans'
+        }, null).catch(e => {});
+    } else {
+        broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
+    }
+
+    return {
+        success: true,
+        priceDropped,
+        oldPrice: oldPriceFormatted,
+        newPrice: newPriceFormatted,
+        foundPrice: newPriceFormatted,
+        family: updatedFamily
+    };
+}
+
+async function checkAllWishlistPricesPeriodic() {
+    try {
+        const families = await dbManager.getAllFamilies();
+        if (!families || !Array.isArray(families)) return;
+
+        for (const fam of families) {
+            if (!fam || !Array.isArray(fam.plans)) continue;
+            const shopPlansWithLinks = fam.plans.filter(p => 
+                p.category === 'Alisveris' && 
+                !p.completed && 
+                p.link && 
+                (p.link.startsWith('http://') || p.link.startsWith('https://'))
+            );
+
+            for (const plan of shopPlansWithLinks) {
+                try {
+                    await checkWishlistPriceForPlan(fam.id, plan.id);
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (err) {
+                    console.error(`[Wishlist Price Check] Plan ${plan.id} hata:`, err.message);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Wishlist Price Check Periodic Error]:', e);
     }
 }
 
@@ -493,20 +877,80 @@ async function appHandler(req, res) {
                     icon: './icons/icon-192.png',
                     url: './index.html?tab=plans'
                 }, authorId).catch(e => {});
+
+                // Alışveriş ürünü linki eklendiyse hemen canlı fiyatını çek
+                if (body.plan && body.plan.category === 'Alisveris' && body.plan.link && body.plan.id) {
+                    setTimeout(() => {
+                        checkWishlistPriceForPlan(body.familyId, body.plan.id).catch(e => {});
+                    }, 400);
+                }
+
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
             if (pathname === '/api/plans/update' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
+                const currentFam = await dbManager.getFullFamilyData(body.familyId);
+                const existingPlan = currentFam && currentFam.plans ? currentFam.plans.find(p => p.id === body.planId) : null;
+                
+                let isPriceDrop = false;
+                let oldPriceFormatted = '';
+                let newPriceFormatted = '';
+
+                if (existingPlan && body.plan) {
+                    const newShopPrice = body.plan.shopPrice || body.plan.currentPrice;
+                    const oldShopPrice = existingPlan.shopPrice || existingPlan.currentPrice || existingPlan.initialPrice;
+                    if (newShopPrice && oldShopPrice) {
+                        const newNum = parsePriceToNumber(newShopPrice);
+                        const oldNum = parsePriceToNumber(oldShopPrice);
+                        if (oldNum > 0 && newNum > 0 && newNum < oldNum) {
+                            isPriceDrop = true;
+                            oldPriceFormatted = formatPriceTr(oldNum);
+                            newPriceFormatted = formatPriceTr(newNum);
+                            body.plan.priceDropped = true;
+                            body.plan.oldPrice = oldPriceFormatted;
+                            body.plan.lastPriceDropTime = new Date().toISOString();
+                        }
+                    }
+                }
+
                 const updatedFamily = await dbManager.updatePlan(body.familyId, body.planId, body.plan);
-                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                
+                if (isPriceDrop) {
+                    broadcastToFamilyLive(body.familyId, 'price_drop', {
+                        family: updatedFamily,
+                        planId: body.planId,
+                        title: (body.plan && body.plan.title) || (existingPlan && existingPlan.title) || 'Ürün',
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: `🔥 İndirim Müjdesi! (${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)})`,
+                        body: `Takip ettiğiniz "${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
+                } else {
+                    broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                }
+
                 const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
-                dbManager.sendPushToFamily(body.familyId, {
-                    title: '🗺️ Aile Planı Güncellendi',
-                    body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
-                    icon: './icons/icon-192.png',
-                    url: './index.html?tab=plans'
-                }, authorId).catch(e => {});
-                return sendJson(res, 200, { success: true, family: updatedFamily });
+                if (!isPriceDrop) {
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: '🗺️ Aile Planı Güncellendi',
+                        body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, authorId).catch(e => {});
+                }
+
+                // Alışveriş linki güncellendiyse anında canlı fiyatı çek ve karşılaştır
+                if (body.plan && body.plan.category === 'Alisveris' && body.plan.link) {
+                    setTimeout(() => {
+                        checkWishlistPriceForPlan(body.familyId, body.planId).catch(e => {});
+                    }, 400);
+                }
+
+                return sendJson(res, 200, { success: true, family: updatedFamily, priceDropped: isPriceDrop });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
@@ -519,6 +963,94 @@ async function appHandler(req, res) {
                 const updatedFamily = await dbManager.deletePlan(body.familyId, body.planId);
                 broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/plans/check-price' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const result = await checkWishlistPriceForPlan(body.familyId, body.planId);
+                if (result) {
+                    return sendJson(res, 200, result);
+                } else {
+                    return sendJson(res, 400, { success: false, message: 'Fiyat kontrolü gerçekleştirilemedi.' });
+                }
+            }
+            if (pathname === '/api/plans/update-price' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const familyId = body.familyId;
+                const planId = body.planId;
+                const inputPrice = body.newPrice;
+
+                const family = await dbManager.getFullFamilyData(familyId);
+                if (!family || !Array.isArray(family.plans)) {
+                    return sendJson(res, 404, { success: false, message: 'Aile bulunamadı.' });
+                }
+
+                const plan = family.plans.find(p => p.id === planId);
+                if (!plan) {
+                    return sendJson(res, 404, { success: false, message: 'Plan bulunamadı.' });
+                }
+
+                const newPriceNum = parsePriceToNumber(inputPrice);
+                if (newPriceNum <= 0) {
+                    return sendJson(res, 400, { success: false, message: 'Lütfen geçerli bir fiyat girin.' });
+                }
+
+                const newPriceFormatted = formatPriceTr(newPriceNum);
+                const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
+                const prevPriceNum = parsePriceToNumber(rawPrevPrice);
+
+                let priceDropped = false;
+                let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
+
+                if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
+                    priceDropped = true;
+                    oldPriceFormatted = formatPriceTr(prevPriceNum);
+                }
+
+                const updatedPlan = {
+                    ...plan,
+                    shopPrice: newPriceFormatted,
+                    currentPrice: newPriceFormatted,
+                    lastPriceCheck: new Date().toISOString()
+                };
+
+                if (priceDropped) {
+                    updatedPlan.priceDropped = true;
+                    updatedPlan.oldPrice = oldPriceFormatted;
+                    updatedPlan.lastPriceDropTime = new Date().toISOString();
+                } else {
+                    if (!plan.initialPrice && prevPriceNum === 0) {
+                        updatedPlan.initialPrice = newPriceFormatted;
+                    }
+                }
+
+                const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
+
+                if (priceDropped) {
+                    broadcastToFamilyLive(familyId, 'price_drop', {
+                        family: updatedFamily,
+                        planId: plan.id,
+                        title: plan.title,
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+
+                    dbManager.sendPushToFamily(familyId, {
+                        title: `🔥 İndirim Müjdesi! (${plan.title})`,
+                        body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
+                } else {
+                    broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
+                }
+
+                return sendJson(res, 200, {
+                    success: true,
+                    priceDropped,
+                    oldPrice: oldPriceFormatted,
+                    newPrice: newPriceFormatted,
+                    family: updatedFamily
+                });
             }
 
             // 7.1 Günlük Planlama İşlemleri (Her Gün Sıfırlanır)
@@ -706,6 +1238,13 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 12.1 Ayın 1'i Bütçe Sıfırlama (Tüm Gelir & Giderler Sıfırlanır, Sadece Sabit Giderler Kalır)
+            if (pathname === '/api/budget/reset-month' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.resetMonthlyBudget(body.familyId);
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 13. Yatırım ve Birikim İşlemleri
             if (pathname === '/api/investments/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
@@ -881,6 +1420,12 @@ if (require.main === module) {
         }
         console.log('====================================================');
     });
+
+    // İlk açılışta 15 saniye sonra, ardından her 20 dakikada bir istek/ürün fiyatlarını tara
+    setTimeout(() => {
+        checkAllWishlistPricesPeriodic();
+    }, 15000);
+    setInterval(checkAllWishlistPricesPeriodic, 20 * 60 * 1000);
 }
 
 module.exports = appHandler;

@@ -485,6 +485,23 @@ function normalizeFamily(fam) {
     return fam;
 }
 
+// 4.9 Tüm Aileleri Getir (Periyodik İşler & Kontroller İçin)
+async function getAllFamilies() {
+    const sql = getNeon();
+    if (sql) {
+        try {
+            const rows = await sql`SELECT data FROM families`;
+            if (rows && rows.length > 0) {
+                return rows.map(r => normalizeFamily(r.data));
+            }
+        } catch (e) {
+            console.error('Neon getAllFamilies error:', e);
+        }
+    }
+    loadJsonStore();
+    return (jsonStore.families || []).map(f => normalizeFamily(f));
+}
+
 // 5. Güncel Aile Verilerini Getir
 async function getFullFamilyData(familyId) {
     const sql = getNeon();
@@ -878,6 +895,29 @@ async function deleteFixedExpense(familyId, id) {
     return await updateFamilyHelper(familyId, (fam) => {
         if (!fam.fixedExpenses) fam.fixedExpenses = [];
         fam.fixedExpenses = fam.fixedExpenses.filter(f => f.id !== id);
+        return fam;
+    });
+}
+
+// Ayın 1'inde Aylık Bütçe Sıfırlama (Tüm Gelir ve Giderler Sıfırlanır, Sadece Sabit Giderler Kalır)
+async function resetMonthlyBudget(familyId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        // 1. Gelirleri Sıfırla (Maaşlar, Ek Gelirler, Mesailer)
+        fam.salaries = [];
+        fam.extraIncomes = [];
+        fam.overtimes = [];
+
+        // 2. Değişken Giderleri Sıfırla
+        fam.expenses = [];
+
+        // 3. Sabit Giderler Korunur, Sadece Ödendi Durumları Yeni Ay İçin Sıfırlanır
+        if (!fam.fixedExpenses) fam.fixedExpenses = [];
+        fam.fixedExpenses = fam.fixedExpenses.map(f => ({
+            ...f,
+            isPaid: false
+        }));
+
+        fam.lastBudgetResetMonth = new Date().toISOString().substring(0, 7);
         return fam;
     });
 }
@@ -1309,6 +1349,7 @@ module.exports = {
     syncFamily,
     deleteMember,
     getFullFamilyData,
+    getAllFamilies,
     addPost,
     deletePost,
     addPlan,
@@ -1339,6 +1380,7 @@ module.exports = {
     updateFixedExpense,
     toggleFixedExpense,
     deleteFixedExpense,
+    resetMonthlyBudget,
     addInvestment,
     adjustInvestment,
     deleteInvestment,

@@ -899,6 +899,29 @@ async function deleteFixedExpense(familyId, id) {
     });
 }
 
+// Ayın 1'inde Aylık Bütçe Sıfırlama (Tüm Gelir ve Giderler Sıfırlanır, Sadece Sabit Giderler Kalır)
+async function resetMonthlyBudget(familyId) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        // 1. Gelirleri Sıfırla (Maaşlar, Ek Gelirler, Mesailer)
+        fam.salaries = [];
+        fam.extraIncomes = [];
+        fam.overtimes = [];
+
+        // 2. Değişken Giderleri Sıfırla
+        fam.expenses = [];
+
+        // 3. Sabit Giderler Korunur, Sadece Ödendi Durumları Yeni Ay İçin Sıfırlanır
+        if (!fam.fixedExpenses) fam.fixedExpenses = [];
+        fam.fixedExpenses = fam.fixedExpenses.map(f => ({
+            ...f,
+            isPaid: false
+        }));
+
+        fam.lastBudgetResetMonth = new Date().toISOString().substring(0, 7);
+        return fam;
+    });
+}
+
 // Yatırım ve Portföy İşlemleri
 async function addInvestment(familyId, investment) {
     return await updateFamilyHelper(familyId, (fam) => {
@@ -1357,6 +1380,7 @@ module.exports = {
     updateFixedExpense,
     toggleFixedExpense,
     deleteFixedExpense,
+    resetMonthlyBudget,
     addInvestment,
     adjustInvestment,
     deleteInvestment,

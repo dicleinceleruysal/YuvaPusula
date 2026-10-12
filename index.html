@@ -725,7 +725,10 @@
                     <!-- Aile Maaşları Dağılım Listesi (Akordeon / Mini Kartlar) -->
                     <div class="section-title">
                         <h4><i class="fa-solid fa-users"></i> Aile Fertleri Maaş Dağılımı</h4>
-                        <button class="btn-text-sm" onclick="openMySalaryModal()">+ Maaşımı Güncelle</button>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn-text-sm" onclick="triggerManualMonthReset()" title="Ayın 1'i bütçe sıfırlamasını manuel başlat"><i class="fa-solid fa-rotate"></i> Yeni Aya Başla (Sıfırla)</button>
+                            <button class="btn-text-sm" onclick="openMySalaryModal()">+ Maaşımı Güncelle</button>
+                        </div>
                     </div>
                     <div class="salaries-family-list" id="salariesListContainer">
                         <!-- Dinamik Maaş Kartları -->

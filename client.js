@@ -1543,6 +1543,23 @@ const AilemAPI = {
         return null;
     },
 
+    async resetMonthlyBudget(familyId) {
+        try {
+            const res = await fetch('/api/budget/reset-month', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {
+            console.error('resetMonthlyBudget error:', e);
+        }
+        return null;
+    },
+
     // Yatırım ve Portföy İşlemleri
     async addInvestment(familyId, investment) {
         try {
@@ -2535,31 +2552,82 @@ async function handleQuickDemoLogin() {
 // ==========================================================
 // 3. EKRAN VE GÖRÜNÜM YÖNETİMİ (RENDER)
 // ==========================================================
-function checkMonthStartRollover() {
+async function checkMonthStartRollover() {
     const family = appState.familyData;
     if (!family) return;
 
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastCheckedMonth = localStorage.getItem('yuvapusula_last_checked_month');
+    const lastCheckedMonth = localStorage.getItem('yuvapusula_last_checked_month') || family.lastBudgetResetMonth;
 
-    if (lastCheckedMonth !== currentMonthKey) {
-        // Yeni bir aya girildi! (Örn: Ayın 1'i)
-        // Sabit giderlerin isPaid (ödendi) durumunu yeni ay ödeme takibi için sıfırla (sabit giderler silinmez)
-        if (family.fixedExpenses && family.fixedExpenses.length > 0) {
-            let hasPaid = false;
-            family.fixedExpenses.forEach(f => {
-                if (f.isPaid) {
-                    f.isPaid = false;
-                    hasPaid = true;
-                }
-            });
-            if (hasPaid) {
-                saveStateToStorage();
-            }
+    if (lastCheckedMonth && lastCheckedMonth !== currentMonthKey) {
+        // Yeni bir aya girildi! (Ayın 1'inde otomatik bütçe sıfırlama)
+        // Kullanıcı kuralı: Ayın 1'inde tüm gelirler ve harcamalar sıfırlanır, sadece sabit giderler kalır (ödenmedi yapılır)
+        localStorage.setItem('yuvapusula_last_checked_month', currentMonthKey);
+
+        let updatedFamily = null;
+        if (family.id) {
+            updatedFamily = await AilemAPI.resetMonthlyBudget(family.id);
         }
+
+        if (updatedFamily) {
+            appState.familyData = normalizeFamilyData(updatedFamily);
+        } else {
+            family.salaries = [];
+            family.extraIncomes = [];
+            family.overtimes = [];
+            family.expenses = [];
+            if (family.fixedExpenses && family.fixedExpenses.length > 0) {
+                family.fixedExpenses.forEach(f => { f.isPaid = false; });
+            }
+            family.lastBudgetResetMonth = currentMonthKey;
+        }
+
+        saveStateToStorage();
+        renderBudget();
+        renderOvertimePage();
+        updateQuickStats();
+
+        showToast('🗓️ Yeni ay başladı! Tüm gelir ve giderler sıfırlandı, sabit giderleriniz hazır bekliyor.');
+    } else if (!lastCheckedMonth) {
         localStorage.setItem('yuvapusula_last_checked_month', currentMonthKey);
     }
+}
+
+async function triggerManualMonthReset() {
+    const confirmed = confirm('Yeni aya başlama sıfırlaması yapmak istediğinize emin misiniz?\n\n• Tüm maaşlar, ek gelirler ve mesailer sıfırlanacak (0 ₺)\n• Tüm değişken harcamalar sıfırlanacak (0 ₺)\n• Sadece sabit giderler kalacak ve ödenmedi olarak işaretlenecek');
+    if (!confirmed) return;
+
+    const family = appState.familyData;
+    if (!family) return;
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    localStorage.setItem('yuvapusula_last_checked_month', currentMonthKey);
+
+    let updatedFamily = null;
+    if (family.id) {
+        updatedFamily = await AilemAPI.resetMonthlyBudget(family.id);
+    }
+
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        family.salaries = [];
+        family.extraIncomes = [];
+        family.overtimes = [];
+        family.expenses = [];
+        if (family.fixedExpenses && family.fixedExpenses.length > 0) {
+            family.fixedExpenses.forEach(f => { f.isPaid = false; });
+        }
+        family.lastBudgetResetMonth = currentMonthKey;
+    }
+
+    saveStateToStorage();
+    renderBudget();
+    renderOvertimePage();
+    updateQuickStats();
+    showToast('✨ Ayın 1\'i sıfırlaması uygulandı! Sabit giderler korundu, gelir ve harcamalar sıfırlandı.');
 }
 
 async function checkDayStartRollover() {
@@ -3688,28 +3756,30 @@ function renderBudget() {
     const monthNamesTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const currentMonthLabel = `${monthNamesTr[now.getMonth()]} ${currentYear}`;
 
-    // Yalnızca aktif aya ait ek gelirleri topla
-    const currentMonthExtraIncomes = extraIncomes.filter(inc => {
-        if (inc.month) return inc.month === currentMonthKey;
-        if (inc.createdAt) return inc.createdAt.startsWith(currentMonthKey);
-        return true;
-    });
+    // Helper: Bir kaydın aktif aya ait olup olmadığını kesin tespit eder
+    function isInCurrentMonth(item) {
+        if (item.month) return item.month === currentMonthKey;
+        if (item.date) {
+            if (item.date.includes('-')) return item.date.startsWith(currentMonthKey);
+            if (item.date.includes('.')) {
+                const p = item.date.split('.');
+                if (p.length === 3) {
+                    return `${p[2]}-${p[1].padStart(2, '0')}` === currentMonthKey;
+                }
+            }
+        }
+        if (item.createdAt) return item.createdAt.startsWith(currentMonthKey);
+        return false;
+    }
+
+    // Yalnızca aktif aya ait ek gelirleri topla (Her ayın 1'inde sıfırlanır)
+    const currentMonthExtraIncomes = extraIncomes.filter(isInCurrentMonth);
 
     // Yalnızca aktif aya ait mesaileri topla (Her ayın 1'inde sıfırlanır)
-    const currentMonthOvertimes = overtimes.filter(ot => {
-        if (ot.month) return ot.month === currentMonthKey;
-        if (ot.date && ot.date.startsWith(currentMonthKey)) return true;
-        if (ot.createdAt) return ot.createdAt.startsWith(currentMonthKey);
-        return true;
-    });
+    const currentMonthOvertimes = overtimes.filter(isInCurrentMonth);
 
     // Yalnızca aktif aya ait değişken harcamaları topla (Her ayın 1'inde sıfırlanır)
-    const currentMonthExpenses = expenses.filter(exp => {
-        if (exp.month) return exp.month === currentMonthKey;
-        if (exp.date && exp.date.startsWith(currentMonthKey)) return true;
-        if (exp.createdAt) return exp.createdAt.startsWith(currentMonthKey);
-        return true;
-    });
+    const currentMonthExpenses = expenses.filter(isInCurrentMonth);
 
     const totalSalaries = salaries.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalExtraIncomes = currentMonthExtraIncomes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
@@ -5385,12 +5455,20 @@ function renderOvertimePage() {
     const monthNamesTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const currentMonthLabel = `${monthNamesTr[now.getMonth()]} ${currentYear}`;
 
-    // Aktif aya ait mesailer
+    // Aktif aya ait mesailer (Her ayın 1'inde sıfırlanır)
     const currentMonthOvertimes = family.overtimes.filter(ot => {
         if (ot.month) return ot.month === currentMonthKey;
-        if (ot.date && ot.date.startsWith(currentMonthKey)) return true;
+        if (ot.date) {
+            if (ot.date.includes('-')) return ot.date.startsWith(currentMonthKey);
+            if (ot.date.includes('.')) {
+                const p = ot.date.split('.');
+                if (p.length === 3) {
+                    return `${p[2]}-${p[1].padStart(2, '0')}` === currentMonthKey;
+                }
+            }
+        }
         if (ot.createdAt) return ot.createdAt.startsWith(currentMonthKey);
-        return true;
+        return false;
     });
 
     // 1. Dicle Mesai
