@@ -3563,10 +3563,10 @@ async function checkPlanPrice(planId, evt) {
                 saveStateToStorage();
                 renderPlans();
             }
-            if (result.priceDropped) {
+            if (result.isPriceDropEvent) {
                 triggerHapticAndSound();
                 showToast(`🟢 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Önceki: ${result.oldPrice})`);
-            } else if (result.priceIncreased) {
+            } else if (result.isPriceIncreaseEvent) {
                 triggerHapticAndSound();
                 showToast(`🔺 Fiyat YÜKSELDİ: ${result.newPrice} (Önceki: ${result.oldPrice})`, 'info');
             } else if (result.foundPrice) {

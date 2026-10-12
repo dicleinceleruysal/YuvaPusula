@@ -441,56 +441,48 @@ function extractPriceFromHtml(html) {
 function calculatePriceStatus(plan, newPriceNum, newPriceFormatted) {
     const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
     const prevPriceNum = parsePriceToNumber(rawPrevPrice);
-    const oldPriceNum = plan.oldPrice ? parsePriceToNumber(plan.oldPrice) : 0;
-    const initPriceNum = plan.initialPrice ? parsePriceToNumber(plan.initialPrice) : 0;
+    const lastNotifiedNum = plan.lastNotifiedPrice ? parsePriceToNumber(plan.lastNotifiedPrice) : 0;
 
-    let priceDropped = false;
-    let priceIncreased = false;
+    let isPriceDropEvent = false;
+    let isPriceIncreaseEvent = false;
+    let priceDropped = plan.priceDropped || false;
+    let priceIncreased = plan.priceIncreased || false;
     let oldPriceFormatted = plan.oldPrice || '';
 
     if (prevPriceNum > 0) {
         if (newPriceNum < prevPriceNum) {
+            // Gerçek fiyat düşüşü!
+            if (lastNotifiedNum !== newPriceNum) {
+                isPriceDropEvent = true;
+            }
             priceDropped = true;
             priceIncreased = false;
             oldPriceFormatted = formatPriceTr(prevPriceNum);
         } else if (newPriceNum > prevPriceNum) {
+            // Gerçek fiyat artışı!
+            if (lastNotifiedNum !== newPriceNum) {
+                isPriceIncreaseEvent = true;
+            }
             priceIncreased = true;
             priceDropped = false;
             oldPriceFormatted = formatPriceTr(prevPriceNum);
         } else {
-            // newPriceNum === prevPriceNum
-            if (plan.priceDropped && oldPriceNum > 0 && newPriceNum < oldPriceNum) {
-                priceDropped = true;
-                priceIncreased = false;
-                oldPriceFormatted = formatPriceTr(oldPriceNum);
-            } else if (plan.priceIncreased && oldPriceNum > 0 && newPriceNum > oldPriceNum) {
-                priceIncreased = true;
-                priceDropped = false;
-                oldPriceFormatted = formatPriceTr(oldPriceNum);
-            } else if (initPriceNum > 0 && newPriceNum < initPriceNum) {
-                priceDropped = true;
-                priceIncreased = false;
-                oldPriceFormatted = formatPriceTr(initPriceNum);
-            } else if (initPriceNum > 0 && newPriceNum > initPriceNum) {
-                priceIncreased = true;
-                priceDropped = false;
-                oldPriceFormatted = formatPriceTr(initPriceNum);
-            } else {
-                priceDropped = false;
-                priceIncreased = false;
+            // newPriceNum === prevPriceNum -> FİYAT DEĞİŞMEDİ!
+            isPriceDropEvent = false;
+            isPriceIncreaseEvent = false;
+            if (oldPriceFormatted && parsePriceToNumber(oldPriceFormatted) === newPriceNum) {
                 oldPriceFormatted = '';
+                priceDropped = false;
+                priceIncreased = false;
             }
         }
     } else {
-        if (initPriceNum > 0 && newPriceNum < initPriceNum) {
-            priceDropped = true;
-            priceIncreased = false;
-            oldPriceFormatted = formatPriceTr(initPriceNum);
-        } else if (initPriceNum > 0 && newPriceNum > initPriceNum) {
-            priceIncreased = true;
-            priceDropped = false;
-            oldPriceFormatted = formatPriceTr(initPriceNum);
-        }
+        // İlk defa fiyat tespit ediliyor, baz fiyat olarak kaydedilir
+        isPriceDropEvent = false;
+        isPriceIncreaseEvent = false;
+        priceDropped = false;
+        priceIncreased = false;
+        oldPriceFormatted = '';
     }
 
     const updatedPlan = {
@@ -500,20 +492,23 @@ function calculatePriceStatus(plan, newPriceNum, newPriceFormatted) {
         lastPriceCheck: new Date().toISOString()
     };
 
-    if (priceDropped) {
+    if (isPriceDropEvent) {
         updatedPlan.priceDropped = true;
         updatedPlan.priceIncreased = false;
         updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastNotifiedPrice = newPriceFormatted;
         updatedPlan.lastPriceDropTime = new Date().toISOString();
-    } else if (priceIncreased) {
+    } else if (isPriceIncreaseEvent) {
         updatedPlan.priceDropped = false;
         updatedPlan.priceIncreased = true;
         updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastNotifiedPrice = newPriceFormatted;
         updatedPlan.lastPriceIncreaseTime = new Date().toISOString();
     } else {
-        updatedPlan.priceDropped = false;
-        updatedPlan.priceIncreased = false;
-        updatedPlan.oldPrice = '';
+        // Fiyat değişmediğinde güncel fiyatı koru
+        updatedPlan.priceDropped = priceDropped;
+        updatedPlan.priceIncreased = priceIncreased;
+        updatedPlan.oldPrice = oldPriceFormatted;
         if (!plan.initialPrice && prevPriceNum === 0) {
             updatedPlan.initialPrice = newPriceFormatted;
         }
@@ -521,9 +516,11 @@ function calculatePriceStatus(plan, newPriceNum, newPriceFormatted) {
 
     return {
         updatedPlan,
-        priceDropped,
-        priceIncreased,
-        oldPriceFormatted: (priceDropped || priceIncreased) ? oldPriceFormatted : ''
+        isPriceDropEvent,
+        isPriceIncreaseEvent,
+        priceDropped: updatedPlan.priceDropped,
+        priceIncreased: updatedPlan.priceIncreased,
+        oldPriceFormatted: (updatedPlan.priceDropped || updatedPlan.priceIncreased) ? updatedPlan.oldPrice : ''
     };
 }
 
@@ -546,11 +543,19 @@ async function checkWishlistPriceForPlan(familyId, planId) {
     const newPriceNum = priceResult.number;
     const newPriceFormatted = priceResult.formatted;
 
-    const { updatedPlan, priceDropped, priceIncreased, oldPriceFormatted } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
+    const { 
+        updatedPlan, 
+        isPriceDropEvent, 
+        isPriceIncreaseEvent, 
+        priceDropped, 
+        priceIncreased, 
+        oldPriceFormatted 
+    } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
 
     const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
 
-    if (priceDropped) {
+    // BİLDİRİM: SADECE VE SADECE GERÇEK BİR DEĞİŞİKLİK OLDUĞUNDA (İLK DÜŞÜŞTE VEYA İLK ARTIŞTA) GÖNDERİLİR!
+    if (isPriceDropEvent) {
         // 1. Canlı SSE ile AÇIK OLAN TÜM CİHAZLARA ANINDA SESLİ & GÖRSEL İNDİRİM BİLDİRİMİ FIRLAT
         broadcastToFamilyLive(familyId, 'price_drop', {
             family: updatedFamily,
@@ -567,7 +572,7 @@ async function checkWishlistPriceForPlan(familyId, planId) {
             icon: './icons/icon-192.png',
             url: './index.html?tab=plans'
         }, null).catch(e => {});
-    } else if (priceIncreased) {
+    } else if (isPriceIncreaseEvent) {
         // Fiyat Yükselişi SSE ve Bildirimi
         broadcastToFamilyLive(familyId, 'price_increase', {
             family: updatedFamily,
@@ -584,11 +589,14 @@ async function checkWishlistPriceForPlan(familyId, planId) {
             url: './index.html?tab=plans'
         }, null).catch(e => {});
     } else {
+        // Fiyat aynıysa: Bildirim veya ses yok, sadece sessiz SSE güncellemesi
         broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
     }
 
     return {
         success: true,
+        isPriceDropEvent,
+        isPriceIncreaseEvent,
         priceDropped,
         priceIncreased,
         oldPrice: oldPriceFormatted,
@@ -983,14 +991,22 @@ async function appHandler(req, res) {
                         if (newNum > 0) {
                             newPriceFormatted = formatPriceTr(newNum);
                             const resStatus = calculatePriceStatus(existingPlan, newNum, newPriceFormatted);
-                            isPriceDrop = resStatus.priceDropped;
-                            isPriceIncrease = resStatus.priceIncreased;
+                            isPriceDrop = resStatus.isPriceDropEvent;
+                            isPriceIncrease = resStatus.isPriceIncreaseEvent;
                             oldPriceFormatted = resStatus.oldPriceFormatted;
-                            body.plan.priceDropped = isPriceDrop;
-                            body.plan.priceIncreased = isPriceIncrease;
+                            body.plan.shopPrice = newPriceFormatted;
+                            body.plan.currentPrice = newPriceFormatted;
+                            body.plan.priceDropped = resStatus.priceDropped;
+                            body.plan.priceIncreased = resStatus.priceIncreased;
                             body.plan.oldPrice = oldPriceFormatted;
-                            if (isPriceDrop) body.plan.lastPriceDropTime = new Date().toISOString();
-                            if (isPriceIncrease) body.plan.lastPriceIncreaseTime = new Date().toISOString();
+                            if (isPriceDrop) {
+                                body.plan.lastPriceDropTime = new Date().toISOString();
+                                body.plan.lastNotifiedPrice = newPriceFormatted;
+                            }
+                            if (isPriceIncrease) {
+                                body.plan.lastPriceIncreaseTime = new Date().toISOString();
+                                body.plan.lastNotifiedPrice = newPriceFormatted;
+                            }
                         }
                     }
                 }
@@ -1091,11 +1107,18 @@ async function appHandler(req, res) {
                 }
 
                 const newPriceFormatted = formatPriceTr(newPriceNum);
-                const { updatedPlan, priceDropped, priceIncreased, oldPriceFormatted } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
+                const { 
+                    updatedPlan, 
+                    isPriceDropEvent, 
+                    isPriceIncreaseEvent, 
+                    priceDropped, 
+                    priceIncreased, 
+                    oldPriceFormatted 
+                } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
 
                 const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
 
-                if (priceDropped) {
+                if (isPriceDropEvent) {
                     broadcastToFamilyLive(familyId, 'price_drop', {
                         family: updatedFamily,
                         planId: plan.id,
@@ -1110,7 +1133,7 @@ async function appHandler(req, res) {
                         icon: './icons/icon-192.png',
                         url: './index.html?tab=plans'
                     }, null).catch(e => {});
-                } else if (priceIncreased) {
+                } else if (isPriceIncreaseEvent) {
                     broadcastToFamilyLive(familyId, 'price_increase', {
                         family: updatedFamily,
                         planId: plan.id,
@@ -1131,6 +1154,8 @@ async function appHandler(req, res) {
 
                 return sendJson(res, 200, {
                     success: true,
+                    isPriceDropEvent,
+                    isPriceIncreaseEvent,
                     priceDropped,
                     priceIncreased,
                     oldPrice: oldPriceFormatted,
