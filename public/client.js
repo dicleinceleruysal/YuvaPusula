@@ -3689,7 +3689,8 @@ function renderBudget() {
     const totalSalaries = salaries.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalExtraIncomes = currentMonthExtraIncomes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const totalOvertimes = currentMonthOvertimes.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-    const totalIncome = totalSalaries + totalExtraIncomes + totalOvertimes;
+    // Mesai ücretleri aylık sabit/ana gelire eklenmez, kendi panelinde bağımsız takip edilir
+    const totalIncome = totalSalaries + totalExtraIncomes;
     const totalFixed = fixedExpenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const paidCount = fixedExpenses.filter(x => x.isPaid).length;
     const unpaidCount = fixedExpenses.filter(x => !x.isPaid).length;
@@ -3705,9 +3706,8 @@ function renderBudget() {
     if (elSalaryCount) {
         const parts = [];
         if (totalSalaries > 0) parts.push(`Maaş: ${formatTL(totalSalaries)}`);
-        if (totalOvertimes > 0) parts.push(`Mesai: ${formatTL(totalOvertimes)}`);
-        if (totalExtraIncomes > 0) parts.push(`Ek: ${formatTL(totalExtraIncomes)}`);
-        elSalaryCount.textContent = parts.length > 0 ? parts.join(' • ') : `${salaries.length} maaş geliri (Ek/Mesai yok)`;
+        if (totalExtraIncomes > 0) parts.push(`Ek Gelir: ${formatTL(totalExtraIncomes)}`);
+        elSalaryCount.textContent = parts.length > 0 ? parts.join(' • ') : `${salaries.length} maaş geliri (Ek gelir yok)`;
     }
 
     const elStatFixed = document.getElementById('statTotalFixedExpenses');
