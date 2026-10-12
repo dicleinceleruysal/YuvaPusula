@@ -2671,10 +2671,13 @@ async function checkDayStartRollover() {
                 renderDailyPlans();
             }
         } else if (family.dailyPlans && family.dailyPlans.length > 0) {
-            // Çevrimdışı fallback: Tekrarlayan rutinler kalır (completed: false), tek günlük planlar temizlenir
+            // Çevrimdışı fallback: Tekrarlayan rutinler kalır (completed: false), tek günlük planlar ve 'Bugün' görevleri temizlenir
             family.dailyPlans = family.dailyPlans
                 .filter(p => p.isRecurring)
-                .map(p => ({ ...p, completed: false }));
+                .map(p => ({ ...p, completed: false, completedAt: null }));
+            if (family.tasks && Array.isArray(family.tasks)) {
+                family.tasks = family.tasks.filter(t => (t.dueDate || '').toLowerCase() !== 'bugün');
+            }
             saveStateToStorage();
             renderDailyPlans();
         }
@@ -3116,18 +3119,39 @@ function renderDailyPlans() {
 
     const todayMatchStrings = getTodayFormattedStrings();
 
-    // 1. Günlük Rutinleri Al
-    const dailyItems = family.dailyPlans.map(p => ({
-        ...p,
-        itemType: 'dailyPlan'
-    }));
+    const todayIso = now.toISOString().split('T')[0];
+
+    // 1. Günlük Rutinleri Al (Her Gün tekrarlayanlar veya bugün eklenenler)
+    const dailyItems = family.dailyPlans
+        .filter(p => {
+            if (p.isRecurring !== false) return true;
+            if (p.createdAt) {
+                const planDay = p.createdAt.split('T')[0];
+                if (planDay !== todayIso) return false;
+            }
+            return true;
+        })
+        .map(p => ({
+            ...p,
+            itemType: 'dailyPlan'
+        }));
 
     // 2. Bugünün Görevlerini Al (Görevler tabından bugüne eklenenler)
+    // Sadece BUGÜN eklenmiş 'Bugün' görevleri veya 'Düzenli' olanlar gösterilir.
+    // Geçmiş günlerden kalma tek seferlik görevler gün bittiğinde gösterilmez.
     const todayTasks = family.tasks
         .filter(t => {
             if (!t.dueDate) return false;
-            const due = t.dueDate.trim();
-            return todayMatchStrings.some(s => due.includes(s) || due === s);
+            const due = t.dueDate.trim().toLowerCase();
+            if (due === 'bugün' || due === 'today') {
+                if (t.createdAt) {
+                    const taskDay = t.createdAt.split('T')[0];
+                    if (taskDay !== todayIso) return false;
+                }
+                return true;
+            }
+            if (due === 'düzenli' || due === 'düzenli günlük') return true;
+            return todayMatchStrings.some(s => due.includes(s.toLowerCase()) || due === s.toLowerCase());
         })
         .map(t => ({
             id: t.id,
@@ -4483,7 +4507,10 @@ async function handleResetDailyPlans() {
         if (appState.familyData.dailyPlans) {
             appState.familyData.dailyPlans = appState.familyData.dailyPlans
                 .filter(p => p.isRecurring)
-                .map(p => ({ ...p, completed: false }));
+                .map(p => ({ ...p, completed: false, completedAt: null }));
+        }
+        if (appState.familyData.tasks) {
+            appState.familyData.tasks = appState.familyData.tasks.filter(t => (t.dueDate || '').toLowerCase() !== 'bugün');
         }
     }
 

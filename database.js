@@ -470,6 +470,15 @@ function normalizeFamily(fam) {
     if (!fam.shoppingList) fam.shoppingList = fam.shopping || [];
     fam.shopping = fam.shoppingList;
     if (!fam.tasks) fam.tasks = [];
+    const todayIsoStr = new Date().toISOString().split('T')[0];
+    fam.tasks = fam.tasks.filter(t => {
+        const due = (t.dueDate || '').trim().toLowerCase();
+        if ((due === 'bugün' || due === 'today') && t.createdAt) {
+            const taskDay = t.createdAt.split('T')[0];
+            if (taskDay < todayIsoStr) return false;
+        }
+        return true;
+    });
     if (!fam.expenses) fam.expenses = [];
     if (!fam.salaries) fam.salaries = [];
     if (!fam.extraIncomes) fam.extraIncomes = [];
@@ -699,14 +708,29 @@ async function deleteDailyPlan(familyId, planId) {
 
 async function resetDailyPlans(familyId) {
     return await updateFamilyHelper(familyId, (fam) => {
+        // 1. Günlük Rutinler: Sadece 'Her Gün' olanlar kalsın (isRecurring === true), tamamlanma durumu sıfırlansın.
+        // Tek seferlik günlük planlar silinsin.
         if (!fam.dailyPlans) fam.dailyPlans = [];
         fam.dailyPlans = fam.dailyPlans
-            .filter(p => p.isRecurring !== false)
+            .filter(p => p.isRecurring === true)
             .map(p => ({
                 ...p,
                 completed: false,
                 completedAt: null
             }));
+
+        // 2. Bugünün Görevleri: Gün bittiğinde 'Bugün' vadeli tek seferlik görevler silinsin.
+        // Sadece 'Düzenli' olanlar ve ileri vadeli görevler kalsın.
+        if (fam.tasks && Array.isArray(fam.tasks)) {
+            fam.tasks = fam.tasks.filter(t => {
+                const due = (t.dueDate || '').trim().toLowerCase();
+                if (due === 'bugün' || due === 'today') {
+                    return false;
+                }
+                return true;
+            });
+        }
+
         return fam;
     });
 }

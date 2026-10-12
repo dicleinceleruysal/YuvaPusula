@@ -1511,6 +1511,31 @@ async function appHandler(req, res) {
     });
 }
 
+let lastRolloverDay = new Date().toISOString().split('T')[0];
+
+async function checkServerMidnightRollover() {
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (todayStr !== lastRolloverDay) {
+            console.log(`[Midnight Rollover] Yeni güne geçildi: ${todayStr}. Günlük planlar ve 'Bugün' görevleri sıfırlanıyor...`);
+            lastRolloverDay = todayStr;
+            const families = await dbManager.getAllFamilies();
+            if (families && Array.isArray(families)) {
+                for (const fam of families) {
+                    if (fam && fam.id) {
+                        const updated = await dbManager.resetDailyPlans(fam.id);
+                        if (updated) {
+                            broadcastToFamilyLive(fam.id, 'update', { family: updated });
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Midnight Rollover Error]:', e.message);
+    }
+}
+
 const server = http.createServer(appHandler);
 
 if (require.main === module) {
@@ -1537,6 +1562,9 @@ if (require.main === module) {
         checkAllWishlistPricesPeriodic();
     }, 15000);
     setInterval(checkAllWishlistPricesPeriodic, 20 * 60 * 1000);
+
+    // Her dakika kontrol et, gece 00:00 olduğunda günün tek seferlik görevlerini temizle ve günlük rutinleri sıfırla
+    setInterval(checkServerMidnightRollover, 60 * 1000);
 }
 
 module.exports = appHandler;
