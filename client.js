@@ -2730,6 +2730,18 @@ function updateQuickStats() {
         quickOvertimeEl.textContent = `${totalOt.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺`;
     }
 
+    // Hızlı Hayır & Sadaka Özeti
+    const quickCharityEl = document.getElementById('quickCharityTotal');
+    if (quickCharityEl) {
+        const selectedMonth = appState.budgetSelectedMonth || new Date().toISOString().substring(0, 7);
+        const charities = (family.charities || []).filter(c => {
+            const m = c.month || (c.date ? c.date.substring(0, 7) : '');
+            return m === selectedMonth;
+        });
+        const totalCharityMonth = charities.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+        quickCharityEl.textContent = `${totalCharityMonth.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺`;
+    }
+
     // Hub Kategori Sayaçları
     const countSeyahat = allPlans.filter(p => p.category === 'Seyahat').length;
     const countRestoran = allPlans.filter(p => p.category === 'Restoran').length;
@@ -4939,8 +4951,12 @@ function filterTasks(status, btn) {
 // BÜTÇE, MAAŞ, SABİT GİDER VE YATIRIM ETKİLEŞİMLERİ
 // ==========================================================
 
-// Alt Sekme Geçişi (Harcamalar, Sabit Giderler, Yatırımlar, Hayır & Sadaka)
+// Alt Sekme Geçişi (Harcamalar, Sabit Giderler, Yatırımlar)
 function switchBudgetSubTab(tabKey) {
+    if (tabKey === 'charity') {
+        switchTab('tabCharity');
+        return;
+    }
     appState.activeBudgetSubTab = tabKey;
 
     // Subtab butonları aktifliği
@@ -4948,7 +4964,6 @@ function switchBudgetSubTab(tabKey) {
     let activeBtnId = 'subtabBtnExpenses';
     if (tabKey === 'fixed') activeBtnId = 'subtabBtnFixed';
     else if (tabKey === 'investments') activeBtnId = 'subtabBtnInvestments';
-    else if (tabKey === 'charity') activeBtnId = 'subtabBtnCharity';
 
     const activeSubBtn = document.getElementById(activeBtnId);
     if (activeSubBtn) activeSubBtn.classList.add('active');
@@ -4957,11 +4972,9 @@ function switchBudgetSubTab(tabKey) {
     const viewExp = document.getElementById('budgetViewExpenses');
     const viewFixed = document.getElementById('budgetViewFixed');
     const viewInv = document.getElementById('budgetViewInvestments');
-    const viewCharity = document.getElementById('budgetViewCharity');
 
     if (viewExp) viewExp.classList.toggle('hidden', tabKey !== 'expenses');
     if (viewFixed) viewFixed.classList.toggle('hidden', tabKey !== 'fixed');
-    if (viewCharity) viewCharity.classList.toggle('hidden', tabKey !== 'charity');
     if (viewInv) {
         viewInv.classList.toggle('hidden', tabKey !== 'investments');
         if (tabKey === 'investments') {
@@ -4975,7 +4988,6 @@ function switchBudgetSubTab(tabKey) {
         if (tabKey === 'expenses') btnActionText.textContent = 'Harcama Ekle';
         else if (tabKey === 'fixed') btnActionText.textContent = 'Sabit Gider Ekle';
         else if (tabKey === 'investments') btnActionText.textContent = 'Yatırım Ekle';
-        else if (tabKey === 'charity') btnActionText.textContent = 'Hayır Ekle';
     }
 }
 
@@ -5053,6 +5065,8 @@ async function handleAddCharity(e) {
 
     saveStateToStorage();
     renderBudget();
+    renderCharities();
+    updateQuickStats();
 }
 
 async function handleDeleteCharity(id) {
@@ -5072,6 +5086,8 @@ async function handleDeleteCharity(id) {
 
     saveStateToStorage();
     renderBudget();
+    renderCharities();
+    updateQuickStats();
 }
 
 function filterCharityCategory(cat, btn) {
@@ -6984,6 +7000,8 @@ function switchTab(tabId, navBtn) {
         fetchLiveMarketRates();
     } else if (tabId === 'tabOvertime') {
         renderOvertimePage();
+    } else if (tabId === 'tabCharity') {
+        renderCharities();
     }
 
     // Hem Mobil Bottom Nav hem de Masaüstü Sidebar Öğelerini Senkronize Et
