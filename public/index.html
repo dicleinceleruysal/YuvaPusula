@@ -160,6 +160,10 @@
                     <i class="fa-solid fa-wallet"></i>
                     <span>Bütçe & Yatırım</span>
                 </button>
+                <button class="sidebar-nav-item" data-tab-target="tabOvertime" onclick="switchTab('tabOvertime')">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Mesai Takibi</span>
+                </button>
                 <button class="sidebar-nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers')">
                     <i class="fa-solid fa-users"></i>
                     <span>Aile Bireyleri</span>
@@ -248,6 +252,10 @@
                 <div class="quick-stat-pill" onclick="switchTab('tabTasks')">
                     <i class="fa-solid fa-list-check"></i>
                     <span id="quickPendingTasks">0</span> Görev
+                </div>
+                <div class="quick-stat-pill" onclick="switchTab('tabOvertime')" title="Mesai Takip Sayfasına Git">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span id="quickOvertimeTotal">0 ₺</span> Mesai
                 </div>
                 <div class="quick-stat-pill" onclick="switchTab('tabMembers')">
                     <i class="fa-solid fa-users"></i>
@@ -638,8 +646,8 @@
                         <button class="btn-primary-sm" onclick="openMySalaryModal()">
                             <i class="fa-solid fa-money-bill-wave"></i> Maaşım
                         </button>
-                        <button class="btn-primary-sm" onclick="openAddOvertimeModal()" style="background: linear-gradient(135deg, #D49A48, #C46747);">
-                            <i class="fa-solid fa-clock-rotate-left"></i> + Mesai Ekle
+                        <button class="btn-secondary-sm" onclick="switchTab('tabOvertime')" title="Mesai Takip Sayfasına Git">
+                            <i class="fa-solid fa-clock-rotate-left"></i> <span>Mesai Takibi</span>
                         </button>
                         <button class="btn-primary-sm" onclick="openAddExtraIncomeModal()" style="background: linear-gradient(135deg, #10b981, #059669);">
                             <i class="fa-solid fa-hand-holding-dollar"></i> + Ek Gelir
@@ -719,49 +727,7 @@
                         <!-- Dinamik Maaş Kartları -->
                     </div>
 
-                    <!-- Bu Ayki Mesai Takip Paneli (Saatlik 296,875 TL & Fırat - Ayın 1'inde Sıfırlanır) -->
-                    <div class="overtime-section-card">
-                        <div class="overtime-section-header">
-                            <div class="overtime-header-left">
-                                <div class="overtime-header-icon">
-                                    <i class="fa-solid fa-clock-rotate-left"></i>
-                                </div>
-                                <div>
-                                    <h4>Aylık Mesai & Ek Kazanç Takibi</h4>
-                                    <span class="extra-income-month-badge" id="overtimeMonthBadge">📅 Yükleniyor...</span>
-                                </div>
-                            </div>
-                            <button class="btn-daily-add-sm" onclick="openAddOvertimeModal()">
-                                <i class="fa-solid fa-plus"></i> <span>Mesai Ekle</span>
-                            </button>
-                        </div>
 
-                        <!-- Mesai 2'li Özet Kutuları (Dicle Mesai & Fırat Mesai) -->
-                        <div class="overtime-summary-grid">
-                            <div class="overtime-summary-box my-overtime">
-                                <div class="ot-box-top">
-                                    <span class="ot-box-badge">👩 Dicle Mesai</span>
-                                    <small class="ot-rate-tag">296,875 ₺ / saat</small>
-                                </div>
-                                <div class="ot-box-val" id="dicleOvertimeTotalAmount">0,00 ₺</div>
-                                <div class="ot-box-sub" id="dicleOvertimeTotalHours">0 Saat İşlendi</div>
-                            </div>
-
-                            <div class="overtime-summary-box firat-overtime">
-                                <div class="ot-box-top">
-                                    <span class="ot-box-badge">👨 Fırat Mesai</span>
-                                    <small class="ot-rate-tag" id="firatOvertimeRateTag">H.İçi: 1.041,67 ₺ • Cts: 3.125,00 ₺</small>
-                                </div>
-                                <div class="ot-box-val" id="firatOvertimeTotalAmount">0,00 ₺</div>
-                                <div class="ot-box-sub" id="firatOvertimeTotalDays">0 Gün Mesai</div>
-                            </div>
-                        </div>
-
-                        <!-- Mesai Hareket Listesi -->
-                        <div class="overtimes-list" id="overtimesListContainer">
-                            <!-- Dinamik Mesai Kartları -->
-                        </div>
-                    </div>
 
                     <!-- Bu Ayki Ek Gelirler (Prim, İkramiye, Kira vb. - Ayın 1'inde Sıfırlanır) -->
                     <div class="section-title" style="margin-top: 20px;">
@@ -993,6 +959,76 @@
                     </div>
                 </div>
             </section>
+ 
+            <!-- TAB: MESAİ VE EK KAZANÇ TAKİBİ (AYRI SAYFA) -->
+            <section id="tabOvertime" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>⏱️ Mesai & Ek Kazanç Takibi</h3>
+                        <p class="subtitle">Dicle ve Fırat için aylık mesai saatleri ve hak ediş hesaplama</p>
+                    </div>
+                    <button class="btn-primary-sm" onclick="openAddOvertimeModal()" style="background: linear-gradient(135deg, #D49A48, #C46747);">
+                        <i class="fa-solid fa-plus"></i> Mesai Ekle
+                    </button>
+                </div>
+
+                <!-- 3'LÜ MESAİ ÖZET KARTLARI -->
+                <div class="overtime-page-master-grid">
+                    <div class="master-stat-card" style="background: linear-gradient(135deg, #2C221D, #40322A); color: white;">
+                        <div class="stat-header">
+                            <span class="stat-icon" style="background: rgba(212, 154, 72, 0.2); color: #D49A48;"><i class="fa-solid fa-sack-dollar"></i></span>
+                            <span class="stat-title" style="color: #E6D7C8;">Toplam Mesai Kazancı</span>
+                        </div>
+                        <div class="stat-value" id="overtimeTotalMasterAmount" style="color: #F8F4EE;">0,00 ₺</div>
+                        <span class="stat-desc" id="overtimeTotalMasterDesc" style="color: #BDB0A4;">🟢 Bu Ayki Hak Ediş</span>
+                    </div>
+
+                    <div class="overtime-summary-box my-overtime">
+                        <div class="ot-box-top">
+                            <span class="ot-box-badge">👩 Dicle Mesai</span>
+                            <small class="ot-rate-tag">296,875 ₺ / saat</small>
+                        </div>
+                        <div class="ot-box-val" id="dicleOvertimeTotalAmount">0,00 ₺</div>
+                        <div class="ot-box-sub" id="dicleOvertimeTotalHours">0 Saat İşlendi</div>
+                    </div>
+
+                    <div class="overtime-summary-box firat-overtime">
+                        <div class="ot-box-top">
+                            <span class="ot-box-badge">👨 Fırat Mesai</span>
+                            <small class="ot-rate-tag" id="firatOvertimeRateTag">H.İçi: 1.041,67 ₺ • Cts: 3.125,00 ₺</small>
+                        </div>
+                        <div class="ot-box-val" id="firatOvertimeTotalAmount">0,00 ₺</div>
+                        <div class="ot-box-sub" id="firatOvertimeTotalDays">0 Gün Mesai</div>
+                    </div>
+                </div>
+
+                <!-- BİLGİLENDİRME VE FİLTRE BARI -->
+                <div class="overtime-filter-bar">
+                    <div class="category-chips" id="overtimePersonFilter">
+                        <button class="chip active" onclick="filterOvertimePerson('ALL', this)">Tümü</button>
+                        <button class="chip" onclick="filterOvertimePerson('Dicle', this)">👩 Dicle</button>
+                        <button class="chip" onclick="filterOvertimePerson('Fırat', this)">👨 Fırat</button>
+                    </div>
+                    <span class="extra-income-month-badge" id="overtimeMonthBadge">📅 Yükleniyor...</span>
+                </div>
+
+                <!-- MESAİ HAREKETLERİ LİSTESİ -->
+                <div class="section-title" style="margin-top: 15px;">
+                    <h4><i class="fa-solid fa-list-check"></i> Bu Ayki Mesai Kayıtları</h4>
+                </div>
+                <div class="overtimes-list" id="overtimesListContainer">
+                    <!-- Dinamik Mesai Kartları -->
+                </div>
+
+                <!-- MESAİ BİLGİLENDİRME KUTUSU -->
+                <div class="overtime-info-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <div>
+                        <strong>Mesai Takip Kuralları</strong>
+                        <p>Mesai kazançları ana bütçe ve maaş gelirine dahil edilmez, ayrı olarak takip edilir. Dicle için saatlik 296,875 ₺; Fırat için hafta içi günlük 1.041,67 ₺, Cumartesi günü 3.125,00 ₺ katsayısı uygulanır. Her ayın 1'inde yeni döneme başlar.</p>
+                    </div>
+                </div>
+            </section>
 
             <!-- TAB 5: AİLE BİLGİSİ, ÜYELER VE AYARLAR -->
             <section id="tabMembers" class="tab-panel">
@@ -1088,6 +1124,10 @@
             <button class="nav-item" data-tab-target="tabExpenses" onclick="switchTab('tabExpenses', this)">
                 <i class="fa-solid fa-wallet"></i>
                 <span>Bütçe</span>
+            </button>
+            <button class="nav-item" data-tab-target="tabOvertime" onclick="switchTab('tabOvertime', this)">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Mesai</span>
             </button>
             <button class="nav-item" data-tab-target="tabMembers" onclick="switchTab('tabMembers', this)">
                 <i class="fa-solid fa-users"></i>

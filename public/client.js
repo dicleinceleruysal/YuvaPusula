@@ -87,6 +87,7 @@ let appState = {
     taskFilter: 'ALL',
     taskAssigneeFilter: 'MINE',     // 'MINE', 'ALL', 'DICLE', 'FIRAT', 'FAMILY'
     dailyPlannerFilter: 'MINE',     // 'MINE' (Bana Özel + Tüm Aile), 'ALL' (Tüm Aile Akışı)
+    overtimePersonFilter: 'ALL',     // 'ALL', 'Dicle', 'Fırat'
     deferredPrompt: null
 };
 
@@ -2717,6 +2718,18 @@ function updateQuickStats() {
     const quickMemberEl = document.getElementById('quickMemberCount');
     if (quickMemberEl) quickMemberEl.textContent = memberItems.length;
 
+    // Hızlı Mesai Özeti
+    const quickOvertimeEl = document.getElementById('quickOvertimeTotal');
+    if (quickOvertimeEl) {
+        const selectedMonth = appState.budgetSelectedMonth || new Date().toISOString().substring(0, 7);
+        const overtimes = (family.overtimes || []).filter(o => {
+            const m = o.month || (o.date ? o.date.substring(0, 7) : '');
+            return m === selectedMonth;
+        });
+        const totalOt = overtimes.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+        quickOvertimeEl.textContent = `${totalOt.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺`;
+    }
+
     // Hub Kategori Sayaçları
     const countSeyahat = allPlans.filter(p => p.category === 'Seyahat').length;
     const countRestoran = allPlans.filter(p => p.category === 'Restoran').length;
@@ -3794,96 +3807,8 @@ function renderBudget() {
         }
     }
 
-    // 4.0 Bu Ayki Mesai Takip Paneli Render (Saatlik 296,875 TL & Fırat - Ayın 1'inde Sıfırlanır)
-    const otMonthBadgeEl = document.getElementById('overtimeMonthBadge');
-    if (otMonthBadgeEl) {
-        otMonthBadgeEl.innerHTML = `🟢 ${currentMonthLabel} • Ayın 1'inde Sıfırlanır`;
-    }
-
-    const curUserName = (appState.currentUser ? appState.currentUser.name : '').toLowerCase();
-
-    // 1. Dicle Mesai (Saatlik 296,875 TL)
-    const dicleOvertimes = currentMonthOvertimes.filter(ot => {
-        const p = (ot.person || '').toLowerCase();
-        return p.includes('dicle') || (!p.includes('fırat') && !p.includes('firat'));
-    });
-    const dicleTotalAmount = dicleOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
-    const dicleTotalHours = dicleOvertimes.reduce((s, o) => s + (parseFloat(o.hours) || 0), 0);
-
-    const elDicleOtAmount = document.getElementById('dicleOvertimeTotalAmount') || document.getElementById('myOvertimeTotalAmount');
-    if (elDicleOtAmount) elDicleOtAmount.textContent = formatTL(dicleTotalAmount);
-
-    const elDicleOtHours = document.getElementById('dicleOvertimeTotalHours') || document.getElementById('myOvertimeTotalHours');
-    if (elDicleOtHours) elDicleOtHours.textContent = `${dicleTotalHours > 0 ? dicleTotalHours.toLocaleString('tr-TR') : 0} Saat İşlendi`;
-
-    // 2. Fırat Mesai (Günlük: Hafta İçi 1.041,67 TL / Cumartesi 3.125,00 TL)
-    const firatOvertimes = currentMonthOvertimes.filter(ot => {
-        const p = (ot.person || '').toLowerCase();
-        return p.includes('fırat') || p.includes('firat');
-    });
-    const firatTotalAmount = firatOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
-    const firatTotalDays = firatOvertimes.reduce((s, o) => s + (parseFloat(o.days) || 1), 0);
-
-    const elFiratOtAmount = document.getElementById('firatOvertimeTotalAmount');
-    if (elFiratOtAmount) elFiratOtAmount.textContent = formatTL(firatTotalAmount);
-
-    const elFiratOtDays = document.getElementById('firatOvertimeTotalDays') || document.getElementById('firatOvertimeTotalHours');
-    if (elFiratOtDays) {
-        elFiratOtDays.textContent = `${firatTotalDays > 0 ? firatTotalDays.toLocaleString('tr-TR') : 0} Gün Mesai`;
-    }
-
-    const overtimesContainer = document.getElementById('overtimesListContainer');
-    if (overtimesContainer) {
-        if (currentMonthOvertimes.length === 0) {
-            overtimesContainer.innerHTML = `
-                <div class="empty-state" style="padding: 16px; grid-column: 1 / -1;">
-                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary); font-size: 24px; margin-bottom: 6px;"></i>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Bu ay (${currentMonthLabel}) henüz mesai girişi yapılmadı.<br>Dicle veya Fırat için mesai ekleyebilirsiniz.</p>
-                </div>
-            `;
-        } else {
-            overtimesContainer.innerHTML = currentMonthOvertimes.map(ot => {
-                const isFirat = (ot.person || '').toLowerCase().includes('fırat') || (ot.person || '').toLowerCase().includes('firat');
-                let personDisplay = isFirat ? '👨 Fırat Mesai' : '👩 Dicle Mesai';
-                let iconDisplay = isFirat ? '👨' : '👩';
-                let calcDetail = '';
-
-                if (isFirat) {
-                    const dayLabel = (ot.dayType === 'saturday' || (ot.amount && ot.amount % 3125 === 0)) ? '🏖️ Cumartesi' : '📅 Hafta İçi';
-                    const daysVal = parseFloat(ot.days || 1);
-                    calcDetail = `${dayLabel} (${daysVal.toLocaleString('tr-TR')} Gün)`;
-                } else {
-                    const hoursVal = parseFloat(ot.hours || 0);
-                    const rateVal = parseFloat(ot.hourlyRate || DICLE_HOURLY_OVERTIME_RATE);
-                    calcDetail = `⏱️ <b>${hoursVal.toLocaleString('tr-TR')} Saat</b> × ${rateVal.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
-                }
-
-                return `
-                    <div class="overtime-card">
-                        <div class="overtime-card-left">
-                            <div class="overtime-card-icon" style="background: ${isFirat ? '#F4F8F6' : '#FEF7EC'};">
-                                ${iconDisplay}
-                            </div>
-                            <div class="overtime-card-info">
-                                <div class="overtime-card-title">${personDisplay}</div>
-                                <div class="overtime-card-meta">
-                                    <span>${calcDetail}</span>
-                                    <span>• 📅 ${ot.date || ''}</span>
-                                </div>
-                                ${ot.notes || ot.note ? `<div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">💬 ${ot.notes || ot.note}</div>` : ''}
-                            </div>
-                        </div>
-                        <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
-                            <span class="overtime-amount-val" style="color: #10B981; font-weight: 800;">+${parseFloat(ot.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
-                            <button class="btn-delete-item" onclick="handleDeleteOvertime('${ot.id}')" title="Mesaiyi Sil">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-    }
+    // 4.0 Bağımsız Mesai Takip Sayfasını Senkronize Et
+    renderOvertimePage();
 
     // 4.1 Bu Ayki Ek Gelirler Listesi
     const monthBadgeEl = document.getElementById('extraIncomeMonthBadge');
@@ -5423,6 +5348,149 @@ function onOvertimeDateChanged() {
     calculateOvertimeTotalLive();
 }
 
+function filterOvertimePerson(person, btn) {
+    appState.overtimePersonFilter = person;
+    if (btn) {
+        document.querySelectorAll('#overtimePersonFilter .chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderOvertimePage();
+}
+
+function renderOvertimePage() {
+    const family = appState.familyData;
+    if (!family) return;
+    if (!family.overtimes) family.overtimes = [];
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthNum = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonthKey = `${currentYear}-${currentMonthNum}`;
+    const monthNamesTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const currentMonthLabel = `${monthNamesTr[now.getMonth()]} ${currentYear}`;
+
+    // Aktif aya ait mesailer
+    const currentMonthOvertimes = family.overtimes.filter(ot => {
+        if (ot.month) return ot.month === currentMonthKey;
+        if (ot.date && ot.date.startsWith(currentMonthKey)) return true;
+        if (ot.createdAt) return ot.createdAt.startsWith(currentMonthKey);
+        return true;
+    });
+
+    // 1. Dicle Mesai
+    const dicleOvertimes = currentMonthOvertimes.filter(ot => {
+        const p = (ot.person || '').toLowerCase();
+        return p.includes('dicle') || (!p.includes('fırat') && !p.includes('firat'));
+    });
+    const dicleTotalAmount = dicleOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+    const dicleTotalHours = dicleOvertimes.reduce((s, o) => s + (parseFloat(o.hours) || 0), 0);
+
+    // 2. Fırat Mesai
+    const firatOvertimes = currentMonthOvertimes.filter(ot => {
+        const p = (ot.person || '').toLowerCase();
+        return p.includes('fırat') || p.includes('firat');
+    });
+    const firatTotalAmount = firatOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+    const firatTotalDays = firatOvertimes.reduce((s, o) => s + (parseFloat(o.days) || 1), 0);
+
+    const totalOvertimeMaster = dicleTotalAmount + firatTotalAmount;
+
+    // UI Güncellemeleri
+    const elMasterAmount = document.getElementById('overtimeTotalMasterAmount');
+    if (elMasterAmount) elMasterAmount.textContent = formatTL(totalOvertimeMaster);
+
+    const elMasterDesc = document.getElementById('overtimeTotalMasterDesc');
+    if (elMasterDesc) {
+        elMasterDesc.textContent = `Dicle: ${formatTL(dicleTotalAmount)} • Fırat: ${formatTL(firatTotalAmount)}`;
+    }
+
+    const elDicleAmount = document.getElementById('dicleOvertimeTotalAmount');
+    if (elDicleAmount) elDicleAmount.textContent = formatTL(dicleTotalAmount);
+
+    const elDicleHours = document.getElementById('dicleOvertimeTotalHours');
+    if (elDicleHours) elDicleHours.textContent = `${dicleTotalHours > 0 ? dicleTotalHours.toLocaleString('tr-TR') : 0} Saat İşlendi`;
+
+    const elFiratAmount = document.getElementById('firatOvertimeTotalAmount');
+    if (elFiratAmount) elFiratAmount.textContent = formatTL(firatTotalAmount);
+
+    const elFiratDays = document.getElementById('firatOvertimeTotalDays');
+    if (elFiratDays) elFiratDays.textContent = `${firatTotalDays > 0 ? firatTotalDays.toLocaleString('tr-TR') : 0} Gün Mesai`;
+
+    const otMonthBadgeEl = document.getElementById('overtimeMonthBadge');
+    if (otMonthBadgeEl) {
+        otMonthBadgeEl.innerHTML = `🟢 ${currentMonthLabel} • Ayın 1'inde Sıfırlanır`;
+    }
+
+    const quickOvertimeEl = document.getElementById('quickOvertimeTotal');
+    if (quickOvertimeEl) quickOvertimeEl.textContent = formatTL(totalOvertimeMaster);
+
+    // Listeyi filtrele
+    let filteredList = currentMonthOvertimes;
+    const currentFilter = appState.overtimePersonFilter || 'ALL';
+    if (currentFilter === 'Dicle') {
+        filteredList = dicleOvertimes;
+    } else if (currentFilter === 'Fırat') {
+        filteredList = firatOvertimes;
+    }
+
+    const overtimesContainer = document.getElementById('overtimesListContainer');
+    if (overtimesContainer) {
+        if (filteredList.length === 0) {
+            overtimesContainer.innerHTML = `
+                <div class="empty-state" style="padding: 24px; text-align: center; background: #ffffff; border: 1px dashed var(--border-color); border-radius: 20px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary); font-size: 32px; margin-bottom: 10px;"></i>
+                    <p style="font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin: 0 0 6px 0;">Bu ay (${currentMonthLabel}) henüz mesai kaydı yok</p>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 14px 0;">Dicle veya Fırat için ek mesai veya hafta sonu çalışması ekleyebilirsiniz.</p>
+                    <button class="btn-primary-sm" onclick="openAddOvertimeModal()" style="margin: 0 auto;">
+                        <i class="fa-solid fa-plus"></i> İlk Mesaiyi Ekle
+                    </button>
+                </div>
+            `;
+        } else {
+            overtimesContainer.innerHTML = filteredList.map(ot => {
+                const isFirat = (ot.person || '').toLowerCase().includes('fırat') || (ot.person || '').toLowerCase().includes('firat');
+                let personDisplay = isFirat ? '👨 Fırat Mesai' : '👩 Dicle Mesai';
+                let iconDisplay = isFirat ? '👨' : '👩';
+                let calcDetail = '';
+
+                if (isFirat) {
+                    const dayLabel = (ot.dayType === 'saturday' || (ot.amount && ot.amount % 3125 === 0)) ? '🏖️ Cumartesi' : '📅 Hafta İçi';
+                    const daysVal = parseFloat(ot.days || 1);
+                    calcDetail = `${dayLabel} (${daysVal.toLocaleString('tr-TR')} Gün)`;
+                } else {
+                    const hoursVal = parseFloat(ot.hours || 0);
+                    const rateVal = parseFloat(ot.hourlyRate || DICLE_HOURLY_OVERTIME_RATE);
+                    calcDetail = `⏱️ <b>${hoursVal.toLocaleString('tr-TR')} Saat</b> × ${rateVal.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
+                }
+
+                return `
+                    <div class="overtime-card">
+                        <div class="overtime-card-left">
+                            <div class="overtime-card-icon" style="background: ${isFirat ? '#F4F8F6' : '#FEF7EC'};">
+                                ${iconDisplay}
+                            </div>
+                            <div class="overtime-card-info">
+                                <div class="overtime-card-title">${personDisplay}</div>
+                                <div class="overtime-card-meta">
+                                    <span>${calcDetail}</span>
+                                    <span>• 📅 ${ot.date || ''}</span>
+                                </div>
+                                ${ot.notes || ot.note ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px;">💬 ${ot.notes || ot.note}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right; display: flex; align-items: center; gap: 10px;">
+                            <span class="overtime-amount-val" style="color: #10B981; font-weight: 800; font-size: 1rem;">+${parseFloat(ot.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
+                            <button class="btn-delete-item" onclick="handleDeleteOvertime('${ot.id}')" title="Mesaiyi Sil">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+}
+
 function calculateOvertimeTotalLive() {
     const resEl = document.getElementById('overtimeLiveCalcResult');
     const detailEl = document.getElementById('overtimeLiveCalcDetail');
@@ -5556,6 +5624,8 @@ async function handleAddOvertime(e) {
     saveStateToStorage();
     closeModal('modalNewOvertime');
     renderBudget();
+    renderOvertimePage();
+    updateQuickStats();
     showToast(`${person} için mesai başarıyla eklendi! ⏰💰`);
 }
 
@@ -5573,6 +5643,8 @@ async function handleDeleteOvertime(id) {
 
     saveStateToStorage();
     renderBudget();
+    renderOvertimePage();
+    updateQuickStats();
     showToast('Mesai kaydı silindi.');
 }
 
@@ -6910,6 +6982,8 @@ function switchTab(tabId, navBtn) {
     } else if (tabId === 'tabExpenses') {
         renderBudget();
         fetchLiveMarketRates();
+    } else if (tabId === 'tabOvertime') {
+        renderOvertimePage();
     }
 
     // Hem Mobil Bottom Nav hem de Masaüstü Sidebar Öğelerini Senkronize Et
