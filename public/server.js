@@ -438,6 +438,95 @@ function extractPriceFromHtml(html) {
     return null;
 }
 
+function calculatePriceStatus(plan, newPriceNum, newPriceFormatted) {
+    const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
+    const prevPriceNum = parsePriceToNumber(rawPrevPrice);
+    const oldPriceNum = plan.oldPrice ? parsePriceToNumber(plan.oldPrice) : 0;
+    const initPriceNum = plan.initialPrice ? parsePriceToNumber(plan.initialPrice) : 0;
+
+    let priceDropped = false;
+    let priceIncreased = false;
+    let oldPriceFormatted = plan.oldPrice || '';
+
+    if (prevPriceNum > 0) {
+        if (newPriceNum < prevPriceNum) {
+            priceDropped = true;
+            priceIncreased = false;
+            oldPriceFormatted = formatPriceTr(prevPriceNum);
+        } else if (newPriceNum > prevPriceNum) {
+            priceIncreased = true;
+            priceDropped = false;
+            oldPriceFormatted = formatPriceTr(prevPriceNum);
+        } else {
+            // newPriceNum === prevPriceNum
+            if (plan.priceDropped && oldPriceNum > 0 && newPriceNum < oldPriceNum) {
+                priceDropped = true;
+                priceIncreased = false;
+                oldPriceFormatted = formatPriceTr(oldPriceNum);
+            } else if (plan.priceIncreased && oldPriceNum > 0 && newPriceNum > oldPriceNum) {
+                priceIncreased = true;
+                priceDropped = false;
+                oldPriceFormatted = formatPriceTr(oldPriceNum);
+            } else if (initPriceNum > 0 && newPriceNum < initPriceNum) {
+                priceDropped = true;
+                priceIncreased = false;
+                oldPriceFormatted = formatPriceTr(initPriceNum);
+            } else if (initPriceNum > 0 && newPriceNum > initPriceNum) {
+                priceIncreased = true;
+                priceDropped = false;
+                oldPriceFormatted = formatPriceTr(initPriceNum);
+            } else {
+                priceDropped = false;
+                priceIncreased = false;
+                oldPriceFormatted = '';
+            }
+        }
+    } else {
+        if (initPriceNum > 0 && newPriceNum < initPriceNum) {
+            priceDropped = true;
+            priceIncreased = false;
+            oldPriceFormatted = formatPriceTr(initPriceNum);
+        } else if (initPriceNum > 0 && newPriceNum > initPriceNum) {
+            priceIncreased = true;
+            priceDropped = false;
+            oldPriceFormatted = formatPriceTr(initPriceNum);
+        }
+    }
+
+    const updatedPlan = {
+        ...plan,
+        shopPrice: newPriceFormatted,
+        currentPrice: newPriceFormatted,
+        lastPriceCheck: new Date().toISOString()
+    };
+
+    if (priceDropped) {
+        updatedPlan.priceDropped = true;
+        updatedPlan.priceIncreased = false;
+        updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastPriceDropTime = new Date().toISOString();
+    } else if (priceIncreased) {
+        updatedPlan.priceDropped = false;
+        updatedPlan.priceIncreased = true;
+        updatedPlan.oldPrice = oldPriceFormatted;
+        updatedPlan.lastPriceIncreaseTime = new Date().toISOString();
+    } else {
+        updatedPlan.priceDropped = false;
+        updatedPlan.priceIncreased = false;
+        updatedPlan.oldPrice = '';
+        if (!plan.initialPrice && prevPriceNum === 0) {
+            updatedPlan.initialPrice = newPriceFormatted;
+        }
+    }
+
+    return {
+        updatedPlan,
+        priceDropped,
+        priceIncreased,
+        oldPriceFormatted: (priceDropped || priceIncreased) ? oldPriceFormatted : ''
+    };
+}
+
 async function checkWishlistPriceForPlan(familyId, planId) {
     const family = await dbManager.getFullFamilyData(familyId);
     if (!family || !Array.isArray(family.plans)) return null;
@@ -457,39 +546,12 @@ async function checkWishlistPriceForPlan(familyId, planId) {
     const newPriceNum = priceResult.number;
     const newPriceFormatted = priceResult.formatted;
 
-    const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
-    const prevPriceNum = parsePriceToNumber(rawPrevPrice);
-
-    let priceDropped = false;
-    let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
-
-    // Eğer önceki bir fiyat varsa ve yeni fiyat bundan daha düşükse: İNDİRİM BİLDİRİMİ!
-    if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
-        priceDropped = true;
-        oldPriceFormatted = formatPriceTr(prevPriceNum);
-    }
-
-    const updatedPlan = {
-        ...plan,
-        shopPrice: newPriceFormatted,
-        currentPrice: newPriceFormatted,
-        lastPriceCheck: new Date().toISOString()
-    };
-
-    if (priceDropped) {
-        updatedPlan.priceDropped = true;
-        updatedPlan.oldPrice = oldPriceFormatted;
-        updatedPlan.lastPriceDropTime = new Date().toISOString();
-    } else {
-        if (!plan.initialPrice && prevPriceNum === 0) {
-            updatedPlan.initialPrice = newPriceFormatted;
-        }
-    }
+    const { updatedPlan, priceDropped, priceIncreased, oldPriceFormatted } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
 
     const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
 
     if (priceDropped) {
-        // 1. Canlı SSE ile AÇIK OLAN TÜM CİHAZLARA ANINDA SESLİ & GÖRSEL BİLDİRİM FIRLAT
+        // 1. Canlı SSE ile AÇIK OLAN TÜM CİHAZLARA ANINDA SESLİ & GÖRSEL İNDİRİM BİLDİRİMİ FIRLAT
         broadcastToFamilyLive(familyId, 'price_drop', {
             family: updatedFamily,
             planId: plan.id,
@@ -498,10 +560,26 @@ async function checkWishlistPriceForPlan(familyId, planId) {
             newPrice: newPriceFormatted
         });
 
-        // 2. Web Push ile TÜM AİLE ÜYELERİNİN TELEFONLARINA BİLDİRİM GÖNDER (excludeUserId = null -> Herkese gider!)
+        // 2. Web Push ile TÜM AİLE ÜYELERİNİN TELEFONLARINA BİLDİRİM GÖNDER
         dbManager.sendPushToFamily(familyId, {
             title: `🔥 İndirim Müjdesi! (${plan.title})`,
             body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine düştü! (Önceki: ${oldPriceFormatted})`,
+            icon: './icons/icon-192.png',
+            url: './index.html?tab=plans'
+        }, null).catch(e => {});
+    } else if (priceIncreased) {
+        // Fiyat Yükselişi SSE ve Bildirimi
+        broadcastToFamilyLive(familyId, 'price_increase', {
+            family: updatedFamily,
+            planId: plan.id,
+            title: plan.title,
+            oldPrice: oldPriceFormatted,
+            newPrice: newPriceFormatted
+        });
+
+        dbManager.sendPushToFamily(familyId, {
+            title: `📈 Fiyat Yükseldi! (${plan.title})`,
+            body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine yükseldi. (Önceki: ${oldPriceFormatted})`,
             icon: './icons/icon-192.png',
             url: './index.html?tab=plans'
         }, null).catch(e => {});
@@ -512,6 +590,7 @@ async function checkWishlistPriceForPlan(familyId, planId) {
     return {
         success: true,
         priceDropped,
+        priceIncreased,
         oldPrice: oldPriceFormatted,
         newPrice: newPriceFormatted,
         foundPrice: newPriceFormatted,
@@ -893,22 +972,25 @@ async function appHandler(req, res) {
                 const existingPlan = currentFam && currentFam.plans ? currentFam.plans.find(p => p.id === body.planId) : null;
                 
                 let isPriceDrop = false;
+                let isPriceIncrease = false;
                 let oldPriceFormatted = '';
                 let newPriceFormatted = '';
 
                 if (existingPlan && body.plan) {
                     const newShopPrice = body.plan.shopPrice || body.plan.currentPrice;
-                    const oldShopPrice = existingPlan.shopPrice || existingPlan.currentPrice || existingPlan.initialPrice;
-                    if (newShopPrice && oldShopPrice) {
+                    if (newShopPrice) {
                         const newNum = parsePriceToNumber(newShopPrice);
-                        const oldNum = parsePriceToNumber(oldShopPrice);
-                        if (oldNum > 0 && newNum > 0 && newNum < oldNum) {
-                            isPriceDrop = true;
-                            oldPriceFormatted = formatPriceTr(oldNum);
+                        if (newNum > 0) {
                             newPriceFormatted = formatPriceTr(newNum);
-                            body.plan.priceDropped = true;
+                            const resStatus = calculatePriceStatus(existingPlan, newNum, newPriceFormatted);
+                            isPriceDrop = resStatus.priceDropped;
+                            isPriceIncrease = resStatus.priceIncreased;
+                            oldPriceFormatted = resStatus.oldPriceFormatted;
+                            body.plan.priceDropped = isPriceDrop;
+                            body.plan.priceIncreased = isPriceIncrease;
                             body.plan.oldPrice = oldPriceFormatted;
-                            body.plan.lastPriceDropTime = new Date().toISOString();
+                            if (isPriceDrop) body.plan.lastPriceDropTime = new Date().toISOString();
+                            if (isPriceIncrease) body.plan.lastPriceIncreaseTime = new Date().toISOString();
                         }
                     }
                 }
@@ -929,12 +1011,26 @@ async function appHandler(req, res) {
                         icon: './icons/icon-192.png',
                         url: './index.html?tab=plans'
                     }, null).catch(e => {});
+                } else if (isPriceIncrease) {
+                    broadcastToFamilyLive(body.familyId, 'price_increase', {
+                        family: updatedFamily,
+                        planId: body.planId,
+                        title: (body.plan && body.plan.title) || (existingPlan && existingPlan.title) || 'Ürün',
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+                    dbManager.sendPushToFamily(body.familyId, {
+                        title: `📈 Fiyat Yükseldi! (${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)})`,
+                        body: `Takip ettiğiniz "${(body.plan && body.plan.title) || (existingPlan && existingPlan.title)}" ürününün fiyatı ${newPriceFormatted} seviyesine yükseldi. (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
                 } else {
                     broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
                 }
 
                 const authorId = body.currentUserId || (body.plan ? (body.plan.addedById || body.plan.userId) : null);
-                if (!isPriceDrop) {
+                if (!isPriceDrop && !isPriceIncrease) {
                     dbManager.sendPushToFamily(body.familyId, {
                         title: '🗺️ Aile Planı Güncellendi',
                         body: `${(body.plan && body.plan.title) || 'Plan'} bilgileri güncellendi.`,
@@ -950,7 +1046,7 @@ async function appHandler(req, res) {
                     }, 400);
                 }
 
-                return sendJson(res, 200, { success: true, family: updatedFamily, priceDropped: isPriceDrop });
+                return sendJson(res, 200, { success: true, family: updatedFamily, priceDropped: isPriceDrop, priceIncreased: isPriceIncrease });
             }
             if (pathname === '/api/plans/toggle' && req.method === 'POST') {
                 const body = await parseJsonBody(req);
@@ -995,33 +1091,7 @@ async function appHandler(req, res) {
                 }
 
                 const newPriceFormatted = formatPriceTr(newPriceNum);
-                const rawPrevPrice = plan.shopPrice || plan.currentPrice || plan.initialPrice;
-                const prevPriceNum = parsePriceToNumber(rawPrevPrice);
-
-                let priceDropped = false;
-                let oldPriceFormatted = plan.oldPrice || (prevPriceNum > 0 ? formatPriceTr(prevPriceNum) : '');
-
-                if (prevPriceNum > 0 && newPriceNum < prevPriceNum) {
-                    priceDropped = true;
-                    oldPriceFormatted = formatPriceTr(prevPriceNum);
-                }
-
-                const updatedPlan = {
-                    ...plan,
-                    shopPrice: newPriceFormatted,
-                    currentPrice: newPriceFormatted,
-                    lastPriceCheck: new Date().toISOString()
-                };
-
-                if (priceDropped) {
-                    updatedPlan.priceDropped = true;
-                    updatedPlan.oldPrice = oldPriceFormatted;
-                    updatedPlan.lastPriceDropTime = new Date().toISOString();
-                } else {
-                    if (!plan.initialPrice && prevPriceNum === 0) {
-                        updatedPlan.initialPrice = newPriceFormatted;
-                    }
-                }
+                const { updatedPlan, priceDropped, priceIncreased, oldPriceFormatted } = calculatePriceStatus(plan, newPriceNum, newPriceFormatted);
 
                 const updatedFamily = await dbManager.updatePlan(familyId, planId, updatedPlan);
 
@@ -1040,6 +1110,21 @@ async function appHandler(req, res) {
                         icon: './icons/icon-192.png',
                         url: './index.html?tab=plans'
                     }, null).catch(e => {});
+                } else if (priceIncreased) {
+                    broadcastToFamilyLive(familyId, 'price_increase', {
+                        family: updatedFamily,
+                        planId: plan.id,
+                        title: plan.title,
+                        oldPrice: oldPriceFormatted,
+                        newPrice: newPriceFormatted
+                    });
+
+                    dbManager.sendPushToFamily(familyId, {
+                        title: `📈 Fiyat Yükseldi! (${plan.title})`,
+                        body: `Takip ettiğiniz "${plan.title}" ürününün fiyatı ${newPriceFormatted} seviyesine yükseldi. (Önceki: ${oldPriceFormatted})`,
+                        icon: './icons/icon-192.png',
+                        url: './index.html?tab=plans'
+                    }, null).catch(e => {});
                 } else {
                     broadcastToFamilyLive(familyId, 'update', { family: updatedFamily });
                 }
@@ -1047,6 +1132,7 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, {
                     success: true,
                     priceDropped,
+                    priceIncreased,
                     oldPrice: oldPriceFormatted,
                     newPrice: newPriceFormatted,
                     family: updatedFamily

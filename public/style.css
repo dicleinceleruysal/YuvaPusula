@@ -5678,47 +5678,48 @@ body {
 }
 
 /* ==========================================================
-   ALIŞVERİŞ & HAYAL ÜRÜNÜ CANLI FİYAT VE İNDİRİM TAKİP STİLLERİ
+   ALIŞVERİŞ & HAYAL ÜRÜNÜ CANLI FİYAT VE İNDİRİM / YÜKSELİŞ TAKİP STİLLERİ
    ========================================================== */
+/* 🟢 FİYAT DÜŞÜNCE: YEŞİL ÇERÇEVE & İNDİRİM ROZETİ */
 .card-price-dropped {
-    border: 2px solid #ef4444 !important;
-    background: linear-gradient(180deg, #fff 0%, #fff7f7 100%) !important;
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12) !important;
+    border: 2px solid #10b981 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%) !important;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.16) !important;
     position: relative;
 }
 
 .badge-price-drop-glow {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
     color: #ffffff !important;
     font-weight: 800 !important;
     letter-spacing: 0.5px;
-    animation: pulseGlow 1.8s infinite alternate ease-in-out;
+    animation: pulseDropGlow 1.8s infinite alternate ease-in-out;
 }
 
-@keyframes pulseGlow {
+@keyframes pulseDropGlow {
     0% {
-        box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+        box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
         transform: scale(1);
     }
     100% {
-        box-shadow: 0 0 14px rgba(239, 68, 68, 0.8);
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.8);
         transform: scale(1.04);
     }
 }
 
 .has-price-drop-box {
-    border-color: #fecaca !important;
-    background: #fff5f5 !important;
+    border-color: #bbf7d0 !important;
+    background: #f0fdf4 !important;
 }
 
 .plan-price-drop-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #fee2e2;
+    background: #dcfce7;
     padding: 6px 12px;
     border-radius: 10px;
-    border: 1px solid #fca5a5;
+    border: 1px solid #86efac;
     margin-bottom: 6px;
 }
 
@@ -5729,20 +5730,82 @@ body {
     flex-wrap: wrap;
 }
 
-.old-price-del {
-    color: #94a3b8;
-    font-size: 0.88rem;
-    text-decoration: line-through;
-    font-weight: 600;
-}
-
-.new-price-highlight {
-    color: #dc2626;
+.new-price-highlight-drop {
+    color: #059669;
     font-size: 1.15rem;
     font-weight: 800;
 }
 
 .badge-price-drop {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+/* 🔺 FİYAT YÜKSELİNCE: KIRMIZI ÇERÇEVE & YÜKSELDİ ROZETİ */
+.card-price-increased {
+    border: 2px solid #ef4444 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fff7f7 100%) !important;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.16) !important;
+    position: relative;
+}
+
+.badge-price-increase-glow {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    animation: pulseIncreaseGlow 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulseIncreaseGlow {
+    0% {
+        box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 14px rgba(239, 68, 68, 0.8);
+        transform: scale(1.04);
+    }
+}
+
+.has-price-increase-box {
+    border-color: #fecaca !important;
+    background: #fff5f5 !important;
+}
+
+.plan-price-increase-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fee2e2;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid #fca5a5;
+    margin-bottom: 6px;
+}
+
+.price-increase-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.new-price-highlight-increase {
+    color: #dc2626;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.badge-price-increase {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -5753,6 +5816,14 @@ body {
     padding: 2px 7px;
     border-radius: 6px;
     text-transform: uppercase;
+}
+
+/* ORTAK ESKİ ÇİZİLİ FİYAT */
+.old-price-del {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    text-decoration: line-through;
+    font-weight: 600;
 }
 
 .plan-shop-actions {

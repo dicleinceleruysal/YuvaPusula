@@ -1916,10 +1916,10 @@ function initRealtimeStream() {
                     renderApp();
                 }
                 triggerHapticAndSound();
-                showToast(`🔥 Fiyat İndirimi! "${data.title || 'Ürün'}" fiyatı düştü: ${data.newPrice || ''} (Eski: ${data.oldPrice || ''})`);
+                showToast(`🟢 Fiyat İndirimi! "${data.title || 'Ürün'}" fiyatı düştü: ${data.newPrice || ''} (Eski: ${data.oldPrice || ''})`);
                 if (appState.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
                     try {
-                        new Notification('🔥 Fiyat İndirimi Yakalandı!', {
+                        new Notification('🟢 Fiyat İndirimi Yakalandı!', {
                             body: `${data.title || 'Ürün'} fiyatı ${data.newPrice} seviyesine düştü! (Eski: ${data.oldPrice})`,
                             icon: 'icons/icon.svg'
                         });
@@ -1927,6 +1927,29 @@ function initRealtimeStream() {
                 }
             } catch (err) {
                 console.warn('SSE price_drop ayrıştırma:', err);
+            }
+        });
+
+        familyEventSource.addEventListener('price_increase', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.family) {
+                    appState.familyData = normalizeFamilyData(data.family);
+                    saveStateToStorage();
+                    renderApp();
+                }
+                triggerHapticAndSound();
+                showToast(`📈 Fiyat Yükseldi! "${data.title || 'Ürün'}" fiyatı yükseldi: ${data.newPrice || ''} (Eski: ${data.oldPrice || ''})`, 'info');
+                if (appState.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+                    try {
+                        new Notification('📈 Fiyat Yükseldi!', {
+                            body: `${data.title || 'Ürün'} fiyatı ${data.newPrice} seviyesine yükseldi! (Eski: ${data.oldPrice})`,
+                            icon: 'icons/icon.svg'
+                        });
+                    } catch (e) {}
+                }
+            } catch (err) {
+                console.warn('SSE price_increase ayrıştırma:', err);
             }
         });
 
@@ -3407,18 +3430,38 @@ function renderPlans() {
                 </div>
             `;
         } else if (plan.category === 'Alisveris') {
-            const hasDrop = !!plan.priceDropped && !!plan.oldPrice;
-            const priceHtml = hasDrop ? `
-                <div class="plan-detail-row plan-price-drop-row">
-                    <i class="fa-solid fa-fire" style="color: #dc2626;"></i> 
-                    <b>Fiyat:</b> 
-                    <span class="price-drop-wrap">
-                        <del class="old-price-del">${plan.oldPrice}</del>
-                        <strong class="new-price-highlight">${plan.shopPrice || plan.currentPrice}</strong>
-                        <span class="badge-price-drop"><i class="fa-solid fa-arrow-trend-down"></i> İndirim!</span>
-                    </span>
-                </div>
-            ` : (plan.shopPrice ? `<div class="plan-detail-row"><i class="fa-solid fa-tag"></i> <b>Fiyat:</b> <span>${plan.shopPrice}</span></div>` : '');
+            const currentPriceStr = plan.shopPrice || plan.currentPrice || '';
+            const hasDrop = !!plan.priceDropped && !!plan.oldPrice && plan.oldPrice !== currentPriceStr;
+            const hasIncrease = !!plan.priceIncreased && !!plan.oldPrice && plan.oldPrice !== currentPriceStr;
+
+            let priceHtml = '';
+            if (hasDrop) {
+                priceHtml = `
+                    <div class="plan-detail-row plan-price-drop-row">
+                        <i class="fa-solid fa-arrow-trend-down" style="color: #10b981;"></i> 
+                        <b>Fiyat:</b> 
+                        <span class="price-drop-wrap">
+                            <del class="old-price-del">${plan.oldPrice}</del>
+                            <strong class="new-price-highlight-drop">${currentPriceStr}</strong>
+                            <span class="badge-price-drop"><i class="fa-solid fa-arrow-trend-down"></i> İndirim!</span>
+                        </span>
+                    </div>
+                `;
+            } else if (hasIncrease) {
+                priceHtml = `
+                    <div class="plan-detail-row plan-price-increase-row">
+                        <i class="fa-solid fa-arrow-trend-up" style="color: #ef4444;"></i> 
+                        <b>Fiyat:</b> 
+                        <span class="price-increase-wrap">
+                            <del class="old-price-del">${plan.oldPrice}</del>
+                            <strong class="new-price-highlight-increase">${currentPriceStr}</strong>
+                            <span class="badge-price-increase"><i class="fa-solid fa-arrow-trend-up"></i> Yükseldi!</span>
+                        </span>
+                    </div>
+                `;
+            } else if (currentPriceStr) {
+                priceHtml = `<div class="plan-detail-row"><i class="fa-solid fa-tag"></i> <b>Fiyat:</b> <span>${currentPriceStr}</span></div>`;
+            }
 
             const hasHttpLink = plan.link && (plan.link.startsWith('http://') || plan.link.startsWith('https://'));
             const linkBtnsHtml = `
@@ -3441,7 +3484,7 @@ function renderPlans() {
             }
 
             detailsHtml = `
-                <div class="plan-details-box ${hasDrop ? 'has-price-drop-box' : ''}">
+                <div class="plan-details-box ${hasDrop ? 'has-price-drop-box' : (hasIncrease ? 'has-price-increase-box' : '')}">
                     ${priceHtml}
                     ${plan.priority ? `<div class="plan-detail-row"><i class="fa-solid fa-star"></i> <b>Öncelik:</b> <span>${plan.priority}</span></div>` : ''}
                     ${plan.shopNote ? `<div class="plan-detail-row"><i class="fa-solid fa-note-sticky"></i> <b>Not / Amaç:</b> <span>${plan.shopNote}</span></div>` : ''}
@@ -3454,13 +3497,23 @@ function renderPlans() {
         const catClass = `cat-${plan.category}`;
         const badgeClass = `badge-${plan.category}`;
 
+        const isDrop = !!plan.priceDropped && !!plan.oldPrice && plan.oldPrice !== (plan.shopPrice || plan.currentPrice);
+        const isIncrease = !!plan.priceIncreased && !!plan.oldPrice && plan.oldPrice !== (plan.shopPrice || plan.currentPrice);
+        const priceCardClass = isDrop ? 'card-price-dropped' : (isIncrease ? 'card-price-increased' : '');
+        let priceBadgeHtml = '';
+        if (isDrop) {
+            priceBadgeHtml = `<span class="plan-cat-badge badge-price-drop-glow"><i class="fa-solid fa-arrow-trend-down"></i> FİYAT DÜŞTÜ</span>`;
+        } else if (isIncrease) {
+            priceBadgeHtml = `<span class="plan-cat-badge badge-price-increase-glow"><i class="fa-solid fa-arrow-trend-up"></i> FİYAT YÜKSELDİ</span>`;
+        }
+
         return `
-            <div class="plan-card ${catClass} ${plan.completed ? 'completed' : ''} ${plan.priceDropped ? 'card-price-dropped' : ''}">
+            <div class="plan-card ${catClass} ${plan.completed ? 'completed' : ''} ${priceCardClass}">
                 <div class="plan-top">
                     <div class="plan-badges">
                         <span class="plan-cat-badge ${badgeClass}">${CAT_ICONS[plan.category] || plan.category}</span>
                         ${plan.travelType ? `<span class="plan-cat-badge" style="background:#f1f5f9; color:#475569;">${plan.travelType === 'Yurtdisi' ? '🌍 Yurt Dışı' : '🇹🇷 Yurt İçi'}</span>` : ''}
-                        ${plan.priceDropped ? `<span class="plan-cat-badge badge-price-drop-glow"><i class="fa-solid fa-fire"></i> FİYAT DÜŞTÜ</span>` : ''}
+                        ${priceBadgeHtml}
                     </div>
                     <span class="plan-status-badge ${plan.completed ? 'status-completed' : 'status-pending'}">
                         ${plan.completed ? '⭐ Gerçekleşti' : '🎯 Hedef Plan'}
@@ -3512,7 +3565,10 @@ async function checkPlanPrice(planId, evt) {
             }
             if (result.priceDropped) {
                 triggerHapticAndSound();
-                showToast(`🔥 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Önceki: ${result.oldPrice})`);
+                showToast(`🟢 Müjde! Fiyat DÜŞTÜ: ${result.newPrice} (Önceki: ${result.oldPrice})`);
+            } else if (result.priceIncreased) {
+                triggerHapticAndSound();
+                showToast(`🔺 Fiyat YÜKSELDİ: ${result.newPrice} (Önceki: ${result.oldPrice})`, 'info');
             } else if (result.foundPrice) {
                 showToast(`✅ Güncel satış fiyatı: ${result.foundPrice} (Fiyat değişikliği yok)`);
             } else {
