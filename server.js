@@ -6,6 +6,14 @@ const os = require('os');
 const { exec } = require('child_process');
 const dbManager = require('./database.js');
 
+// Uncaught exception ve unhandled rejection yakalayıcıları (sunucunun çökmesini engeller)
+process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT EXCEPTION]:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]:', reason);
+});
+
 // Veritabanını başlat
 dbManager.initDatabase();
 
