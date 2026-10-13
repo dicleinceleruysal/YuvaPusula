@@ -80,7 +80,7 @@ let appState = {
     chatChannel: 'group', // 'group' veya 'direct'
     chatTargetMemberId: null,
     notificationsEnabled: false,
-    activePlanHub: 'Seyahat',
+    activePlanHub: 'Alisveris',
     plansSubFilter: 'ALL',
     plansStatusFilter: 'ALL',
     shoppingFilter: 'ALL',
@@ -2778,7 +2778,7 @@ function renderApp() {
     renderPano();
     renderDailyPlans();
     renderChat();
-    switchPlansHub(appState.activePlanHub || 'Seyahat');
+    switchPlansHub(appState.activePlanHub || 'Alisveris');
     renderShopping();
     renderTasks();
     renderBudget();
@@ -3008,7 +3008,7 @@ function switchPlansHub(category) {
     if (activeBtn) activeBtn.classList.add('active');
 
     // Başlık ve Açıklamayı Güncelle
-    const meta = HUB_META[category] || HUB_META['Seyahat'];
+    const meta = HUB_META[category] || HUB_META['Alisveris'];
     const titleEl = document.getElementById('activeHubTitle');
     const descEl = document.getElementById('activeHubSubtitle');
     const addBtnEl = document.getElementById('btnHubAddCategory');
