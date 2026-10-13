@@ -3615,17 +3615,13 @@ async function checkPlanPrice(planId, evt) {
 function renderShopping() {
     const container = document.getElementById('shoppingItemsList');
     if (!container || !appState.familyData) return;
-    let items = appState.familyData.shoppingList || appState.familyData.shopping || [];
-
-    if (appState.shoppingFilter !== 'ALL') {
-        items = items.filter(item => item.category === appState.shoppingFilter);
-    }
+    const items = appState.familyData.shoppingList || appState.familyData.shopping || [];
 
     if (items.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fa-solid fa-cart-shopping"></i>
-                <p>Bu kategoride alınacak bir şey kalmadı. Harika! ✨</p>
+                <p>Market listesinde alınacak bir şey kalmadı. Harika! ✨</p>
             </div>
         `;
         return;
@@ -3640,7 +3636,7 @@ function renderShopping() {
                 <div class="item-title">${item.title}</div>
                 <div class="item-meta">
                     <span><i class="fa-solid fa-box"></i> ${item.quantity}</span>
-                    <span>• ${(SHOPPING_ICONS[item.category] || '📦')} ${item.category}</span>
+                    <span>• 🛒 Market</span>
                     <span>• Ekleyen: ${item.addedBy}</span>
                 </div>
             </div>
@@ -4958,7 +4954,8 @@ async function handleAddShoppingItem(e) {
     e.preventDefault();
     const title = document.getElementById('shoppingTitle').value.trim();
     const quantity = document.getElementById('shoppingQuantity').value.trim() || '1 Adet';
-    const category = document.getElementById('shoppingCategory').value;
+    const catEl = document.getElementById('shoppingCategory');
+    const category = catEl ? catEl.value : 'Market';
 
     const newItem = {
         id: 'shop_' + Date.now(),

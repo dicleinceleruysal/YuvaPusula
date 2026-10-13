@@ -560,26 +560,12 @@
             <section id="tabShopping" class="tab-panel">
                 <div class="panel-header-action">
                     <div>
-                        <h3>🛒 Alışveriş Listesi</h3>
+                        <h3>🛒 Market & Alışveriş Listesi</h3>
                         <p class="subtitle">Bitince anında işaretleyin, herkes görsün</p>
                     </div>
                     <button class="btn-primary-sm" onclick="openModal('modalNewShopping')">
                         <i class="fa-solid fa-plus"></i> Ekle
                     </button>
-                </div>
-
-                <!-- Filtreler -->
-                <div class="category-chips" id="shoppingCategoryFilter">
-                    <button class="chip active" onclick="filterShopping('ALL', this)">Tümü</button>
-                    <button class="chip" onclick="filterShopping('Market', this)">🥛 Market</button>
-                    <button class="chip" onclick="filterShopping('Manav', this)">🍏 Manav</button>
-                    <button class="chip" onclick="filterShopping('Kasap', this)">🥩 Kasap</button>
-                    <button class="chip" onclick="filterShopping('Giyim', this)">👗 Giyim</button>
-                    <button class="chip" onclick="filterShopping('Eşya', this)">🛋️ Eşya</button>
-                    <button class="chip" onclick="filterShopping('Çocuk', this)">🧸 Çocuk</button>
-                    <button class="chip" onclick="filterShopping('Kozmetik', this)">💄 Kozmetik</button>
-                    <button class="chip" onclick="filterShopping('Eczane', this)">💊 Eczane</button>
-                    <button class="chip" onclick="filterShopping('Ev', this)">🧼 Ev & Temizlik</button>
                 </div>
 
                 <div class="list-container" id="shoppingItemsList">
@@ -1186,7 +1172,7 @@
     <div id="modalNewShopping" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-cart-plus"></i> Alışveriş Maddesi Ekle</h3>
+                <h3><i class="fa-solid fa-cart-plus"></i> Market Listesine Ekle</h3>
                 <button class="btn-close" onclick="closeModal('modalNewShopping')"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form onsubmit="handleAddShoppingItem(event)">
@@ -1194,25 +1180,9 @@
                     <label>Alınacak Ürün / Malzeme</label>
                     <input type="text" id="shoppingTitle" placeholder="Örn: Süt, Ekmek, Domates..." required>
                 </div>
-                <div class="form-row">
-                    <div class="form-group flex-1">
-                        <label>Miktar / Adet</label>
-                        <input type="text" id="shoppingQuantity" placeholder="Örn: 2 Litre / 1 Paket" value="1 Adet">
-                    </div>
-                    <div class="form-group flex-1">
-                        <label>Kategori</label>
-                        <select id="shoppingCategory">
-                            <option value="Market">🥛 Market</option>
-                            <option value="Manav">🍏 Manav</option>
-                            <option value="Kasap">🥩 Kasap</option>
-                            <option value="Giyim">👗 Giyim</option>
-                            <option value="Eşya">🛋️ Eşya</option>
-                            <option value="Çocuk">🧸 Çocuk & Bebek</option>
-                            <option value="Kozmetik">💄 Kozmetik & Bakım</option>
-                            <option value="Eczane">💊 Eczane</option>
-                            <option value="Ev">🧼 Ev & Temizlik</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Miktar / Adet</label>
+                    <input type="text" id="shoppingQuantity" placeholder="Örn: 2 Litre / 1 Paket" value="1 Adet">
                 </div>
                 <button type="submit" class="btn-primary">Listeye Ekle</button>
             </form>
