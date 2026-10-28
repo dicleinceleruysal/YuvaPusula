@@ -71,8 +71,8 @@ if (!isServerless) {
     }
 }
 
-const DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.sqlite') : path.join(__dirname, '..', 'database.sqlite');
-const JSON_DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.json') : path.join(__dirname, '..', 'database.json');
+const DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.sqlite') : (fs.existsSync(path.join(__dirname, 'database.sqlite')) ? path.join(__dirname, 'database.sqlite') : path.join(__dirname, '..', 'database.sqlite'));
+const JSON_DB_PATH = isServerless ? path.join(os.tmpdir(), 'database.json') : (fs.existsSync(path.join(__dirname, 'database.json')) ? path.join(__dirname, 'database.json') : path.join(__dirname, '..', 'database.json'));
 
 let db = null;
 let jsonStore = { families: [], users: [] };
