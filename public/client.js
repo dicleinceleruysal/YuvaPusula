@@ -5456,7 +5456,7 @@ function selectOvertimePerson(person) {
     if (firatFields) firatFields.classList.toggle('hidden', person !== 'Fırat');
 
     if (person === 'Dicle') {
-        if (dicleHoursInput) dicleHoursInput.required = true;
+        if (dicleHoursInput) dicleHoursInput.required = false;
         if (firatDaysInput) firatDaysInput.required = false;
     } else {
         if (dicleHoursInput) dicleHoursInput.required = false;
@@ -5582,7 +5582,19 @@ function renderOvertimePage() {
     if (elDicleAmount) elDicleAmount.textContent = formatTL(dicleTotalAmount);
 
     const elDicleHours = document.getElementById('dicleOvertimeTotalHours');
-    if (elDicleHours) elDicleHours.textContent = `${dicleTotalHours > 0 ? dicleTotalHours.toLocaleString('tr-TR') : 0} Saat İşlendi`;
+    if (elDicleHours) {
+        if (dicleTotalHours > 0) {
+            const totH = Math.floor(dicleTotalHours);
+            const totM = Math.round((dicleTotalHours - totH) * 60);
+            if (totM > 0) {
+                elDicleHours.textContent = `${totH > 0 ? `${totH} sa ` : ''}${totM} dk (${dicleTotalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} Sa) İşlendi`;
+            } else {
+                elDicleHours.textContent = `${totH} Saat İşlendi`;
+            }
+        } else {
+            elDicleHours.textContent = '0 Saat İşlendi';
+        }
+    }
 
     const elFiratAmount = document.getElementById('firatOvertimeTotalAmount');
     if (elFiratAmount) elFiratAmount.textContent = formatTL(firatTotalAmount);
@@ -5634,7 +5646,27 @@ function renderOvertimePage() {
                 } else {
                     const hoursVal = parseFloat(ot.hours || 0);
                     const rateVal = parseFloat(ot.hourlyRate || DICLE_HOURLY_OVERTIME_RATE);
-                    calcDetail = `⏱️ <b>${hoursVal.toLocaleString('tr-TR')} Saat</b> × ${rateVal.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
+                    let timeLabel = '';
+                    if (ot.hourPart !== undefined && ot.minutePart !== undefined) {
+                        const h = parseInt(ot.hourPart) || 0;
+                        const m = parseInt(ot.minutePart) || 0;
+                        if (h > 0 && m > 0) {
+                            timeLabel = `${h} sa ${m} dk`;
+                        } else if (m > 0) {
+                            timeLabel = `${m} dk`;
+                        } else {
+                            timeLabel = `${h} Saat`;
+                        }
+                    } else {
+                        const h = Math.floor(hoursVal);
+                        const m = Math.round((hoursVal - h) * 60);
+                        if (m > 0) {
+                            timeLabel = h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
+                        } else {
+                            timeLabel = `${hoursVal.toLocaleString('tr-TR')} Saat`;
+                        }
+                    }
+                    calcDetail = `⏱️ <b>${timeLabel}</b> × ${rateVal.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
                 }
 
                 return `
@@ -5672,11 +5704,22 @@ function calculateOvertimeTotalLive() {
 
     if (selectedOvertimePerson === 'Dicle') {
         const hours = parseFloat(document.getElementById('overtimeDicleHoursInput')?.value) || 0;
+        const minutes = parseFloat(document.getElementById('overtimeDicleMinutesInput')?.value) || 0;
+        const totalHours = hours + (minutes / 60);
         const rate = parseFloat(document.getElementById('overtimeDicleRateInput')?.value) || DICLE_HOURLY_OVERTIME_RATE;
-        const total = hours * rate;
+        const total = totalHours * rate;
 
         resEl.textContent = Number(total.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        detailEl.textContent = `${hours.toLocaleString('tr-TR')} saat × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
+
+        let durationText = '';
+        if (hours > 0 && minutes > 0) {
+            durationText = `${hours} sa ${minutes} dk (${totalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} saat)`;
+        } else if (minutes > 0) {
+            durationText = `${minutes} dk (${totalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} saat)`;
+        } else {
+            durationText = `${hours.toLocaleString('tr-TR')} saat`;
+        }
+        detailEl.textContent = `${durationText} × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
     } else {
         const days = parseFloat(document.getElementById('overtimeFiratDaysInput')?.value) || 0;
         const rate = selectedFiratDayType === 'saturday' ? FIRAT_SATURDAY_OVERTIME_RATE : FIRAT_WEEKDAY_OVERTIME_RATE;
@@ -5704,6 +5747,9 @@ function openAddOvertimeModal() {
     // Alanları sıfırla
     const dicleHours = document.getElementById('overtimeDicleHoursInput');
     if (dicleHours) dicleHours.value = '';
+
+    const dicleMinutes = document.getElementById('overtimeDicleMinutesInput');
+    if (dicleMinutes) dicleMinutes.value = '';
 
     const dicleRate = document.getElementById('overtimeDicleRateInput');
     if (dicleRate) dicleRate.value = DICLE_HOURLY_OVERTIME_RATE;
@@ -5742,18 +5788,22 @@ async function handleAddOvertime(e) {
     let newOvertime = null;
 
     if (person === 'Dicle') {
-        const hours = parseFloat(document.getElementById('overtimeDicleHoursInput')?.value);
+        const hours = parseFloat(document.getElementById('overtimeDicleHoursInput')?.value) || 0;
+        const minutes = parseFloat(document.getElementById('overtimeDicleMinutesInput')?.value) || 0;
+        const totalHours = hours + (minutes / 60);
         const hourlyRate = parseFloat(document.getElementById('overtimeDicleRateInput')?.value) || DICLE_HOURLY_OVERTIME_RATE;
-        if (!hours || hours <= 0) {
-            showToast('Lütfen geçerli bir mesai saati girin.');
+        if (totalHours <= 0) {
+            showToast('Lütfen geçerli bir mesai süresi (saat veya dakika) girin.');
             return;
         }
-        const amount = Math.round(hours * hourlyRate * 100) / 100;
+        const amount = Math.round(totalHours * hourlyRate * 100) / 100;
         newOvertime = {
             id: 'ot_' + Date.now(),
             person: 'Dicle',
             isHourly: true,
-            hours,
+            hours: Math.round(totalHours * 1000) / 1000,
+            hourPart: hours,
+            minutePart: minutes,
             hourlyRate,
             amount,
             date,

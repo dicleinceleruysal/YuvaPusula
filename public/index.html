@@ -1942,14 +1942,19 @@
                 <div id="overtimeDicleFields">
                     <div class="form-row">
                         <div class="form-group flex-1">
-                            <label><i class="fa-solid fa-clock"></i> Mesai Süresi (Saat)</label>
-                            <input type="number" step="0.25" min="0.25" max="240" id="overtimeDicleHoursInput" placeholder="Örn: 4.5" oninput="calculateOvertimeTotalLive()">
-                            <span class="field-hint">Örn: 4.5 saat veya 8 saat</span>
+                            <label><i class="fa-solid fa-clock"></i> Saat</label>
+                            <input type="number" step="1" min="0" max="24" id="overtimeDicleHoursInput" placeholder="0" oninput="calculateOvertimeTotalLive()">
+                            <span class="field-hint">Örn: 2 saat</span>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label><i class="fa-solid fa-stopwatch"></i> Dakika</label>
+                            <input type="number" step="1" min="0" max="59" id="overtimeDicleMinutesInput" placeholder="0" oninput="calculateOvertimeTotalLive()">
+                            <span class="field-hint">Örn: 30 dk</span>
                         </div>
                         <div class="form-group flex-1">
                             <label><i class="fa-solid fa-coins"></i> Saatlik Ücret (₺)</label>
                             <input type="number" step="0.001" min="0" id="overtimeDicleRateInput" value="296.875" oninput="calculateOvertimeTotalLive()">
-                            <span class="field-hint">Sabit: 296,875 ₺ / saat</span>
+                            <span class="field-hint">296,875 ₺ / sa</span>
                         </div>
                     </div>
                 </div>

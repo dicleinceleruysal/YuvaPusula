@@ -1090,7 +1090,7 @@ async function addOvertime(familyId, overtime) {
         const hourlyRate = parseFloat(overtime.hourlyRate) !== undefined && !isNaN(parseFloat(overtime.hourlyRate)) ? parseFloat(overtime.hourlyRate) : 296.875;
         let amount = parseFloat(overtime.amount) || 0;
         if (overtime.isHourly && hours > 0) {
-            amount = hours * hourlyRate;
+            amount = Math.round(hours * hourlyRate * 100) / 100;
         }
 
         fam.overtimes.unshift({
