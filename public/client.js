@@ -7325,7 +7325,6 @@ function renderTodayMenuWidget() {
         (todayMenu.soup && todayMenu.soup.trim()) ||
         (todayMenu.side && todayMenu.side.trim()) ||
         (todayMenu.dessert && todayMenu.dessert.trim()) ||
-        (todayMenu.lunch && todayMenu.lunch.trim()) ||
         (todayMenu.note && todayMenu.note.trim())
     );
 
@@ -7389,15 +7388,6 @@ function renderTodayMenuWidget() {
                             <div>
                                 <small>Tatlı / İkram</small>
                                 <strong>${escapeHtml(todayMenu.dessert)}</strong>
-                            </div>
-                        </div>` : ''}
-
-                        ${todayMenu.lunch ? `
-                        <div class="today-meal-subitem">
-                            <span class="meal-subitem-icon">☀️</span>
-                            <div>
-                                <small>Öğle / Pratik</small>
-                                <strong>${escapeHtml(todayMenu.lunch)}</strong>
                             </div>
                         </div>` : ''}
                     </div>
@@ -7465,7 +7455,6 @@ function renderWeeklyMenuPage() {
             (item.soup && item.soup.trim()) ||
             (item.side && item.side.trim()) ||
             (item.dessert && item.dessert.trim()) ||
-            (item.lunch && item.lunch.trim()) ||
             (item.note && item.note.trim())
         );
 
@@ -7518,15 +7507,6 @@ function renderWeeklyMenuPage() {
                             <div class="meal-type-details">
                                 <small>Tatlı / İkram</small>
                                 <span>${escapeHtml(item.dessert)}</span>
-                            </div>
-                        </div>` : ''}
-
-                        ${item.lunch ? `
-                        <div class="day-meal-row">
-                            <span class="meal-type-icon">☀️</span>
-                            <div class="meal-type-details">
-                                <small>Öğle / Pratik</small>
-                                <span>${escapeHtml(item.lunch)}</span>
                             </div>
                         </div>` : ''}
 
@@ -7621,7 +7601,6 @@ function openEditMenuModal(dateStr, dayName, dayIndex, weekKey) {
     document.getElementById('menuInputSoup').value = existing?.soup || '';
     document.getElementById('menuInputSide').value = existing?.side || '';
     document.getElementById('menuInputDessert').value = existing?.dessert || '';
-    document.getElementById('menuInputLunch').value = existing?.lunch || '';
     document.getElementById('menuInputNote').value = existing?.note || '';
 
     const btnDelete = document.getElementById('btnDeleteDailyMenu');
@@ -7646,7 +7625,6 @@ async function handleSaveDailyMenu(event) {
     const soup = document.getElementById('menuInputSoup').value.trim();
     const side = document.getElementById('menuInputSide').value.trim();
     const dessert = document.getElementById('menuInputDessert').value.trim();
-    const lunch = document.getElementById('menuInputLunch').value.trim();
     const note = document.getElementById('menuInputNote').value.trim();
 
     if (!main) {
@@ -7664,7 +7642,6 @@ async function handleSaveDailyMenu(event) {
         soup,
         side,
         dessert,
-        lunch,
         note,
         updatedBy: appState.currentUser?.name || 'Aile Üyesi',
         updatedAt: new Date().toISOString()
