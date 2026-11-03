@@ -491,6 +491,7 @@ function normalizeFamily(fam) {
         completed: !!p.completed,
         isRecurring: p.isRecurring !== undefined ? !!p.isRecurring : true
     }));
+    if (!fam.weeklyMenu) fam.weeklyMenu = [];
     return fam;
 }
 
@@ -1141,6 +1142,82 @@ async function deleteCharity(familyId, charityId) {
     });
 }
 
+// Haftalık Menü İşlemleri
+async function saveDailyMenu(familyId, menuData) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.weeklyMenu) fam.weeklyMenu = [];
+        const dateStr = menuData.date;
+        const weekKey = menuData.weekKey;
+        const dayIndex = menuData.dayIndex;
+
+        const existingIdx = fam.weeklyMenu.findIndex(m =>
+            (dateStr && m.date === dateStr) ||
+            (weekKey && dayIndex !== undefined && m.weekKey === weekKey && m.dayIndex === dayIndex)
+        );
+
+        const entry = {
+            id: menuData.id || ('menu_' + (dateStr || `${weekKey}_${dayIndex}`)),
+            date: dateStr || '',
+            weekKey: weekKey || '',
+            dayIndex: dayIndex !== undefined ? parseInt(dayIndex) : 1,
+            dayName: menuData.dayName || '',
+            main: (menuData.main || '').trim(),
+            soup: (menuData.soup || '').trim(),
+            side: (menuData.side || '').trim(),
+            dessert: (menuData.dessert || '').trim(),
+            lunch: (menuData.lunch || '').trim(),
+            note: (menuData.note || '').trim(),
+            updatedBy: menuData.updatedBy || 'Aile Üyesi',
+            updatedAt: new Date().toISOString()
+        };
+
+        if (existingIdx >= 0) {
+            fam.weeklyMenu[existingIdx] = {
+                ...fam.weeklyMenu[existingIdx],
+                ...entry
+            };
+        } else {
+            fam.weeklyMenu.push(entry);
+        }
+        return fam;
+    });
+}
+
+async function deleteDailyMenu(familyId, menuId, dateStr) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.weeklyMenu) fam.weeklyMenu = [];
+        fam.weeklyMenu = fam.weeklyMenu.filter(m => {
+            if (menuId && m.id === menuId) return false;
+            if (dateStr && m.date === dateStr) return false;
+            return true;
+        });
+        return fam;
+    });
+}
+
+async function copyWeeklyMenu(familyId, fromWeekKey, toWeekKey, targetDates) {
+    return await updateFamilyHelper(familyId, (fam) => {
+        if (!fam.weeklyMenu) fam.weeklyMenu = [];
+        const sourceItems = fam.weeklyMenu.filter(m => m.weekKey === fromWeekKey);
+        if (sourceItems.length === 0) return fam;
+
+        // Clear existing in toWeekKey
+        fam.weeklyMenu = fam.weeklyMenu.filter(m => m.weekKey !== toWeekKey);
+
+        sourceItems.forEach(src => {
+            const targetDate = (targetDates && targetDates[src.dayIndex]) ? targetDates[src.dayIndex] : '';
+            fam.weeklyMenu.push({
+                ...src,
+                id: 'menu_' + (targetDate || `${toWeekKey}_${src.dayIndex}`),
+                weekKey: toWeekKey,
+                date: targetDate,
+                updatedAt: new Date().toISOString()
+            });
+        });
+        return fam;
+    });
+}
+
 // Push Subscription İşlemleri (Uygulama Kapalıyken Bildirim Gönderme)
 async function savePushSubscription(familyId, userId, subscription) {
     if (!subscription || !subscription.endpoint) return false;
@@ -1410,6 +1487,9 @@ module.exports = {
     deleteInvestment,
     addCharity,
     deleteCharity,
+    saveDailyMenu,
+    deleteDailyMenu,
+    copyWeeklyMenu,
     addMessage,
     markMessagesAsRead,
     savePushSubscription,

@@ -5973,3 +5973,755 @@ body {
 
 
 
+
+
+/* ==========================================================
+   GÜNÜN MENÜSÜ & HAFTALIK MENÜ (YEMEK PLANI) STİLLERİ
+   ========================================================== */
+
+/* 1. GÜNÜN MENÜSÜ KARTI (ANA SAYFA) */
+.today-menu-card {
+    background: #FFFFFF;
+    border: 1.5px solid var(--border-color);
+    border-radius: 26px;
+    padding: 22px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(44, 34, 29, 0.05);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.today-menu-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #E65100 0%, #D49A48 50%, #10B981 100%);
+}
+
+.today-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.today-menu-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+}
+
+.today-menu-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #E65100 0%, #F59E0B 100%);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #FFFFFF;
+    flex-shrink: 0;
+    box-shadow: 0 6px 18px rgba(230, 81, 0, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    transition: transform 0.2s ease;
+}
+
+.today-menu-icon:hover {
+    transform: rotate(-8deg) scale(1.05);
+}
+
+.today-menu-text-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.today-menu-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #E65100;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.today-menu-title {
+    margin: 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+}
+
+.today-menu-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.today-menu-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-menu-action-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: var(--primary);
+    color: #FFFFFF;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-menu-action-sm:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-menu-action-sm.secondary {
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FFEDD5;
+}
+
+.btn-menu-action-sm.secondary:hover {
+    background: #FFEDD5;
+}
+
+/* Ana Yemek Vurgu Kartı */
+.today-meal-highlight {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border: 1.5px solid #FDE68A;
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+}
+
+.today-meal-highlight .meal-badge-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.meal-highlight-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.meal-highlight-info small {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #B45309;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.meal-highlight-info strong {
+    font-size: 1.15rem;
+    color: #78350F;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+/* Alt Yemekler Izgarası */
+.today-meals-subgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.today-meal-subitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #FAFAFA;
+    border: 1px solid #F3F4F6;
+    border-radius: 14px;
+    padding: 10px 14px;
+}
+
+.today-meal-subitem .meal-subitem-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.today-meal-subitem div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.today-meal-subitem small {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.today-meal-subitem strong {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.today-menu-note-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #FDF4E6;
+    border-left: 3px solid var(--accent-ochre);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #78350F;
+    margin-bottom: 14px;
+}
+
+.today-menu-bottom-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-today-menu-shop {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ECFDF5;
+    color: #047857;
+    border: 1px solid #A7F3D0;
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-today-menu-shop:hover {
+    background: #D1FAE5;
+    transform: translateY(-1px);
+}
+
+/* Boş Durum (Empty State) */
+.today-menu-card-inner.empty {
+    text-align: center;
+    padding: 10px 4px;
+}
+
+.today-menu-empty-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.today-menu-empty-icon {
+    width: 60px;
+    height: 60px;
+    background: #FFF7ED;
+    border: 2px dashed #FDBA74;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.today-menu-empty-texts h4 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 4px 0;
+}
+
+.today-menu-empty-texts p {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    max-width: 440px;
+    margin: 0 auto;
+    line-height: 1.4;
+}
+
+.today-menu-empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-today-menu-set {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #E65100 0%, #D49A48 100%);
+    color: #FFFFFF;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 14px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(230, 81, 0, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-today-menu-set:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(230, 81, 0, 0.35);
+}
+
+.btn-today-menu-view-week {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFFFFF;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 9px 16px;
+    border-radius: 14px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-today-menu-view-week:hover {
+    background: #F9FAFB;
+    color: var(--dark);
+}
+
+/* 2. HAFTALIK MENÜ SAYFASI */
+.menu-week-navigator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.btn-week-nav {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.btn-week-nav:hover {
+    background: var(--primary);
+    color: #FFFFFF;
+    border-color: var(--primary);
+}
+
+.menu-week-info {
+    text-align: center;
+    min-width: 200px;
+}
+
+.menu-week-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #10B981;
+    margin-bottom: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.menu-week-badge.offset {
+    color: var(--primary);
+}
+
+.menu-week-info h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--dark);
+}
+
+.btn-return-today {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #ECFDF5;
+    color: #059669;
+    border: 1px solid #A7F3D0;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-return-today:hover {
+    background: #D1FAE5;
+}
+
+/* 7 Günlük Menü Kartları Grid */
+.weekly-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.day-menu-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(44, 34, 29, 0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.day-menu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(44, 34, 29, 0.08);
+    border-color: #D49A48;
+}
+
+.day-menu-card.is-today {
+    border: 2px solid #D49A48;
+    background: #FFFCF7;
+    box-shadow: 0 6px 20px rgba(212, 154, 72, 0.15);
+}
+
+.day-menu-card.is-today::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #E65100 0%, #D49A48 100%);
+}
+
+.day-menu-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.day-menu-day-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.day-menu-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--dark);
+}
+
+.day-menu-date {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.day-menu-header-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.day-today-pill {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: #FFFFFF;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.btn-card-edit-mini {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+}
+
+.btn-card-edit-mini:hover {
+    background: var(--primary);
+    color: #FFFFFF;
+    border-color: var(--primary);
+}
+
+.day-menu-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.day-meal-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: #FAFAFA;
+}
+
+.day-meal-row.primary {
+    background: #FFF7ED;
+    border: 1px solid #FFEDD5;
+}
+
+.day-meal-row .meal-type-icon {
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.meal-type-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.meal-type-details small {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.4px;
+}
+
+.day-meal-row.primary .meal-type-details small {
+    color: #C2410C;
+}
+
+.meal-type-details strong {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1.25;
+}
+
+.meal-type-details span {
+    font-size: 0.82rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.day-menu-card-note {
+    font-size: 0.74rem;
+    color: #92400E;
+    background: #FEF3C7;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Boş Kart Durumu */
+.day-menu-card-empty-state {
+    text-align: center;
+    padding: 24px 10px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.empty-plate-icon {
+    font-size: 28px;
+    opacity: 0.6;
+}
+
+.day-menu-card-empty-state p {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.btn-card-add-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px dashed #FDBA74;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-card-add-menu:hover {
+    background: #FFEDD5;
+    border-style: solid;
+}
+
+.day-menu-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.btn-day-card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ECFDF5;
+    color: #047857;
+    border: 1px solid #A7F3D0;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-day-card-action:hover {
+    background: #D1FAE5;
+}
+
+.btn-day-card-action-icon.delete {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #FEF2F2;
+    border: 1px solid #FEE2E2;
+    color: #DC2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+}
+
+.btn-day-card-action-icon.delete:hover {
+    background: #DC2626;
+    color: #FFFFFF;
+}
+
+/* Modal Banner */
+.menu-modal-date-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+    border: 1px solid #FDBA74;
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.menu-modal-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.menu-modal-date-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-modal-date-text strong {
+    font-size: 0.96rem;
+    color: #9A3412;
+    font-weight: 800;
+}
+
+.menu-modal-date-text span {
+    font-size: 0.76rem;
+    color: #C2410C;
+}
+
+@media (max-width: 640px) {
+    .today-meals-subgrid {
+        grid-template-columns: 1fr;
+    }
+    .weekly-menu-grid {
+        grid-template-columns: 1fr;
+    }
+}

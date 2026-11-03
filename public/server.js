@@ -1279,6 +1279,34 @@ async function appHandler(req, res) {
                 return sendJson(res, 200, { success: true, family: updatedFamily });
             }
 
+            // 9.1 Haftalık & Günlük Menü İşlemleri
+            if (pathname === '/api/menu/save' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.saveDailyMenu(body.familyId, body.menu);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                const authorId = body.currentUserId || (body.menu ? body.menu.userId : null);
+                const dishTitle = (body.menu && body.menu.main) ? body.menu.main : 'Yeni yemek planlandı';
+                dbManager.sendPushToFamily(body.familyId, {
+                    title: `🍲 ${(body.menu && body.menu.dayName) || 'Günün'} Menüsü Güncellendi`,
+                    body: dishTitle,
+                    icon: './icons/icon-192.png',
+                    url: './index.html?tab=menu'
+                }, authorId).catch(e => {});
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/menu/delete' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.deleteDailyMenu(body.familyId, body.menuId, body.date);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+            if (pathname === '/api/menu/copy-week' && req.method === 'POST') {
+                const body = await parseJsonBody(req);
+                const updatedFamily = await dbManager.copyWeeklyMenu(body.familyId, body.fromWeekKey, body.toWeekKey, body.targetDates);
+                broadcastToFamilyLive(body.familyId, 'update', { family: updatedFamily });
+                return sendJson(res, 200, { success: true, family: updatedFamily });
+            }
+
             // 10. Harcama İşlemleri
             if (pathname === '/api/expenses/add' && req.method === 'POST') {
                 const body = await parseJsonBody(req);

@@ -152,6 +152,10 @@
                     <i class="fa-solid fa-cart-shopping"></i>
                     <span>Alışveriş Listesi</span>
                 </button>
+                <button class="sidebar-nav-item" data-tab-target="tabMenu" onclick="switchTab('tabMenu')">
+                    <i class="fa-solid fa-utensils"></i>
+                    <span>Haftalık Menü</span>
+                </button>
                 <button class="sidebar-nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks')">
                     <i class="fa-solid fa-circle-check"></i>
                     <span>Görev & Sorumluluk</span>
@@ -317,6 +321,11 @@
                     <div class="plan-hero-badge">
                         <span>Oluştur</span> <i class="fa-solid fa-chevron-right"></i>
                     </div>
+                </div>
+
+                <!-- GÜNÜN MENÜSÜ KARTI (ANA SAYFA) -->
+                <div class="today-menu-card" id="todayMenuCard">
+                    <!-- Dinamik Günün Menüsü Gelecek -->
                 </div>
 
                 <!-- GÜNLÜK PLANLAMA VE GÜNÜN AKIŞI KARTI (HER GÜN SIFIRLANIR) -->
@@ -570,6 +579,46 @@
 
                 <div class="list-container" id="shoppingItemsList">
                     <!-- Dinamik Alışveriş Maddeleri -->
+                </div>
+            </section>
+
+            <!-- TAB: HAFTALIK MENÜ (YEMEK PLANI) -->
+            <section id="tabMenu" class="tab-panel">
+                <div class="panel-header-action">
+                    <div>
+                        <h3>🍲 Haftalık Yemek Menüsü</h3>
+                        <p class="subtitle">Ailenin haftalık yemek planı, sağlıklı & düzenli lezzet rehberi</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-secondary-sm" onclick="handleCopyLastWeekMenu()" title="Geçen haftanın menüsünü bu haftaya kopyala">
+                            <i class="fa-solid fa-copy"></i> Geçen Haftadan Al
+                        </button>
+                        <button class="btn-primary-sm" onclick="openEditMenuForToday()">
+                            <i class="fa-solid fa-plus"></i> Bugünün Menüsü
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hafta Gezinme Barı -->
+                <div class="menu-week-navigator">
+                    <button class="btn-week-nav" onclick="changeMenuWeek(-1)" title="Önceki Hafta">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div class="menu-week-info">
+                        <div class="menu-week-badge" id="menuWeekBadge"><i class="fa-regular fa-calendar-days"></i> Bu Hafta</div>
+                        <h4 id="menuWeekRangeLabel">2 - 8 Kasım 2026</h4>
+                    </div>
+                    <button class="btn-week-nav" onclick="changeMenuWeek(1)" title="Sonraki Hafta">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <button class="btn-return-today hidden" id="btnMenuReturnCurrentWeek" onclick="resetMenuWeekToCurrent()">
+                        <i class="fa-solid fa-calendar-day"></i> Bu Haftaya Dön
+                    </button>
+                </div>
+
+                <!-- 7 Günlük Menü Kartları Grid -->
+                <div class="weekly-menu-grid" id="weeklyMenuGrid">
+                    <!-- 7 Gün Dinamik Olarak Gelecek -->
                 </div>
             </section>
 
@@ -1112,6 +1161,10 @@
                 <i class="fa-solid fa-cart-shopping"></i>
                 <span>Alışveriş</span>
             </button>
+            <button class="nav-item" data-tab-target="tabMenu" onclick="switchTab('tabMenu', this)">
+                <i class="fa-solid fa-utensils"></i>
+                <span>Menü</span>
+            </button>
             <button class="nav-item" data-tab-target="tabTasks" onclick="switchTab('tabTasks', this)">
                 <i class="fa-solid fa-circle-check"></i>
                 <span>Görevler</span>
@@ -1522,6 +1575,71 @@
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeModal('modalEditDailyPlan')">İptal</button>
                     <button type="submit" class="btn-primary" style="flex: 2;"><i class="fa-solid fa-check"></i> Değişiklikleri Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: GÜNLÜK MENÜ DÜZENLE -->
+    <div id="modalEditDailyMenu" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-utensils"></i> <span id="modalMenuTitle">Günün Menüsünü Belirle</span></h3>
+                <button class="btn-close" onclick="closeModal('modalEditDailyMenu')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleSaveDailyMenu(event)">
+                <input type="hidden" id="menuInputDate">
+                <input type="hidden" id="menuInputWeekKey">
+                <input type="hidden" id="menuInputDayIndex">
+                <input type="hidden" id="menuInputDayName">
+
+                <div class="menu-modal-date-banner">
+                    <div class="menu-modal-icon">🍲</div>
+                    <div class="menu-modal-date-text">
+                        <strong id="modalMenuDayLabel">Salı • 3 Kasım 2026</strong>
+                        <span id="modalMenuSubLabel">Ev halkı için nefis bir lezzet planı hazırlayın</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-bowl-rice" style="color:var(--primary);"></i> <b>Ana Yemek</b> <span style="color:var(--primary);">*</span></label>
+                    <input type="text" id="menuInputMain" placeholder="Örn: Karnıyarık, Fırında Tavuk, Kuru Fasulye" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-bowl-food" style="color:var(--accent-ochre);"></i> Çorba / Başlangıç</label>
+                        <input type="text" id="menuInputSoup" placeholder="Örn: Mercimek, Ezogelin, Tarhana">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-carrot" style="color:var(--secondary);"></i> Yan Lezzet / Pilav / Salata</label>
+                        <input type="text" id="menuInputSide" placeholder="Örn: Pirinç Pilavı, Mevsim Salata, Cacık">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-cake-candles" style="color:#ec4899;"></i> Tatlı / Meyve / İkram</label>
+                        <input type="text" id="menuInputDessert" placeholder="Örn: Sütlaç, Revani, Meyve">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label><i class="fa-solid fa-sun" style="color:#eab308;"></i> Öğle / Pratik Lezzet</label>
+                        <input type="text" id="menuInputLunch" placeholder="Örn: Kaşarlı Tost & Ayran, Menemen">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-note-sticky" style="color:var(--text-muted);"></i> Hazırlık & Malzeme Notu</label>
+                    <input type="text" id="menuInputNote" placeholder="Örn: Kıyma akşamdan çıkarılacak, yoğurt alınacak">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 10px;">
+                    <button type="button" class="btn-secondary-sm" id="btnDeleteDailyMenu" onclick="handleDeleteCurrentMenuModal()" style="color: var(--danger); border-color: var(--danger);">
+                        <i class="fa-solid fa-trash-can"></i> Temizle
+                    </button>
+                    <button type="submit" class="btn-primary" style="flex: 1;">
+                        <i class="fa-solid fa-check"></i> Menüyü Kaydet
+                    </button>
                 </div>
             </form>
         </div>

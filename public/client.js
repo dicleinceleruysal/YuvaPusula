@@ -88,6 +88,7 @@ let appState = {
     taskAssigneeFilter: 'MINE',     // 'MINE', 'ALL', 'DICLE', 'FIRAT', 'FAMILY'
     dailyPlannerFilter: 'MINE',     // 'MINE' (Bana Özel + Tüm Aile), 'ALL' (Tüm Aile Akışı)
     overtimePersonFilter: 'ALL',     // 'ALL', 'Dicle', 'Fırat'
+    menuWeekOffset: 0,              // 0: Bu hafta, -1: Geçen hafta, 1: Gelecek hafta
     deferredPrompt: null
 };
 
@@ -1637,6 +1638,52 @@ const AilemAPI = {
         return null;
     },
 
+    // Haftalık & Günlük Menü İşlemleri
+    async saveDailyMenu(familyId, menu) {
+        try {
+            const res = await fetch('/api/menu/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, menu })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async deleteDailyMenu(familyId, menuId, date) {
+        try {
+            const res = await fetch('/api/menu/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, menuId, date })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    async copyWeeklyMenu(familyId, fromWeekKey, toWeekKey, targetDates) {
+        try {
+            const res = await fetch('/api/menu/copy-week', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ familyId, fromWeekKey, toWeekKey, targetDates })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.family;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     async sendMessage(familyId, message) {
         try {
             const res = await fetch('/api/messages/send', {
@@ -2279,6 +2326,7 @@ function normalizeFamilyData(fam) {
     if (!fam.investmentHistory) fam.investmentHistory = [];
     if (!fam.charities) fam.charities = [];
     if (!fam.messages) fam.messages = [];
+    if (!fam.weeklyMenu) fam.weeklyMenu = [];
     return fam;
 }
 
@@ -2776,10 +2824,12 @@ function renderApp() {
 
     // Modülleri Render Et
     renderPano();
+    renderTodayMenuWidget();
     renderDailyPlans();
     renderChat();
     switchPlansHub(appState.activePlanHub || 'Alisveris');
     renderShopping();
+    renderWeeklyMenuPage();
     renderTasks();
     renderBudget();
     renderMembers();
@@ -7192,6 +7242,612 @@ function escapeHtml(text) {
 }
 
 // ==========================================================
+// 7.9 HAFTALIK MENÜ & GÜNÜN MENÜSÜ YÖNETİMİ
+// ==========================================================
+
+function getMenuWeekDates(offsetWeeks = 0) {
+    const now = new Date();
+    // Hedef haftanın referans tarihini al
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offsetWeeks * 7));
+    
+    // JS'de 0: Pazar, 1: Pazartesi ... 6: Cumartesi
+    const currentDay = targetDate.getDay();
+    const diffToMonday = currentDay === 0 ? -6 : (1 - currentDay);
+    
+    const monday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + diffToMonday);
+    
+    const dayNames = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        const dateLabel = `${d.getDate()} ${months[d.getMonth()]}`;
+        
+        days.push({
+            dayIndex: i + 1, // 1: Pazartesi ... 7: Pazar
+            dayName: dayNames[i],
+            date: dateStr,
+            dateLabel: dateLabel,
+            isToday: dateStr === todayStr,
+            rawDate: d
+        });
+    }
+    
+    const weekKey = getISOWeekKey(monday);
+    const firstDay = days[0];
+    const lastDay = days[6];
+    const weekRangeLabel = `${firstDay.dateLabel} - ${lastDay.dateLabel} ${monday.getFullYear()}`;
+    
+    return {
+        weekKey,
+        weekRangeLabel,
+        days,
+        isCurrentWeek: offsetWeeks === 0
+    };
+}
+
+function renderTodayMenuWidget() {
+    const container = document.getElementById('todayMenuCard');
+    if (!container) return;
+
+    const family = appState.familyData;
+    if (!family) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const todayDayName = dayNames[now.getDay()];
+    const todayDateLabel = `${todayDayName} • ${now.getDate()} ${months[now.getMonth()]}`;
+
+    const menuItems = family.weeklyMenu || [];
+    const currentWeekKey = getISOWeekKey(now);
+    const dayOfWeekIndex = now.getDay() === 0 ? 7 : now.getDay();
+
+    const todayMenu = menuItems.find(m => 
+        (m.date && m.date === todayStr) || 
+        (m.weekKey === currentWeekKey && parseInt(m.dayIndex) === dayOfWeekIndex)
+    );
+
+    const hasContent = todayMenu && (
+        (todayMenu.main && todayMenu.main.trim()) ||
+        (todayMenu.soup && todayMenu.soup.trim()) ||
+        (todayMenu.side && todayMenu.side.trim()) ||
+        (todayMenu.dessert && todayMenu.dessert.trim()) ||
+        (todayMenu.lunch && todayMenu.lunch.trim()) ||
+        (todayMenu.note && todayMenu.note.trim())
+    );
+
+    if (hasContent) {
+        container.innerHTML = `
+            <div class="today-menu-card-inner">
+                <div class="today-menu-header">
+                    <div class="today-menu-title-group">
+                        <div class="today-menu-icon">🍲</div>
+                        <div class="today-menu-text-box">
+                            <div class="today-menu-tag"><i class="fa-solid fa-utensils"></i> GÜNÜN MENÜSÜ</div>
+                            <h4 class="today-menu-title">Bugün Ne Pişiriyoruz?</h4>
+                            <div class="today-menu-date-badge">
+                                <i class="fa-regular fa-calendar-days"></i>
+                                <span>${todayDateLabel}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="today-menu-actions">
+                        <button class="btn-menu-action-sm" onclick="openEditMenuForToday()" title="Bugünün Menüsünü Düzenle">
+                            <i class="fa-solid fa-pen-to-square"></i> <span>Düzenle</span>
+                        </button>
+                        <button class="btn-menu-action-sm secondary" onclick="switchTab('tabMenu')" title="Tüm Haftalık Menüyü Gör">
+                            <i class="fa-solid fa-calendar-week"></i> <span>Tüm Hafta</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="today-menu-meals-grid">
+                    ${todayMenu.main ? `
+                    <div class="today-meal-highlight">
+                        <div class="meal-badge-icon" style="background:#FFF3E0; color:#E65100;">🥘</div>
+                        <div class="meal-highlight-info">
+                            <small>Ana Yemek</small>
+                            <strong>${escapeHtml(todayMenu.main)}</strong>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="today-meals-subgrid">
+                        ${todayMenu.soup ? `
+                        <div class="today-meal-subitem">
+                            <span class="meal-subitem-icon">🍲</span>
+                            <div>
+                                <small>Çorba</small>
+                                <strong>${escapeHtml(todayMenu.soup)}</strong>
+                            </div>
+                        </div>` : ''}
+
+                        ${todayMenu.side ? `
+                        <div class="today-meal-subitem">
+                            <span class="meal-subitem-icon">🥗</span>
+                            <div>
+                                <small>Yan Lezzet / Salata</small>
+                                <strong>${escapeHtml(todayMenu.side)}</strong>
+                            </div>
+                        </div>` : ''}
+
+                        ${todayMenu.dessert ? `
+                        <div class="today-meal-subitem">
+                            <span class="meal-subitem-icon">🍰</span>
+                            <div>
+                                <small>Tatlı / İkram</small>
+                                <strong>${escapeHtml(todayMenu.dessert)}</strong>
+                            </div>
+                        </div>` : ''}
+
+                        ${todayMenu.lunch ? `
+                        <div class="today-meal-subitem">
+                            <span class="meal-subitem-icon">☀️</span>
+                            <div>
+                                <small>Öğle / Pratik</small>
+                                <strong>${escapeHtml(todayMenu.lunch)}</strong>
+                            </div>
+                        </div>` : ''}
+                    </div>
+
+                    ${todayMenu.note ? `
+                    <div class="today-menu-note-box">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <span>${escapeHtml(todayMenu.note)}</span>
+                    </div>` : ''}
+
+                    <div class="today-menu-bottom-actions">
+                        <button class="btn-today-menu-shop" onclick="handleAddMenuToShopping('${todayStr}')">
+                            <i class="fa-solid fa-cart-plus"></i> <span>Malzemeleri Alışveriş Listesine Ekle</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="today-menu-card-inner empty">
+                <div class="today-menu-empty-layout">
+                    <div class="today-menu-empty-icon">🍲</div>
+                    <div class="today-menu-empty-texts">
+                        <div class="today-menu-tag"><i class="fa-solid fa-utensils"></i> GÜNÜN MENÜSÜ • ${todayDateLabel}</div>
+                        <h4>Bugün Ne Pişiriyoruz?</h4>
+                        <p>Bugün için henüz yemek belirlenmedi. Akşam yemeğini şimdiden planlayın, ev halkı haberdar olsun!</p>
+                    </div>
+                </div>
+                <div class="today-menu-empty-actions">
+                    <button class="btn-today-menu-set" onclick="openEditMenuForToday()">
+                        <i class="fa-solid fa-plus"></i> Bugünün Menüsünü Belirle
+                    </button>
+                    <button class="btn-today-menu-view-week" onclick="switchTab('tabMenu')">
+                        <i class="fa-solid fa-calendar-week"></i> Haftalık Menü
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function renderWeeklyMenuPage() {
+    const grid = document.getElementById('weeklyMenuGrid');
+    if (!grid) return;
+
+    const family = appState.familyData;
+    if (!family) return;
+
+    const offset = appState.menuWeekOffset || 0;
+    const weekInfo = getMenuWeekDates(offset);
+
+    const rangeLabel = document.getElementById('menuWeekRangeLabel');
+    if (rangeLabel) rangeLabel.textContent = weekInfo.weekRangeLabel;
+
+    const weekBadge = document.getElementById('menuWeekBadge');
+    if (weekBadge) {
+        if (weekInfo.isCurrentWeek) {
+            weekBadge.innerHTML = '<i class="fa-regular fa-calendar-days"></i> Bu Hafta';
+            weekBadge.classList.remove('offset');
+        } else if (offset === 1) {
+            weekBadge.innerHTML = '<i class="fa-solid fa-forward"></i> Gelecek Hafta';
+            weekBadge.classList.add('offset');
+        } else if (offset === -1) {
+            weekBadge.innerHTML = '<i class="fa-solid fa-backward"></i> Geçen Hafta';
+            weekBadge.classList.add('offset');
+        } else {
+            weekBadge.innerHTML = `<i class="fa-solid fa-calendar"></i> ${offset > 0 ? `+${offset}` : offset} Hafta`;
+            weekBadge.classList.add('offset');
+        }
+    }
+
+    const btnReturn = document.getElementById('btnMenuReturnCurrentWeek');
+    if (btnReturn) {
+        btnReturn.classList.toggle('hidden', weekInfo.isCurrentWeek);
+    }
+
+    const menuItems = family.weeklyMenu || [];
+
+    grid.innerHTML = weekInfo.days.map(day => {
+        const item = menuItems.find(m => 
+            (m.date && m.date === day.date) || 
+            (m.weekKey === weekInfo.weekKey && parseInt(m.dayIndex) === day.dayIndex)
+        );
+
+        const hasMeals = item && (
+            (item.main && item.main.trim()) ||
+            (item.soup && item.soup.trim()) ||
+            (item.side && item.side.trim()) ||
+            (item.dessert && item.dessert.trim()) ||
+            (item.lunch && item.lunch.trim()) ||
+            (item.note && item.note.trim())
+        );
+
+        return `
+            <div class="day-menu-card ${day.isToday ? 'is-today' : ''} ${hasMeals ? 'has-meals' : 'is-empty'}">
+                <div class="day-menu-card-header">
+                    <div class="day-menu-day-meta">
+                        <span class="day-menu-name">${day.dayName}</span>
+                        <span class="day-menu-date">${day.dateLabel}</span>
+                    </div>
+                    <div class="day-menu-header-badges">
+                        ${day.isToday ? '<span class="day-today-pill">🌟 BUGÜN</span>' : ''}
+                        <button class="btn-card-edit-mini" onclick="openEditMenuModal('${day.date}', '${day.dayName}', ${day.dayIndex}, '${weekInfo.weekKey}')" title="Menüyü Düzenle">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="day-menu-card-body">
+                    ${hasMeals ? `
+                        <div class="day-meal-row primary">
+                            <span class="meal-type-icon">🥘</span>
+                            <div class="meal-type-details">
+                                <small>Ana Yemek</small>
+                                <strong>${escapeHtml(item.main || 'Belirtilmedi')}</strong>
+                            </div>
+                        </div>
+
+                        ${item.soup ? `
+                        <div class="day-meal-row">
+                            <span class="meal-type-icon">🍲</span>
+                            <div class="meal-type-details">
+                                <small>Çorba</small>
+                                <span>${escapeHtml(item.soup)}</span>
+                            </div>
+                        </div>` : ''}
+
+                        ${item.side ? `
+                        <div class="day-meal-row">
+                            <span class="meal-type-icon">🥗</span>
+                            <div class="meal-type-details">
+                                <small>Yan Lezzet / Salata</small>
+                                <span>${escapeHtml(item.side)}</span>
+                            </div>
+                        </div>` : ''}
+
+                        ${item.dessert ? `
+                        <div class="day-meal-row">
+                            <span class="meal-type-icon">🍰</span>
+                            <div class="meal-type-details">
+                                <small>Tatlı / İkram</small>
+                                <span>${escapeHtml(item.dessert)}</span>
+                            </div>
+                        </div>` : ''}
+
+                        ${item.lunch ? `
+                        <div class="day-meal-row">
+                            <span class="meal-type-icon">☀️</span>
+                            <div class="meal-type-details">
+                                <small>Öğle / Pratik</small>
+                                <span>${escapeHtml(item.lunch)}</span>
+                            </div>
+                        </div>` : ''}
+
+                        ${item.note ? `
+                        <div class="day-menu-card-note">
+                            <i class="fa-solid fa-note-sticky"></i> ${escapeHtml(item.note)}
+                        </div>` : ''}
+                    ` : `
+                        <div class="day-menu-card-empty-state">
+                            <div class="empty-plate-icon">🍽️</div>
+                            <p>Henüz yemek belirlenmedi</p>
+                            <button class="btn-card-add-menu" onclick="openEditMenuModal('${day.date}', '${day.dayName}', ${day.dayIndex}, '${weekInfo.weekKey}')">
+                                <i class="fa-solid fa-plus"></i> Menü Ekle
+                            </button>
+                        </div>
+                    `}
+                </div>
+
+                ${hasMeals ? `
+                <div class="day-menu-card-footer">
+                    <button class="btn-day-card-action" onclick="handleAddMenuToShopping('${day.date}')" title="Malzemeleri alışveriş listesine ekle">
+                        <i class="fa-solid fa-cart-plus"></i> <span>Alışverişe Ekle</span>
+                    </button>
+                    <button class="btn-day-card-action-icon delete" onclick="handleClearDailyMenu('${day.date}', '${day.dayName}')" title="Bu günün menüsünü sil">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function changeMenuWeek(offsetChange) {
+    appState.menuWeekOffset = (appState.menuWeekOffset || 0) + offsetChange;
+    renderWeeklyMenuPage();
+}
+
+function resetMenuWeekToCurrent() {
+    appState.menuWeekOffset = 0;
+    renderWeeklyMenuPage();
+}
+
+function openEditMenuForToday() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    
+    const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const todayDayName = dayNames[now.getDay()];
+    const dayOfWeekIndex = now.getDay() === 0 ? 7 : now.getDay();
+    const weekKey = getISOWeekKey(now);
+    
+    openEditMenuModal(todayStr, todayDayName, dayOfWeekIndex, weekKey);
+}
+
+function openEditMenuModal(dateStr, dayName, dayIndex, weekKey) {
+    const family = appState.familyData;
+    if (!family) return;
+
+    if (!weekKey) {
+        const parts = dateStr.split('-');
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        weekKey = getISOWeekKey(d);
+    }
+    if (!dayIndex) {
+        const parts = dateStr.split('-');
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        dayIndex = d.getDay() === 0 ? 7 : d.getDay();
+    }
+
+    document.getElementById('menuInputDate').value = dateStr || '';
+    document.getElementById('menuInputWeekKey').value = weekKey || '';
+    document.getElementById('menuInputDayIndex').value = dayIndex || '1';
+    document.getElementById('menuInputDayName').value = dayName || '';
+
+    // Tarih etiketi
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    let formattedDate = dateStr;
+    if (dateStr && dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        const dNum = parseInt(parts[2]);
+        const mNum = parseInt(parts[1]) - 1;
+        formattedDate = `${dNum} ${months[mNum] || ''} ${parts[0]}`;
+    }
+
+    const titleEl = document.getElementById('modalMenuTitle');
+    if (titleEl) titleEl.textContent = `${dayName} Menüsü`;
+
+    const labelEl = document.getElementById('modalMenuDayLabel');
+    if (labelEl) labelEl.textContent = `${dayName} • ${formattedDate}`;
+
+    // Mevcut kaydı bul
+    const menuItems = family.weeklyMenu || [];
+    const existing = menuItems.find(m => 
+        (dateStr && m.date === dateStr) || 
+        (m.weekKey === weekKey && parseInt(m.dayIndex) === parseInt(dayIndex))
+    );
+
+    document.getElementById('menuInputMain').value = existing?.main || '';
+    document.getElementById('menuInputSoup').value = existing?.soup || '';
+    document.getElementById('menuInputSide').value = existing?.side || '';
+    document.getElementById('menuInputDessert').value = existing?.dessert || '';
+    document.getElementById('menuInputLunch').value = existing?.lunch || '';
+    document.getElementById('menuInputNote').value = existing?.note || '';
+
+    const btnDelete = document.getElementById('btnDeleteDailyMenu');
+    if (btnDelete) {
+        btnDelete.style.display = existing ? 'inline-flex' : 'none';
+    }
+
+    openModal('modalEditDailyMenu');
+}
+
+async function handleSaveDailyMenu(event) {
+    event.preventDefault();
+    const family = appState.familyData;
+    if (!family) return;
+
+    const dateStr = document.getElementById('menuInputDate').value;
+    const weekKey = document.getElementById('menuInputWeekKey').value;
+    const dayIndex = parseInt(document.getElementById('menuInputDayIndex').value) || 1;
+    const dayName = document.getElementById('menuInputDayName').value;
+
+    const main = document.getElementById('menuInputMain').value.trim();
+    const soup = document.getElementById('menuInputSoup').value.trim();
+    const side = document.getElementById('menuInputSide').value.trim();
+    const dessert = document.getElementById('menuInputDessert').value.trim();
+    const lunch = document.getElementById('menuInputLunch').value.trim();
+    const note = document.getElementById('menuInputNote').value.trim();
+
+    if (!main) {
+        showToast('Lütfen en azından bir Ana Yemek girin. 🥘');
+        return;
+    }
+
+    const menuData = {
+        id: 'menu_' + (dateStr || `${weekKey}_${dayIndex}`),
+        date: dateStr,
+        weekKey: weekKey,
+        dayIndex: dayIndex,
+        dayName: dayName,
+        main,
+        soup,
+        side,
+        dessert,
+        lunch,
+        note,
+        updatedBy: appState.currentUser?.name || 'Aile Üyesi',
+        updatedAt: new Date().toISOString()
+    };
+
+    const updatedFamily = await AilemAPI.saveDailyMenu(family.id, menuData);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        if (!appState.familyData.weeklyMenu) appState.familyData.weeklyMenu = [];
+        const existingIdx = appState.familyData.weeklyMenu.findIndex(m => 
+            (dateStr && m.date === dateStr) || 
+            (m.weekKey === weekKey && m.dayIndex === dayIndex)
+        );
+        if (existingIdx >= 0) {
+            appState.familyData.weeklyMenu[existingIdx] = {
+                ...appState.familyData.weeklyMenu[existingIdx],
+                ...menuData
+            };
+        } else {
+            appState.familyData.weeklyMenu.push(menuData);
+        }
+    }
+
+    saveStateToStorage();
+    closeModal('modalEditDailyMenu');
+    renderTodayMenuWidget();
+    renderWeeklyMenuPage();
+    showToast(`🍲 ${dayName} menüsü kaydedildi! Afiyet olsun!`);
+}
+
+async function handleDeleteCurrentMenuModal() {
+    const dateStr = document.getElementById('menuInputDate').value;
+    const dayName = document.getElementById('menuInputDayName').value;
+    if (!confirm(`${dayName} menüsünü silmek istediğinize emin misiniz?`)) return;
+
+    await handleClearDailyMenu(dateStr, dayName);
+    closeModal('modalEditDailyMenu');
+}
+
+async function handleClearDailyMenu(dateStr, customDayName) {
+    const family = appState.familyData;
+    if (!family) return;
+
+    const updatedFamily = await AilemAPI.deleteDailyMenu(family.id, null, dateStr);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        appState.familyData.weeklyMenu = (appState.familyData.weeklyMenu || []).filter(m => m.date !== dateStr);
+    }
+
+    saveStateToStorage();
+    renderTodayMenuWidget();
+    renderWeeklyMenuPage();
+    showToast(`${customDayName || 'Günün'} menüsü temizlendi.`);
+}
+
+async function handleCopyLastWeekMenu() {
+    const family = appState.familyData;
+    if (!family) return;
+
+    if (!confirm('Geçen haftanın yemek menüsünü bu haftaya kopyalamak istediğinize emin misiniz?')) return;
+
+    const currentOffset = appState.menuWeekOffset || 0;
+    const targetWeekInfo = getMenuWeekDates(currentOffset);
+    const sourceWeekInfo = getMenuWeekDates(currentOffset - 1);
+
+    const targetDates = {};
+    targetWeekInfo.days.forEach(d => {
+        targetDates[d.dayIndex] = d.date;
+    });
+
+    const updatedFamily = await AilemAPI.copyWeeklyMenu(family.id, sourceWeekInfo.weekKey, targetWeekInfo.weekKey, targetDates);
+    if (updatedFamily) {
+        appState.familyData = normalizeFamilyData(updatedFamily);
+    } else {
+        const sourceItems = (appState.familyData.weeklyMenu || []).filter(m => m.weekKey === sourceWeekInfo.weekKey);
+        if (sourceItems.length > 0) {
+            appState.familyData.weeklyMenu = (appState.familyData.weeklyMenu || []).filter(m => m.weekKey !== targetWeekInfo.weekKey);
+            sourceItems.forEach(src => {
+                const targetDate = targetDates[src.dayIndex] || '';
+                appState.familyData.weeklyMenu.push({
+                    ...src,
+                    id: 'menu_' + (targetDate || `${targetWeekInfo.weekKey}_${src.dayIndex}`),
+                    weekKey: targetWeekInfo.weekKey,
+                    date: targetDate,
+                    updatedAt: new Date().toISOString()
+                });
+            });
+        }
+    }
+
+    saveStateToStorage();
+    renderTodayMenuWidget();
+    renderWeeklyMenuPage();
+    showToast('Geçen haftanın menüsü başarıyla aktarıldı! 📋🍲');
+}
+
+async function handleAddMenuToShopping(dateStr) {
+    const family = appState.familyData;
+    if (!family) return;
+
+    const menuItems = family.weeklyMenu || [];
+    const item = menuItems.find(m => m.date === dateStr);
+    if (!item) {
+        showToast('Bu gün için menü bulunamadı.');
+        return;
+    }
+
+    const dishes = [];
+    if (item.main && item.main.trim()) dishes.push(item.main.trim());
+    if (item.soup && item.soup.trim()) dishes.push(item.soup.trim());
+    if (item.side && item.side.trim()) dishes.push(item.side.trim());
+    if (item.dessert && item.dessert.trim()) dishes.push(item.dessert.trim());
+
+    if (dishes.length === 0) {
+        showToast('Menüde eklenecek lezzet bulunmuyor.');
+        return;
+    }
+
+    let addedCount = 0;
+    for (const dish of dishes) {
+        const newItem = {
+            id: 'shop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            title: `${dish} Malzemeleri`,
+            category: 'Market',
+            completed: false,
+            addedBy: appState.currentUser?.name || 'Aile Üyesi',
+            createdAt: new Date().toISOString()
+        };
+        const updatedFamily = await AilemAPI.addShoppingItem(family.id, newItem);
+        if (updatedFamily) {
+            appState.familyData = normalizeFamilyData(updatedFamily);
+        } else {
+            if (!appState.familyData.shoppingList) appState.familyData.shoppingList = [];
+            appState.familyData.shoppingList.unshift(newItem);
+        }
+        addedCount++;
+    }
+
+    saveStateToStorage();
+    renderShopping();
+    updateQuickStats();
+    showToast(`${addedCount} adet menü malzemesi Alışveriş Listesine eklendi! 🛒🍲`);
+}
+
+// ==========================================================
 // 8. NAVİGASYON & TAB GEÇİŞLERİ
 // ==========================================================
 function switchTab(tabId, navBtn) {
@@ -7210,6 +7866,8 @@ function switchTab(tabId, navBtn) {
         renderOvertimePage();
     } else if (tabId === 'tabCharity') {
         renderCharities();
+    } else if (tabId === 'tabMenu') {
+        renderWeeklyMenuPage();
     }
 
     // Hem Mobil Bottom Nav hem de Masaüstü Sidebar Öğelerini Senkronize Et
