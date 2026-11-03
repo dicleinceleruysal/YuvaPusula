@@ -7245,16 +7245,13 @@ function escapeHtml(text) {
 // 7.9 HAFTALIK MENÜ & GÜNÜN MENÜSÜ YÖNETİMİ
 // ==========================================================
 
-function getMenuWeekDates(offsetWeeks = 0) {
+function getMenuWeekDates() {
     const now = new Date();
-    // Hedef haftanın referans tarihini al
-    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offsetWeeks * 7));
-    
     // JS'de 0: Pazar, 1: Pazartesi ... 6: Cumartesi
-    const currentDay = targetDate.getDay();
+    const currentDay = now.getDay();
     const diffToMonday = currentDay === 0 ? -6 : (1 - currentDay);
     
-    const monday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + diffToMonday);
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
     
     const dayNames = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -7289,7 +7286,7 @@ function getMenuWeekDates(offsetWeeks = 0) {
         weekKey,
         weekRangeLabel,
         days,
-        isCurrentWeek: offsetWeeks === 0
+        isCurrentWeek: true
     };
 }
 
@@ -7450,33 +7447,10 @@ function renderWeeklyMenuPage() {
     const family = appState.familyData;
     if (!family) return;
 
-    const offset = appState.menuWeekOffset || 0;
-    const weekInfo = getMenuWeekDates(offset);
+    const weekInfo = getMenuWeekDates(0);
 
     const rangeLabel = document.getElementById('menuWeekRangeLabel');
     if (rangeLabel) rangeLabel.textContent = weekInfo.weekRangeLabel;
-
-    const weekBadge = document.getElementById('menuWeekBadge');
-    if (weekBadge) {
-        if (weekInfo.isCurrentWeek) {
-            weekBadge.innerHTML = '<i class="fa-regular fa-calendar-days"></i> Bu Hafta';
-            weekBadge.classList.remove('offset');
-        } else if (offset === 1) {
-            weekBadge.innerHTML = '<i class="fa-solid fa-forward"></i> Gelecek Hafta';
-            weekBadge.classList.add('offset');
-        } else if (offset === -1) {
-            weekBadge.innerHTML = '<i class="fa-solid fa-backward"></i> Geçen Hafta';
-            weekBadge.classList.add('offset');
-        } else {
-            weekBadge.innerHTML = `<i class="fa-solid fa-calendar"></i> ${offset > 0 ? `+${offset}` : offset} Hafta`;
-            weekBadge.classList.add('offset');
-        }
-    }
-
-    const btnReturn = document.getElementById('btnMenuReturnCurrentWeek');
-    if (btnReturn) {
-        btnReturn.classList.toggle('hidden', weekInfo.isCurrentWeek);
-    }
 
     const menuItems = family.weeklyMenu || [];
 
@@ -7583,16 +7557,6 @@ function renderWeeklyMenuPage() {
             </div>
         `;
     }).join('');
-}
-
-function changeMenuWeek(offsetChange) {
-    appState.menuWeekOffset = (appState.menuWeekOffset || 0) + offsetChange;
-    renderWeeklyMenuPage();
-}
-
-function resetMenuWeekToCurrent() {
-    appState.menuWeekOffset = 0;
-    renderWeeklyMenuPage();
 }
 
 function openEditMenuForToday() {
@@ -7756,47 +7720,6 @@ async function handleClearDailyMenu(dateStr, customDayName) {
     renderTodayMenuWidget();
     renderWeeklyMenuPage();
     showToast(`${customDayName || 'Günün'} menüsü temizlendi.`);
-}
-
-async function handleCopyLastWeekMenu() {
-    const family = appState.familyData;
-    if (!family) return;
-
-    if (!confirm('Geçen haftanın yemek menüsünü bu haftaya kopyalamak istediğinize emin misiniz?')) return;
-
-    const currentOffset = appState.menuWeekOffset || 0;
-    const targetWeekInfo = getMenuWeekDates(currentOffset);
-    const sourceWeekInfo = getMenuWeekDates(currentOffset - 1);
-
-    const targetDates = {};
-    targetWeekInfo.days.forEach(d => {
-        targetDates[d.dayIndex] = d.date;
-    });
-
-    const updatedFamily = await AilemAPI.copyWeeklyMenu(family.id, sourceWeekInfo.weekKey, targetWeekInfo.weekKey, targetDates);
-    if (updatedFamily) {
-        appState.familyData = normalizeFamilyData(updatedFamily);
-    } else {
-        const sourceItems = (appState.familyData.weeklyMenu || []).filter(m => m.weekKey === sourceWeekInfo.weekKey);
-        if (sourceItems.length > 0) {
-            appState.familyData.weeklyMenu = (appState.familyData.weeklyMenu || []).filter(m => m.weekKey !== targetWeekInfo.weekKey);
-            sourceItems.forEach(src => {
-                const targetDate = targetDates[src.dayIndex] || '';
-                appState.familyData.weeklyMenu.push({
-                    ...src,
-                    id: 'menu_' + (targetDate || `${targetWeekInfo.weekKey}_${src.dayIndex}`),
-                    weekKey: targetWeekInfo.weekKey,
-                    date: targetDate,
-                    updatedAt: new Date().toISOString()
-                });
-            });
-        }
-    }
-
-    saveStateToStorage();
-    renderTodayMenuWidget();
-    renderWeeklyMenuPage();
-    showToast('Geçen haftanın menüsü başarıyla aktarıldı! 📋🍲');
 }
 
 async function handleAddMenuToShopping(dateStr) {

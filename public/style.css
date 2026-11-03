@@ -6725,3 +6725,17 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+
+.menu-current-week-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #FFFFFF;
+    border: 1.5px solid var(--border-color);
+    border-radius: 18px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+}

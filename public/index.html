@@ -590,30 +590,18 @@
                         <p class="subtitle">Ailenin haftalık yemek planı, sağlıklı & düzenli lezzet rehberi</p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn-secondary-sm" onclick="handleCopyLastWeekMenu()" title="Geçen haftanın menüsünü bu haftaya kopyala">
-                            <i class="fa-solid fa-copy"></i> Geçen Haftadan Al
-                        </button>
                         <button class="btn-primary-sm" onclick="openEditMenuForToday()">
                             <i class="fa-solid fa-plus"></i> Bugünün Menüsü
                         </button>
                     </div>
                 </div>
 
-                <!-- Hafta Gezinme Barı -->
-                <div class="menu-week-navigator">
-                    <button class="btn-week-nav" onclick="changeMenuWeek(-1)" title="Önceki Hafta">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </button>
+                <!-- Bu Hafta Bilgi Başlığı -->
+                <div class="menu-current-week-bar">
                     <div class="menu-week-info">
-                        <div class="menu-week-badge" id="menuWeekBadge"><i class="fa-regular fa-calendar-days"></i> Bu Hafta</div>
-                        <h4 id="menuWeekRangeLabel">2 - 8 Kasım 2026</h4>
+                        <div class="menu-week-badge"><i class="fa-regular fa-calendar-days"></i> Bu Haftanın Menüsü</div>
+                        <h4 id="menuWeekRangeLabel">Bu Hafta</h4>
                     </div>
-                    <button class="btn-week-nav" onclick="changeMenuWeek(1)" title="Sonraki Hafta">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </button>
-                    <button class="btn-return-today hidden" id="btnMenuReturnCurrentWeek" onclick="resetMenuWeekToCurrent()">
-                        <i class="fa-solid fa-calendar-day"></i> Bu Haftaya Dön
-                    </button>
                 </div>
 
                 <!-- 7 Günlük Menü Kartları Grid -->
