@@ -328,7 +328,7 @@
                     <!-- Dinamik Günün Menüsü Gelecek -->
                 </div>
 
-                <!-- GÜNLÜK PLANLAMA VE GÜNÜN AKIŞI KARTI (HER GÜN SIFIRLANIR) -->
+                <!-- GÜNLÜK PLANLAMA VE GÜNÜN AKIŞI KARTI -->
                 <div class="daily-planner-card">
                     <div class="daily-planner-header">
                         <div class="daily-planner-title-group">
@@ -337,9 +337,9 @@
                             </div>
                             <div class="daily-planner-text-box">
                                 <div class="daily-planner-tag">
-                                    <i class="fa-solid fa-sparkles"></i> GÜNÜN AKIŞI
+                                    <i class="fa-solid fa-sparkles"></i> GÜNÜN AKIŞI & HAFTALIK PLAN
                                 </div>
-                                <h4 class="daily-planner-title">Günlük Aile Planlama</h4>
+                                <h4 class="daily-planner-title">Aile Planlama</h4>
                                 <div class="daily-planner-date-badge">
                                     <i class="fa-regular fa-calendar-days"></i>
                                     <span id="dailyPlannerDateLabel">Bugün</span>
@@ -347,8 +347,8 @@
                             </div>
                         </div>
                         <div class="daily-planner-actions">
-                            <button class="btn-daily-reset-sm" onclick="handleResetDailyPlans()" title="Tüm günlük planları sıfırla">
-                                <i class="fa-solid fa-arrows-rotate"></i> <span>Günü Sıfırla</span>
+                            <button class="btn-daily-reset-sm" onclick="handleResetWeeklyTasks()" title="Haftalık plan ve görevleri sıfırla (Haftanın başında otomatik sıfırlanır)">
+                                <i class="fa-solid fa-arrows-rotate"></i> <span>Haftalık Sıfırla</span>
                             </button>
                             <button class="btn-daily-add-sm" onclick="openModal('modalNewDailyPlan')">
                                 <i class="fa-solid fa-plus"></i> <span>Plan Ekle</span>
@@ -614,12 +614,15 @@
             <section id="tabTasks" class="tab-panel">
                 <div class="panel-header-action">
                     <div>
-                        <h3>✅ Aile Görevleri</h3>
-                        <p class="subtitle">Ev işleri, haftalık sorumluluklar ve kişisel görevler</p>
+                        <h3>✅ Aile Görevleri & Haftalık Akış</h3>
+                        <p class="subtitle">Ev işleri, haftalık sorumluluklar ve ana sayfa planları (Haftanın başında sıfırlanır)</p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn-secondary-sm" onclick="handleResetWeeklyTasks()" title="Haftalık Görevleri Sıfırla">
+                        <button class="btn-secondary-sm" onclick="handleResetWeeklyTasks()" title="Haftalık Görevleri ve Planları Sıfırla">
                             <i class="fa-solid fa-arrows-rotate"></i> Haftalık Sıfırla
+                        </button>
+                        <button class="btn-action-sm" onclick="openModal('modalNewDailyPlan')" title="Ana Sayfa Planı / Rutin Ekle">
+                            <i class="fa-solid fa-clock"></i> Plan Ekle
                         </button>
                         <button class="btn-primary-sm" onclick="openModal('modalNewTask')">
                             <i class="fa-solid fa-plus"></i> Görev Ata
@@ -627,8 +630,22 @@
                     </div>
                 </div>
 
+                <!-- Gün Bazlı Filtreler (Tüm Hafta / Pazartesi / Salı ...) -->
+                <div class="category-chips task-day-filter-row" id="taskDayFilterRow">
+                    <button class="chip active" data-day="ALL" onclick="filterTaskDay('ALL', this)">
+                        <i class="fa-solid fa-calendar-week"></i> Tüm Hafta
+                    </button>
+                    <button class="chip" data-day="Pazartesi" onclick="filterTaskDay('Pazartesi', this)">Pzt</button>
+                    <button class="chip" data-day="Salı" onclick="filterTaskDay('Salı', this)">Sal</button>
+                    <button class="chip" data-day="Çarşamba" onclick="filterTaskDay('Çarşamba', this)">Çar</button>
+                    <button class="chip" data-day="Perşembe" onclick="filterTaskDay('Perşembe', this)">Per</button>
+                    <button class="chip" data-day="Cuma" onclick="filterTaskDay('Cuma', this)">Cum</button>
+                    <button class="chip" data-day="Cumartesi" onclick="filterTaskDay('Cumartesi', this)">Cmt</button>
+                    <button class="chip" data-day="Pazar" onclick="filterTaskDay('Pazar', this)">Paz</button>
+                </div>
+
                 <!-- Kişi Bazlı Filtreler (Dicle / Fırat / Tüm Aile) -->
-                <div class="category-chips" id="taskAssigneeFilterRow">
+                <div class="category-chips" id="taskAssigneeFilterRow" style="margin-top: -4px;">
                     <button class="chip active" id="chipTaskMine" onclick="filterTaskAssignee('MINE', this)">
                         <i class="fa-solid fa-user-check"></i> Bana Atananlar & Ortak
                     </button>
@@ -1250,12 +1267,19 @@
                         </select>
                     </div>
                     <div class="form-group flex-1">
-                        <label>Bitiş Zamanı</label>
+                        <label>Bitiş Zamanı / Gün</label>
                         <select id="taskDueDate">
                             <option value="Bugün">📅 Bugün</option>
-                            <option value="Yarın">📅 Yarın</option>
-                            <option value="Hafta Sonu">📅 Bu Hafta Sonu</option>
-                            <option value="Düzenli">🔄 Düzenli Günlük</option>
+                            <option value="Yarın">☀️ Yarın</option>
+                            <option value="Pazartesi">📅 Pazartesi</option>
+                            <option value="Salı">📅 Salı</option>
+                            <option value="Çarşamba">📅 Çarşamba</option>
+                            <option value="Perşembe">📅 Perşembe</option>
+                            <option value="Cuma">📅 Cuma</option>
+                            <option value="Cumartesi">📅 Cumartesi</option>
+                            <option value="Pazar">📅 Pazar</option>
+                            <option value="Hafta Sonu">🏖️ Bu Hafta Sonu</option>
+                            <option value="Düzenli">🔁 Düzenli (Her Gün)</option>
                         </select>
                     </div>
                 </div>
@@ -1487,19 +1511,35 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Kime Ait / Sorumlu Birey</label>
-                    <select id="newDailyPlanAssignedTo">
-                        <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
-                    </select>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Hangi Gün?</label>
+                        <select id="newDailyPlanDay">
+                            <option value="Bugün">🌟 Bugün</option>
+                            <option value="Her Gün">🔁 Her Gün (Tüm Hafta)</option>
+                            <option value="Pazartesi">Pazartesi</option>
+                            <option value="Salı">Salı</option>
+                            <option value="Çarşamba">Çarşamba</option>
+                            <option value="Perşembe">Perşembe</option>
+                            <option value="Cuma">Cuma</option>
+                            <option value="Cumartesi">Cumartesi</option>
+                            <option value="Pazar">Pazar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Kime Ait / Sorumlu Birey</label>
+                        <select id="newDailyPlanAssignedTo">
+                            <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group" style="background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
                         <input type="checkbox" id="newDailyPlanIsRecurring" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-                        <span>🔁 Her gün otomatik tekrarlansın (Sabah sıfırlanır)</span>
+                        <span>🔁 Her hafta otomatik tekrarlansın (Haftanın başında sıfırlanır)</span>
                     </label>
-                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse rutin olarak her gün sıfırdan başlar. İşaretsizse sadece bugünlük kaydedilir.</p>
+                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse her hafta yenilenir. Haftanın başında (Pazartesi) tamamlanma durumu sıfırlanır.</p>
                 </div>
 
                 <button type="submit" class="btn-primary">Günlük Planı Kaydet</button>
@@ -1545,19 +1585,35 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Kime Ait / Sorumlu Birey</label>
-                    <select id="editDailyPlanAssignedTo">
-                        <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
-                    </select>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Hangi Gün?</label>
+                        <select id="editDailyPlanDay">
+                            <option value="Bugün">🌟 Bugün</option>
+                            <option value="Her Gün">🔁 Her Gün (Tüm Hafta)</option>
+                            <option value="Pazartesi">Pazartesi</option>
+                            <option value="Salı">Salı</option>
+                            <option value="Çarşamba">Çarşamba</option>
+                            <option value="Perşembe">Perşembe</option>
+                            <option value="Cuma">Cuma</option>
+                            <option value="Cumartesi">Cumartesi</option>
+                            <option value="Pazar">Pazar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Kime Ait / Sorumlu Birey</label>
+                        <select id="editDailyPlanAssignedTo">
+                            <option value="Tüm Aile">👨‍👩‍👧‍👦 Tüm Aile</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group" style="background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
                         <input type="checkbox" id="editDailyPlanIsRecurring" style="width: 18px; height: 18px; accent-color: var(--primary);">
-                        <span>🔁 Her gün otomatik tekrarlansın (Sabah sıfırlanır)</span>
+                        <span>🔁 Her hafta otomatik tekrarlansın (Haftanın başında sıfırlanır)</span>
                     </label>
-                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse rutin olarak her gün sıfırdan başlar. İşaretsizse sadece bugünlük kaydedilir.</p>
+                    <p style="margin: 4px 0 0 28px; font-size: 0.72rem; color: #64748b;">İşaretliyse her hafta yenilenir. Haftanın başında (Pazartesi) tamamlanma durumu sıfırlanır.</p>
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">

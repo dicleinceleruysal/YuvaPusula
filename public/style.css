@@ -6739,3 +6739,124 @@ body {
     box-shadow: var(--shadow-sm);
     text-align: center;
 }
+
+
+/* =========================================================
+   AİLE GÖREVLERİ: GÜN GÜN PLAN & GÖREV AKIŞI STİLLERİ
+   ========================================================= */
+
+.task-day-filter-row {
+    margin-bottom: 6px;
+    padding: 2px 4px;
+}
+
+.task-day-filter-row .chip {
+    font-weight: 700;
+}
+
+.task-day-filter-row .chip.is-today-chip {
+    border-color: #D97706;
+    color: #92400E;
+    background: #FEF3C7;
+}
+
+.task-day-filter-row .chip.is-today-chip.active {
+    background: #D97706;
+    color: #FFFFFF;
+}
+
+.task-day-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.task-day-group:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.task-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #FAF8F5;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.task-day-header.is-today {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-bottom: 1.5px solid #FDE68A;
+}
+
+.task-day-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--dark);
+}
+
+.task-day-title .today-pill {
+    font-size: 0.68rem;
+    font-weight: 800;
+    background: #F59E0B;
+    color: #FFFFFF;
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+}
+
+.task-day-count {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.05);
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+
+.task-day-items {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-empty-day {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.plan-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #DBEAFE;
+}
+
+.task-time-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: #FEF3C7;
+    color: #B45309;
+}

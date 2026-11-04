@@ -709,29 +709,12 @@ async function deleteDailyPlan(familyId, planId) {
 
 async function resetDailyPlans(familyId) {
     return await updateFamilyHelper(familyId, (fam) => {
-        // 1. Günlük Rutinler: Sadece 'Her Gün' olanlar kalsın (isRecurring === true), tamamlanma durumu sıfırlansın.
-        // Tek seferlik günlük planlar silinsin.
         if (!fam.dailyPlans) fam.dailyPlans = [];
-        fam.dailyPlans = fam.dailyPlans
-            .filter(p => p.isRecurring === true)
-            .map(p => ({
-                ...p,
-                completed: false,
-                completedAt: null
-            }));
-
-        // 2. Bugünün Görevleri: Gün bittiğinde 'Bugün' vadeli tek seferlik görevler silinsin.
-        // Sadece 'Düzenli' olanlar ve ileri vadeli görevler kalsın.
-        if (fam.tasks && Array.isArray(fam.tasks)) {
-            fam.tasks = fam.tasks.filter(t => {
-                const due = (t.dueDate || '').trim().toLowerCase();
-                if (due === 'bugün' || due === 'today') {
-                    return false;
-                }
-                return true;
-            });
-        }
-
+        fam.dailyPlans = fam.dailyPlans.map(p => ({
+            ...p,
+            completed: false,
+            completedAt: null
+        }));
         return fam;
     });
 }
@@ -813,6 +796,15 @@ async function resetWeeklyTasks(familyId) {
             ...t,
             completed: false
         }));
+
+        // Haftanın başında ana sayfa planlarının tamamlanma durumunu yeni hafta için sıfırla
+        if (!fam.dailyPlans) fam.dailyPlans = [];
+        fam.dailyPlans = fam.dailyPlans.map(p => ({
+            ...p,
+            completed: false,
+            completedAt: null
+        }));
+
         return fam;
     });
 }

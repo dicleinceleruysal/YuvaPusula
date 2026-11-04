@@ -1539,19 +1539,28 @@ async function appHandler(req, res) {
     });
 }
 
-let lastRolloverDay = new Date().toISOString().split('T')[0];
+function getISOWeekKeyServer(d = new Date()) {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    const weekNr = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return `${date.getFullYear()}-W${String(weekNr).padStart(2, '0')}`;
+}
 
-async function checkServerMidnightRollover() {
+let lastRolloverWeek = getISOWeekKeyServer();
+
+async function checkServerWeeklyRollover() {
     try {
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (todayStr !== lastRolloverDay) {
-            console.log(`[Midnight Rollover] Yeni güne geçildi: ${todayStr}. Günlük planlar ve 'Bugün' görevleri sıfırlanıyor...`);
-            lastRolloverDay = todayStr;
+        const currentWeek = getISOWeekKeyServer();
+        if (currentWeek !== lastRolloverWeek) {
+            console.log(`[Weekly Rollover] Yeni haftaya geçildi: ${currentWeek}. Haftalık görevler ve ana sayfa planları sıfırlanıyor...`);
+            lastRolloverWeek = currentWeek;
             const families = await dbManager.getAllFamilies();
             if (families && Array.isArray(families)) {
                 for (const fam of families) {
                     if (fam && fam.id) {
-                        const updated = await dbManager.resetDailyPlans(fam.id);
+                        const updated = await dbManager.resetWeeklyTasks(fam.id);
                         if (updated) {
                             broadcastToFamilyLive(fam.id, 'update', { family: updated });
                         }
@@ -1560,7 +1569,7 @@ async function checkServerMidnightRollover() {
             }
         }
     } catch (e) {
-        console.error('[Midnight Rollover Error]:', e.message);
+        console.error('[Weekly Rollover Error]:', e.message);
     }
 }
 
@@ -1591,8 +1600,8 @@ if (require.main === module) {
     }, 15000);
     setInterval(checkAllWishlistPricesPeriodic, 20 * 60 * 1000);
 
-    // Her dakika kontrol et, gece 00:00 olduğunda günün tek seferlik görevlerini temizle ve günlük rutinleri sıfırla
-    setInterval(checkServerMidnightRollover, 60 * 1000);
+    // Her 5 dakikada kontrol et, haftanın başında (Pazartesi) haftalık görev ve planları sıfırla
+    setInterval(checkServerWeeklyRollover, 5 * 60 * 1000);
 }
 
 module.exports = appHandler;
