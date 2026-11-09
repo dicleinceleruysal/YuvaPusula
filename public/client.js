@@ -5745,9 +5745,30 @@ async function handleDeleteExtraIncome(id) {
 const DICLE_HOURLY_OVERTIME_RATE = 296.875;
 const FIRAT_WEEKDAY_OVERTIME_RATE = 1041.67;
 const FIRAT_SATURDAY_OVERTIME_RATE = 3125.00;
+const FIRAT_WEEKDAY_HOURLY_RATE = 130.21;
+const FIRAT_SATURDAY_HOURLY_RATE = 390.63;
 
 let selectedOvertimePerson = 'Dicle'; // 'Dicle' | 'Fırat'
+let selectedFiratCalcMode = 'hourly'; // 'hourly' | 'daily'
 let selectedFiratDayType = 'weekday'; // 'weekday' | 'saturday'
+
+function selectFiratCalcMode(mode) {
+    selectedFiratCalcMode = mode;
+    const btnHourly = document.getElementById('btnFiratModeHourly');
+    const btnDaily = document.getElementById('btnFiratModeDaily');
+    const hourlyFields = document.getElementById('overtimeFiratHourlyFields');
+    const dailyFields = document.getElementById('overtimeFiratDailyFields');
+    const modeInput = document.getElementById('overtimeFiratCalcMode');
+
+    if (btnHourly) btnHourly.classList.toggle('active', mode === 'hourly');
+    if (btnDaily) btnDaily.classList.toggle('active', mode === 'daily');
+
+    if (hourlyFields) hourlyFields.classList.toggle('hidden', mode !== 'hourly');
+    if (dailyFields) dailyFields.classList.toggle('hidden', mode !== 'daily');
+    if (modeInput) modeInput.value = mode;
+
+    calculateOvertimeTotalLive();
+}
 
 function selectOvertimePerson(person) {
     selectedOvertimePerson = person;
@@ -5772,7 +5793,7 @@ function selectOvertimePerson(person) {
         if (firatDaysInput) firatDaysInput.required = false;
     } else {
         if (dicleHoursInput) dicleHoursInput.required = false;
-        if (firatDaysInput) firatDaysInput.required = true;
+        if (firatDaysInput) firatDaysInput.required = false;
         onOvertimeDateChanged();
     }
 
@@ -5786,18 +5807,24 @@ function selectFiratDayType(dayType) {
 
     const btnWeekday = document.getElementById('btnFiratWeekday');
     const btnSaturday = document.getElementById('btnFiratSaturday');
-    const rateInput = document.getElementById('overtimeFiratRateInput');
-    const hintEl = document.getElementById('firatRateHint');
+    const dailyRateInput = document.getElementById('overtimeFiratRateInput');
+    const hourlyRateInput = document.getElementById('overtimeFiratHourlyRateInput');
+    const dailyHintEl = document.getElementById('firatDailyRateHint');
+    const hourlyHintEl = document.getElementById('firatHourlyRateHint');
 
     if (btnWeekday) btnWeekday.classList.toggle('active', dayType === 'weekday');
     if (btnSaturday) btnSaturday.classList.toggle('active', dayType === 'saturday');
 
     if (dayType === 'saturday') {
-        if (rateInput) rateInput.value = FIRAT_SATURDAY_OVERTIME_RATE.toFixed(2);
-        if (hintEl) hintEl.textContent = 'Cumartesi Mesaisi: 3.125,00 ₺ / gün';
+        if (dailyRateInput) dailyRateInput.value = FIRAT_SATURDAY_OVERTIME_RATE.toFixed(2);
+        if (hourlyRateInput) hourlyRateInput.value = FIRAT_SATURDAY_HOURLY_RATE.toFixed(2);
+        if (dailyHintEl) dailyHintEl.textContent = 'Cumartesi: 3.125,00 ₺ / gün';
+        if (hourlyHintEl) hourlyHintEl.textContent = 'Cumartesi: 390,63 ₺ / sa';
     } else {
-        if (rateInput) rateInput.value = FIRAT_WEEKDAY_OVERTIME_RATE.toFixed(2);
-        if (hintEl) hintEl.textContent = 'Hafta İçi: 1.041,67 ₺ / gün';
+        if (dailyRateInput) dailyRateInput.value = FIRAT_WEEKDAY_OVERTIME_RATE.toFixed(2);
+        if (hourlyRateInput) hourlyRateInput.value = FIRAT_WEEKDAY_HOURLY_RATE.toFixed(2);
+        if (dailyHintEl) dailyHintEl.textContent = 'Hafta İçi: 1.041,67 ₺ / gün';
+        if (hourlyHintEl) hourlyHintEl.textContent = 'Hafta İçi: 130,21 ₺ / sa';
     }
 
     calculateOvertimeTotalLive();
@@ -5877,7 +5904,8 @@ function renderOvertimePage() {
         return p.includes('fırat') || p.includes('firat');
     });
     const firatTotalAmount = firatOvertimes.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
-    const firatTotalDays = firatOvertimes.reduce((s, o) => s + (parseFloat(o.days) || 1), 0);
+    const firatTotalDays = firatOvertimes.filter(o => !o.isHourly).reduce((s, o) => s + (parseFloat(o.days) || 1), 0);
+    const firatTotalHours = firatOvertimes.filter(o => o.isHourly).reduce((s, o) => s + (parseFloat(o.hours) || 0), 0);
 
     const totalOvertimeMaster = dicleTotalAmount + firatTotalAmount;
 
@@ -5912,7 +5940,23 @@ function renderOvertimePage() {
     if (elFiratAmount) elFiratAmount.textContent = formatTL(firatTotalAmount);
 
     const elFiratDays = document.getElementById('firatOvertimeTotalDays');
-    if (elFiratDays) elFiratDays.textContent = `${firatTotalDays > 0 ? firatTotalDays.toLocaleString('tr-TR') : 0} Gün Mesai`;
+    if (elFiratDays) {
+        if (firatTotalDays > 0 && firatTotalHours > 0) {
+            elFiratDays.textContent = `${firatTotalDays} Gün • ${firatTotalHours.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} Sa Mesai`;
+        } else if (firatTotalHours > 0) {
+            const totH = Math.floor(firatTotalHours);
+            const totM = Math.round((firatTotalHours - totH) * 60);
+            if (totM > 0) {
+                elFiratDays.textContent = `${totH > 0 ? `${totH} sa ` : ''}${totM} dk (${firatTotalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} Sa) İşlendi`;
+            } else {
+                elFiratDays.textContent = `${totH} Saat İşlendi`;
+            }
+        } else if (firatTotalDays > 0) {
+            elFiratDays.textContent = `${firatTotalDays.toLocaleString('tr-TR')} Gün Mesai`;
+        } else {
+            elFiratDays.textContent = '0 Kayıt';
+        }
+    }
 
     const otMonthBadgeEl = document.getElementById('overtimeMonthBadge');
     if (otMonthBadgeEl) {
@@ -5952,9 +5996,32 @@ function renderOvertimePage() {
                 let calcDetail = '';
 
                 if (isFirat) {
-                    const dayLabel = (ot.dayType === 'saturday' || (ot.amount && ot.amount % 3125 === 0)) ? '🏖️ Cumartesi' : '📅 Hafta İçi';
-                    const daysVal = parseFloat(ot.days || 1);
-                    calcDetail = `${dayLabel} (${daysVal.toLocaleString('tr-TR')} Gün)`;
+                    if (ot.isHourly || ot.hours > 0) {
+                        const hoursVal = parseFloat(ot.hours || 0);
+                        const rateVal = parseFloat(ot.hourlyRate || (ot.dayType === 'saturday' ? FIRAT_SATURDAY_HOURLY_RATE : FIRAT_WEEKDAY_HOURLY_RATE));
+                        let timeLabel = '';
+                        if (ot.hourPart !== undefined && ot.minutePart !== undefined) {
+                            const h = parseInt(ot.hourPart) || 0;
+                            const m = parseInt(ot.minutePart) || 0;
+                            if (h > 0 && m > 0) {
+                                timeLabel = `${h} sa ${m} dk`;
+                            } else if (m > 0) {
+                                timeLabel = `${m} dk`;
+                            } else {
+                                timeLabel = `${h} Saat`;
+                            }
+                        } else {
+                            const h = Math.floor(hoursVal);
+                            const m = Math.round((hoursVal - h) * 60);
+                            timeLabel = m > 0 ? (h > 0 ? `${h} sa ${m} dk` : `${m} dk`) : `${hoursVal.toLocaleString('tr-TR')} Saat`;
+                        }
+                        const dayLabel = ot.dayType === 'saturday' ? '🏖️ Cts Saatlik' : '📅 H.İçi Saatlik';
+                        calcDetail = `${dayLabel}: ⏱️ <b>${timeLabel}</b> × ${rateVal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
+                    } else {
+                        const dayLabel = (ot.dayType === 'saturday' || (ot.amount && ot.amount % 3125 === 0)) ? '🏖️ Cumartesi' : '📅 Hafta İçi';
+                        const daysVal = parseFloat(ot.days || 1);
+                        calcDetail = `${dayLabel} (${daysVal.toLocaleString('tr-TR')} Gün)`;
+                    }
                 } else {
                     const hoursVal = parseFloat(ot.hours || 0);
                     const rateVal = parseFloat(ot.hourlyRate || DICLE_HOURLY_OVERTIME_RATE);
@@ -6033,12 +6100,35 @@ function calculateOvertimeTotalLive() {
         }
         detailEl.textContent = `${durationText} × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ₺`;
     } else {
-        const days = parseFloat(document.getElementById('overtimeFiratDaysInput')?.value) || 0;
-        const rate = selectedFiratDayType === 'saturday' ? FIRAT_SATURDAY_OVERTIME_RATE : FIRAT_WEEKDAY_OVERTIME_RATE;
-        const total = days * rate;
+        // Fırat: Saatlik veya Günlük
+        if (selectedFiratCalcMode === 'hourly') {
+            const hours = parseFloat(document.getElementById('overtimeFiratHoursInput')?.value) || 0;
+            const minutes = parseFloat(document.getElementById('overtimeFiratMinutesInput')?.value) || 0;
+            const totalHours = hours + (minutes / 60);
+            const defaultRate = selectedFiratDayType === 'saturday' ? FIRAT_SATURDAY_HOURLY_RATE : FIRAT_WEEKDAY_HOURLY_RATE;
+            const rate = parseFloat(document.getElementById('overtimeFiratHourlyRateInput')?.value) || defaultRate;
+            const total = totalHours * rate;
 
-        resEl.textContent = Number(total.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-        detailEl.textContent = `${days.toLocaleString('tr-TR')} gün × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺ (${selectedFiratDayType === 'saturday' ? 'Cumartesi' : 'Hafta İçi'})`;
+            resEl.textContent = Number(total.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+            let durationText = '';
+            if (hours > 0 && minutes > 0) {
+                durationText = `${hours} sa ${minutes} dk (${totalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} saat)`;
+            } else if (minutes > 0) {
+                durationText = `${minutes} dk (${totalHours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} saat)`;
+            } else {
+                durationText = `${hours.toLocaleString('tr-TR')} saat`;
+            }
+            const dayTypeLabel = selectedFiratDayType === 'saturday' ? 'Cumartesi' : 'Hafta İçi';
+            detailEl.textContent = `${durationText} × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺ (${dayTypeLabel} Saatlik)`;
+        } else {
+            const days = parseFloat(document.getElementById('overtimeFiratDaysInput')?.value) || 0;
+            const rate = selectedFiratDayType === 'saturday' ? FIRAT_SATURDAY_OVERTIME_RATE : FIRAT_WEEKDAY_OVERTIME_RATE;
+            const total = days * rate;
+
+            resEl.textContent = Number(total.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+            detailEl.textContent = `${days.toLocaleString('tr-TR')} gün × ${Number(rate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺ (${selectedFiratDayType === 'saturday' ? 'Cumartesi' : 'Hafta İçi'} Günlük)`;
+        }
     }
 }
 
@@ -6066,6 +6156,15 @@ function openAddOvertimeModal() {
     const dicleRate = document.getElementById('overtimeDicleRateInput');
     if (dicleRate) dicleRate.value = DICLE_HOURLY_OVERTIME_RATE;
 
+    const firatHours = document.getElementById('overtimeFiratHoursInput');
+    if (firatHours) firatHours.value = '';
+
+    const firatMinutes = document.getElementById('overtimeFiratMinutesInput');
+    if (firatMinutes) firatMinutes.value = '';
+
+    const firatHourlyRate = document.getElementById('overtimeFiratHourlyRateInput');
+    if (firatHourlyRate) firatHourlyRate.value = FIRAT_WEEKDAY_HOURLY_RATE.toFixed(2);
+
     const firatDays = document.getElementById('overtimeFiratDaysInput');
     if (firatDays) firatDays.value = '1';
 
@@ -6080,6 +6179,7 @@ function openAddOvertimeModal() {
         selectOvertimePerson('Dicle');
     }
 
+    selectFiratCalcMode('hourly');
     onOvertimeDateChanged();
     calculateOvertimeTotalLive();
 
@@ -6113,6 +6213,7 @@ async function handleAddOvertime(e) {
             id: 'ot_' + Date.now(),
             person: 'Dicle',
             isHourly: true,
+            calcMode: 'hourly',
             hours: Math.round(totalHours * 1000) / 1000,
             hourPart: hours,
             minutePart: minutes,
@@ -6125,28 +6226,60 @@ async function handleAddOvertime(e) {
             createdAt: new Date().toISOString()
         };
     } else {
-        const days = parseFloat(document.getElementById('overtimeFiratDaysInput')?.value) || 1;
-        const dayType = selectedFiratDayType; // 'weekday' | 'saturday'
-        const dailyRate = dayType === 'saturday' ? FIRAT_SATURDAY_OVERTIME_RATE : FIRAT_WEEKDAY_OVERTIME_RATE;
-        if (!days || days <= 0) {
-            showToast('Lütfen geçerli bir gün sayısı girin.');
-            return;
+        // Fırat
+        if (selectedFiratCalcMode === 'hourly') {
+            const hours = parseFloat(document.getElementById('overtimeFiratHoursInput')?.value) || 0;
+            const minutes = parseFloat(document.getElementById('overtimeFiratMinutesInput')?.value) || 0;
+            const totalHours = hours + (minutes / 60);
+            const defaultRate = selectedFiratDayType === 'saturday' ? FIRAT_SATURDAY_HOURLY_RATE : FIRAT_WEEKDAY_HOURLY_RATE;
+            const hourlyRate = parseFloat(document.getElementById('overtimeFiratHourlyRateInput')?.value) || defaultRate;
+            if (totalHours <= 0) {
+                showToast('Lütfen geçerli bir mesai süresi (saat veya dakika) girin.');
+                return;
+            }
+            const amount = Math.round(totalHours * hourlyRate * 100) / 100;
+            newOvertime = {
+                id: 'ot_' + Date.now(),
+                person: 'Fırat',
+                isHourly: true,
+                calcMode: 'hourly',
+                dayType: selectedFiratDayType,
+                hours: Math.round(totalHours * 1000) / 1000,
+                hourPart: hours,
+                minutePart: minutes,
+                hourlyRate,
+                amount,
+                date,
+                month,
+                notes,
+                addedBy: appState.currentUser?.name || 'Fırat',
+                createdAt: new Date().toISOString()
+            };
+        } else {
+            const days = parseFloat(document.getElementById('overtimeFiratDaysInput')?.value) || 1;
+            const dayType = selectedFiratDayType; // 'weekday' | 'saturday'
+            const dailyRate = dayType === 'saturday' ? FIRAT_SATURDAY_OVERTIME_RATE : FIRAT_WEEKDAY_OVERTIME_RATE;
+            if (!days || days <= 0) {
+                showToast('Lütfen geçerli bir gün sayısı girin.');
+                return;
+            }
+            const amount = Math.round(days * dailyRate * 100) / 100;
+            newOvertime = {
+                id: 'ot_' + Date.now(),
+                person: 'Fırat',
+                isHourly: false,
+                calcMode: 'daily',
+                dayType,
+                days,
+                dailyRate,
+                amount,
+                date,
+                month,
+                notes,
+                addedBy: appState.currentUser?.name || 'Fırat',
+                createdAt: new Date().toISOString()
+            };
         }
-        const amount = Math.round(days * dailyRate * 100) / 100;
-        newOvertime = {
-            id: 'ot_' + Date.now(),
-            person: 'Fırat',
-            isHourly: false,
-            dayType,
-            days,
-            dailyRate,
-            amount,
-            date,
-            month,
-            notes,
-            addedBy: appState.currentUser?.name || 'Fırat',
-            createdAt: new Date().toISOString()
-        };
     }
 
     const updatedFamily = await AilemAPI.addOvertime(family.id, newOvertime);
